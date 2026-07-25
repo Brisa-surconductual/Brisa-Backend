@@ -1,0 +1,9 @@
+export enum EstadoRegistro{
+
+    PENDIENTE_CONSENTIMIENTO,
+
+    PENDIENTE_REVISION,
+
+    REGISTRO_COMPLETO
+
+}

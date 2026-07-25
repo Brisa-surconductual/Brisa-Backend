@@ -1,0 +1,7 @@
+export enum Rol{
+
+    ESTUDIANTE="ESTUDIANTE",
+
+    ADMINISTRADOR="ADMINISTRADOR"
+
+}

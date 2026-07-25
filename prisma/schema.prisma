@@ -1,0 +1,188 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["usuario"]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model consentimientos {
+  id_consentimiento      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  version_consentimiento String     @db.VarChar(20)
+  vigente                Boolean    @default(true)
+  fecha_invalidacion     DateTime?  @db.Timestamptz(6)
+  motivo_invalidacion    String?
+  url_contenido          String
+  titulo                 String     @db.VarChar(35)
+  usuarios               usuarios[]
+
+  @@schema("usuario")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model linea_base {
+  id_linea_base         String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_usuario            String                 @unique(map: "uq_linea_base_usuario") @db.Uuid
+  entidad_educativa     String                 @db.VarChar(255)
+  programa_academico    String                 @db.VarChar(255)
+  semestre_cursado      Int
+  nivel_academico       nivel_academico_enum
+  ciudad                String                 @db.VarChar(150)
+  fecha_inicio_consumo  DateTime               @db.Date
+  motivo_inicio_consumo motivo_consumo_enum
+  fecha_ultimo_consumo  DateTime               @db.Date
+  frecuencia_consumo    Int
+  fecha_creacion        DateTime               @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion   DateTime               @default(now()) @db.Timestamptz(6)
+  fecha_nacimiento      DateTime?              @db.Date
+  usuarios              usuarios               @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_linea_base_usuario")
+  linea_base_historial  linea_base_historial[]
+
+  @@schema("usuario")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model linea_base_historial {
+  id_historial       BigInt     @id @default(autoincrement())
+  id_linea_base      String     @db.Uuid
+  id_usuario         String     @db.Uuid
+  campos_modificados String[]
+  datos_anteriores   Json
+  fecha_modificacion DateTime   @default(now()) @db.Timestamptz(6)
+  linea_base         linea_base @relation(fields: [id_linea_base], references: [id_linea_base], onDelete: Cascade, onUpdate: NoAction, map: "fk_historial_linea_base")
+  usuarios           usuarios   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_historial_usuario")
+
+  @@index([id_usuario, fecha_modificacion(sort: Desc)], map: "ix_historial_usuario_fecha")
+  @@schema("usuario")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sesiones {
+  id_sesion                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_usuario                 String                 @db.Uuid
+  fecha_inicio_sesion        DateTime               @default(now()) @db.Timestamptz(6)
+  fecha_ultima_interaccion   DateTime               @default(now()) @db.Timestamptz(6)
+  limite_inactividad_minutos Int                    @default(15)
+  estado_aplicacion          estado_aplicacion_enum @default(ACTIVA)
+  activa                     Boolean                @default(true)
+  fecha_cierre_sesion        DateTime?              @db.Timestamptz(6)
+  motivo_cierre              motivo_cierre_enum?
+  usuarios                   usuarios               @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_sesiones_usuario")
+
+  @@index([fecha_ultima_interaccion], map: "ix_sesiones_activa_ultima_interaccion", where: raw("(activa = true)"))
+  @@index([id_usuario], map: "ix_sesiones_usuario_activa", where: raw("(activa = true)"))
+  @@schema("usuario")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model solicitudes_recuperacion {
+  id_solicitud       String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correo_electronico String              @db.VarChar(255)
+  id_usuario         String?             @db.Uuid
+  direccion_ip       String              @db.VarChar(45)
+  codigo_hash        String?
+  fecha_solicitud    DateTime            @default(now()) @db.Timestamptz(6)
+  fecha_expiracion   DateTime?           @db.Timestamptz(6)
+  estado_codigo      estado_codigo_enum? @default(ACTIVO)
+  usuarios           usuarios?           @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction, map: "fk_recuperacion_usuario")
+
+  @@index([estado_codigo], map: "ix_recuperacion_estado")
+  @@index([correo_electronico, direccion_ip, fecha_solicitud], map: "ix_recuperacion_rate_limit")
+  @@schema("usuario")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model usuarios {
+  id_usuario                String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correo_electronico        String                     @unique(map: "uq_usuarios_correo") @db.VarChar(255)
+  contrasena_hash           String
+  rol                       rol_enum                   @default(ESTUDIANTE)
+  estado_registro           estado_registro_enum       @default(PENDIENTE_CONSENTIMIENTO)
+  estado_cuenta             estado_cuenta_enum         @default(ACTIVA)
+  fecha_registro            DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion       DateTime                   @default(now()) @db.Timestamptz(6)
+  consentimiendo_aceptado   Boolean?
+  registro_consumo_aceptado Boolean?
+  id_consentimiento         String                     @db.Uuid
+  linea_base                linea_base?
+  linea_base_historial      linea_base_historial[]
+  sesiones                  sesiones[]
+  solicitudes_recuperacion  solicitudes_recuperacion[]
+  consentimientos           consentimientos            @relation(fields: [id_consentimiento], references: [id_consentimiento], onUpdate: NoAction, map: "fk_usuarios_consentimiento")
+
+  @@index([estado_registro], map: "ix_usuarios_estado_registro")
+  @@index([rol], map: "ix_usuarios_rol")
+  @@schema("usuario")
+}
+
+enum estado_aplicacion_enum {
+  ACTIVA
+  SEGUNDO_PLANO
+
+  @@schema("usuario")
+}
+
+enum estado_codigo_enum {
+  ACTIVO
+  USADO
+  EXPIRADO
+
+  @@schema("usuario")
+}
+
+enum estado_cuenta_enum {
+  PENDIENTE_ACTIVACION
+  ACTIVA
+  INACTIVA
+
+  @@schema("usuario")
+}
+
+enum estado_registro_enum {
+  PENDIENTE_CONSENTIMIENTO
+  PENDIENTE_REVISION
+  REGISTRO_COMPLETO
+
+  @@schema("usuario")
+}
+
+enum motivo_cierre_enum {
+  VOLUNTARIO
+  INACTIVIDAD
+  SEGUNDO_PLANO
+
+  @@schema("usuario")
+}
+
+enum motivo_consumo_enum {
+  ESTRES
+  PRESION_SOCIAL
+  CURIOSIDAD
+  ANSIEDAD
+  HABITO
+  OTRO
+
+  @@schema("usuario")
+}
+
+enum nivel_academico_enum {
+  PREGRADO
+  POSGRADO
+
+  @@schema("usuario")
+}
+
+enum rol_enum {
+  ESTUDIANTE
+  ADMINISTRATIVO
+
+  @@schema("usuario")
+}
