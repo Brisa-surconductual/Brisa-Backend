@@ -1,6 +1,5 @@
-export enum MotivoCierre{
-    VOLUNTARIO,
-    INACTIVIDAD,
-    SEGUNDO_PLANO,
-
+export enum MotivoCierre {
+  VOLUNTARIO = 'VOLUNTARIO',
+  INACTIVIDAD = 'INACTIVIDAD',
+  SEGUNDO_PLANO = 'SEGUNDO_PLANO',
 }

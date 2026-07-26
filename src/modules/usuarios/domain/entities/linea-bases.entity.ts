@@ -1,119 +1,141 @@
-import { randomUUID } from "crypto";
-import { frecuenciaConsumo } from "../value-objects/frecuencia-consumo.vo";
-import { semestreCursado } from "../value-objects/semestre-cursado.vo";
-import {NivelAcademico} from "../enums/nivel-academico-enum";
-import {MotivoConsumo} from "../enums/motivo-consumo-enum";
+import { randomUUID } from 'node:crypto';
+import { DatosLineaBaseInvalidosException } from '../exceptions/usuario.exceptions';
+import { MotivoConsumo } from '../enums/motivo-consumo-enum';
+import { NivelAcademico } from '../enums/nivel-academico-enum';
+import { FechasConsumoCoherentes } from '../value-objects/fechas-consumo-coherentes.vo';
+import { FrecuenciaConsumo } from '../value-objects/frecuencia-consumo.vo';
+import { SemestreCursado } from '../value-objects/semestre-cursado.vo';
+
+export interface LineaBaseDatos {
+  ciudad: string;
+  entidadEducativa: string;
+  programaAcademico: string;
+  semestre: number;
+  nivelAcademico: NivelAcademico;
+  edad: number;
+  fechaInicioConsumo: Date;
+  fechaUltimoConsumo: Date;
+  motivoInicioConsumo: MotivoConsumo;
+  frecuenciaConsumo: number;
+}
+
+export interface LineaBaseReconstitucion extends LineaBaseDatos {
+  id: string;
+  idUsuario: string;
+  fechaCreacion: Date;
+  fechaActualizacion: Date;
+}
 
 export class LineaBase {
+  private readonly semestre: SemestreCursado;
+  private readonly frecuencia: FrecuenciaConsumo;
 
-    private constructor(
+  private constructor(private readonly props: LineaBaseReconstitucion) {
+    this.semestre = new SemestreCursado(props.semestre);
+    this.frecuencia = new FrecuenciaConsumo(props.frecuenciaConsumo);
+    new FechasConsumoCoherentes(
+      props.fechaInicioConsumo,
+      props.fechaUltimoConsumo,
+    );
 
-        private readonly id_linea_base: string,
-        private readonly id_usuario: string,
-        private ciudad: string,
-        private entidad_educativa: string,
-        private programa_academico: string,
-        private semestre: semestreCursado,
-        private nivelAcademico: NivelAcademico,
-        private fechaInicioConsumo: Date,
-        private fechaUltimoConsumo: Date,
-        private motivoInicioConsumo: MotivoConsumo,
-        private frecuenciaConsumo: frecuenciaConsumo,
-        private fechaCreacion: Date, 
-        private fechaActualizacion: Date,
-        private fechaNacimiento: Date
-
-    ) {}
-
-    static crear(
-        idUsuario: string,
-        ciudad: string,
-        entidadEducativa: string,
-        programaAcademico: string,
-        semestre: semestreCursado,
-        nivelAcademico: NivelAcademico,
-        fechaInicioConsumo: Date,
-        fechaUltimoConsumo: Date,
-        motivoInicioConsumo: MotivoConsumo,
-        frecuencia: frecuenciaConsumo,
-        fechaCreacion: Date,
-        fechaNacimiento: Date,
-
-    ): LineaBase {
-
-        return new LineaBase(
-            randomUUID(),
-            idUsuario,
-            ciudad,
-            entidadEducativa,
-            programaAcademico,
-            semestre,
-            nivelAcademico,
-            fechaInicioConsumo,
-            fechaUltimoConsumo,
-            motivoInicioConsumo,
-            frecuencia,
-            new Date(),
-            new Date(),
-            fechaNacimiento
-        );
-
+    if (!Number.isInteger(props.edad) || props.edad < 14 || props.edad > 120) {
+      throw new DatosLineaBaseInvalidosException(
+        'La edad debe estar entre 14 y 120 años.',
+      );
     }
 
-    getId(): string {
-        return this.id_linea_base;
+    if (
+      !props.ciudad.trim() ||
+      !props.entidadEducativa.trim() ||
+      !props.programaAcademico.trim()
+    ) {
+      throw new DatosLineaBaseInvalidosException();
     }
+  }
 
-    getUsuarioId(): string {
-        return this.id_usuario;
-    }
+  static crear(idUsuario: string, datos: LineaBaseDatos): LineaBase {
+    const now = new Date();
+    return new LineaBase({
+      ...datos,
+      id: randomUUID(),
+      idUsuario,
+      fechaCreacion: now,
+      fechaActualizacion: now,
+    });
+  }
 
-    getCiudad(): string {
-        return this.ciudad;
-    }
+  static reconstituir(props: LineaBaseReconstitucion): LineaBase {
+    return new LineaBase(props);
+  }
 
-    getEntidadEducativa(): string {
-        return this.entidad_educativa;
-    }
+  getId(): string {
+    return this.props.id;
+  }
 
-    getProgramaAcademico(): string {
-        return this.programa_academico;
-    }
+  getUsuarioId(): string {
+    return this.props.idUsuario;
+  }
 
-    getSemestre(): semestreCursado {
-        return this.semestre;
-    }   
+  getCiudad(): string {
+    return this.props.ciudad;
+  }
 
-    getNivelAcademico(): NivelAcademico {
-        return this.nivelAcademico;
-    }
+  getEntidadEducativa(): string {
+    return this.props.entidadEducativa;
+  }
 
-    getFechaInicioConsumo(): Date {
-        return this.fechaInicioConsumo;
-    }   
+  getProgramaAcademico(): string {
+    return this.props.programaAcademico;
+  }
 
-    getFechaUltimoConsumo(): Date {
-        return this.fechaUltimoConsumo;
-    }   
+  getSemestre(): SemestreCursado {
+    return this.semestre;
+  }
 
-    getMotivoInicioConsumo(): MotivoConsumo {
-        return this.motivoInicioConsumo;
-    }
+  getNivelAcademico(): NivelAcademico {
+    return this.props.nivelAcademico;
+  }
 
-    getFrecuenciaConsumo(): frecuenciaConsumo {
-        return this.frecuenciaConsumo;
-    }
+  getEdad(): number {
+    return this.props.edad;
+  }
 
-    getFechaCreacion(): Date {
-        return this.fechaCreacion;
-    }   
+  getFechaInicioConsumo(): Date {
+    return this.props.fechaInicioConsumo;
+  }
 
-    getFechaActualizacion(): Date {
-        return this.fechaActualizacion;
-    }   
+  getFechaUltimoConsumo(): Date {
+    return this.props.fechaUltimoConsumo;
+  }
 
-    getFechaNacimiento(): Date {
-        return this.fechaNacimiento;
-    }   
+  getMotivoInicioConsumo(): MotivoConsumo {
+    return this.props.motivoInicioConsumo;
+  }
 
+  getFrecuenciaConsumo(): FrecuenciaConsumo {
+    return this.frecuencia;
+  }
+
+  getFechaCreacion(): Date {
+    return this.props.fechaCreacion;
+  }
+
+  getFechaActualizacion(): Date {
+    return this.props.fechaActualizacion;
+  }
+
+  toDatos(): LineaBaseDatos {
+    return {
+      ciudad: this.props.ciudad,
+      entidadEducativa: this.props.entidadEducativa,
+      programaAcademico: this.props.programaAcademico,
+      semestre: this.semestre.getValue(),
+      nivelAcademico: this.props.nivelAcademico,
+      edad: this.props.edad,
+      fechaInicioConsumo: this.props.fechaInicioConsumo,
+      fechaUltimoConsumo: this.props.fechaUltimoConsumo,
+      motivoInicioConsumo: this.props.motivoInicioConsumo,
+      frecuenciaConsumo: this.frecuencia.getValue(),
+    };
+  }
 }

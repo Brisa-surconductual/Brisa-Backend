@@ -1,4 +1,4 @@
-export enum NivelAcademico{
-    PREGRADO, 
-    POSGRADO
+export enum NivelAcademico {
+  PREGRADO = 'PREGRADO',
+  POSGRADO = 'POSGRADO',
 }

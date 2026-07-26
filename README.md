@@ -2,7 +2,16 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-# Brsia Backend
+# Brisa Backend
+
+> El módulo de gestión de usuarios ya incluye Prisma, autenticación JWT,
+> sesiones revocables, consentimiento, línea base, recuperación de contraseña
+> y RBAC. Consulta [la documentación operativa del módulo](docs/modulo-usuarios.md).
+>
+> Entregables del Módulo 1:
+>
+> - [Memoria técnica de la implementación](docs/IMPLEMENTACION_MODULO_USUARIOS.md).
+> - [Guía completa de pruebas en Postman](docs/PRUEBAS_POSTMAN_MODULO_USUARIOS.md).
 
 Backend desarrollado con **NestJS** bajo una arquitectura **Monolito Modular**, implementando principios de **Arquitectura Hexagonal (Ports & Adapters)** y **Screaming Architecture**, con el objetivo de construir una aplicación escalable, mantenible y desacoplada.
 
@@ -334,7 +343,14 @@ Motor utilizado:
 
 ORM:
 
-- Prisma ORM *(cuando sea integrado al proyecto)*
+- Prisma ORM
+
+Aplicar el esquema y crear el consentimiento inicial:
+
+```bash
+pnpm prisma migrate deploy
+pnpm prisma db seed
+```
 
 ---
 
@@ -347,4 +363,3 @@ ORM:
 - Los repositorios del dominio son contratos, no implementaciones.
 
 ---
-

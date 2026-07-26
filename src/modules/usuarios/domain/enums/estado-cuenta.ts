@@ -1,7 +1,5 @@
-export enum EstadoCuenta{
-
-    ACTIVA="ACTIVA",
-
-    BLOQUEADA="BLOQUEADA"
-
+export enum EstadoCuenta {
+  PENDIENTE_ACTIVACION = 'PENDIENTE_ACTIVACION',
+  ACTIVA = 'ACTIVA',
+  INACTIVA = 'INACTIVA',
 }
