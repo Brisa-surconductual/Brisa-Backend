@@ -1,16 +1,17 @@
-import { lineaBaseFechasFueraRangoException } from "../exeption/lineaBase-fechas-fuera-rango.exeption";
+import { FechasConsumoIncoherentesException } from '../exceptions/usuario.exceptions';
 
-export class fechasConsumoCoherentes{
-
-    constructor(
-        readonly fechaInicio:Date,
-        readonly fechaUltimo:Date
-    ){
-
-       if(fechaInicio > fechaUltimo){
-         throw new lineaBaseFechasFueraRangoException();
-       }
+export class FechasConsumoCoherentes {
+  constructor(
+    readonly fechaInicio: Date,
+    readonly fechaUltimo: Date,
+  ) {
+    if (
+      Number.isNaN(fechaInicio.getTime()) ||
+      Number.isNaN(fechaUltimo.getTime()) ||
+      fechaInicio > fechaUltimo ||
+      fechaUltimo > new Date()
+    ) {
+      throw new FechasConsumoIncoherentesException();
     }
-
-
+  }
 }

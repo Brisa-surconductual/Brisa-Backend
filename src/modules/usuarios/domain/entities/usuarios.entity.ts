@@ -1,113 +1,114 @@
-import { randomUUID } from "crypto";
-import { Rol } from "../enums/rol.enum";
-import { EstadoCuenta } from "../enums/estado-cuenta";
-import { EstadoRegistro } from "../enums/estado-registro.enum";
-import { CorreoElectronico } from "../value-objects/correo_electronico.vo";
+import { randomUUID } from 'node:crypto';
+import { EstadoCuenta } from '../enums/estado-cuenta';
+import { EstadoRegistro } from '../enums/estado-registro.enum';
+import { Rol } from '../enums/rol.enum';
+import { CorreoElectronico } from '../value-objects/correo_electronico.vo';
+
+export interface UsuarioReconstitucion {
+  id: string;
+  correo: CorreoElectronico;
+  contrasenaHash: string;
+  rol: Rol;
+  estadoRegistro: EstadoRegistro;
+  estadoCuenta: EstadoCuenta;
+  fechaRegistro: Date;
+  fechaActualizacion: Date;
+  consentimientoAceptado: boolean;
+  registroConsumoAceptado: boolean;
+  idConsentimiento: string | null;
+}
 
 export class Usuario {
+  private constructor(private readonly props: UsuarioReconstitucion) {}
 
-    private constructor(
-        private readonly id_usuario: string,
-        private correo: CorreoElectronico,
-        private contrasenaHash: string,
-        private rol: Rol,
-        private estadoRegistro: EstadoRegistro,
-        private estadoCuenta: EstadoCuenta,
-        private readonly fechaRegistro: Date,
-        private fechaActualizacion: Date, 
-        private consentimeintoAceptado: boolean,
-        private registroConsumoAceptado: boolean,
-        private idConsentimiento: string,
-    ) {}
+  static crear(correo: CorreoElectronico, contrasenaHash: string): Usuario {
+    const now = new Date();
 
-    static crear(
-        correo: CorreoElectronico,
-        contrasenaHash: string,
-        rol: Rol,
-        estadoRegistro: EstadoRegistro,
-        estadoCuenta: EstadoCuenta,
-        fechaRegistro: Date = new Date(),
-        consentimeintoAceptado,
-        registroConsumoAceptado,
-        idConsentimiento
-    ): Usuario {
+    return new Usuario({
+      id: randomUUID(),
+      correo,
+      contrasenaHash,
+      rol: Rol.ESTUDIANTE,
+      estadoRegistro: EstadoRegistro.PENDIENTE_CONSENTIMIENTO,
+      estadoCuenta: EstadoCuenta.ACTIVA,
+      fechaRegistro: now,
+      fechaActualizacion: now,
+      consentimientoAceptado: false,
+      registroConsumoAceptado: false,
+      idConsentimiento: null,
+    });
+  }
 
-        return new Usuario(
-            randomUUID(),
-            correo,
-            contrasenaHash,
-            rol,
-            estadoRegistro,
-            estadoCuenta,
-            new Date(),
-            new Date(),
-            consentimeintoAceptado,
-            registroConsumoAceptado,
-            idConsentimiento
-        );
+  static reconstituir(props: UsuarioReconstitucion): Usuario {
+    return new Usuario(props);
+  }
 
-    }
+  getId(): string {
+    return this.props.id;
+  }
 
-    getId(): string {
-        return this.id_usuario;
-    }
+  getCorreo(): CorreoElectronico {
+    return this.props.correo;
+  }
 
-    getCorreo(): CorreoElectronico {
-        return this.correo;
-    }
+  getContrasenaHash(): string {
+    return this.props.contrasenaHash;
+  }
 
-    getContrasenaHash(): string {
-        return this.contrasenaHash;
-    }
+  getRol(): Rol {
+    return this.props.rol;
+  }
 
-    getRol(): Rol {
-        return this.rol;
-    }
+  getEstadoRegistro(): EstadoRegistro {
+    return this.props.estadoRegistro;
+  }
 
-    getEstadoRegistro(): EstadoRegistro {
-        return this.estadoRegistro;
-    }
+  getEstadoCuenta(): EstadoCuenta {
+    return this.props.estadoCuenta;
+  }
 
-    getEstadoCuenta(): EstadoCuenta {
-        return this.estadoCuenta;
-    }
+  getFechaRegistro(): Date {
+    return this.props.fechaRegistro;
+  }
 
-    getFechaRegistro(): Date {
-        return this.fechaRegistro;
-    }
+  getFechaActualizacion(): Date {
+    return this.props.fechaActualizacion;
+  }
 
-    getFechaActualizacion(): Date {
-        return this.fechaActualizacion;
-    }
+  getConsentimientoAceptado(): boolean {
+    return this.props.consentimientoAceptado;
+  }
 
-    activarCuenta(): void {
-        this.estadoCuenta = EstadoCuenta.ACTIVA;
-        this.fechaActualizacion = new Date();
-    }
+  getRegistroConsumoAceptado(): boolean {
+    return this.props.registroConsumoAceptado;
+  }
 
-    bloquearCuenta(): void {
-        this.estadoCuenta = EstadoCuenta.BLOQUEADA;
-        this.fechaActualizacion = new Date();
-    }
+  getIdConsentimiento(): string | null {
+    return this.props.idConsentimiento;
+  }
 
+  actualizarContrasena(hash: string): void {
+    this.props.contrasenaHash = hash;
+    this.props.fechaActualizacion = new Date();
+  }
 
+  marcarPendienteRevision(idConsentimiento: string): void {
+    this.props.idConsentimiento = idConsentimiento;
+    this.props.consentimientoAceptado = true;
+    this.props.registroConsumoAceptado = true;
+    this.props.estadoRegistro = EstadoRegistro.PENDIENTE_REVISION;
+    this.props.fechaActualizacion = new Date();
+  }
 
-    cambiarCorreo(correo: CorreoElectronico): void {
-        this.correo = correo;
-        this.fechaActualizacion = new Date();
-    }
+  invalidarConsentimiento(): void {
+    this.props.consentimientoAceptado = false;
+    this.props.registroConsumoAceptado = false;
+    this.props.estadoRegistro = EstadoRegistro.PENDIENTE_CONSENTIMIENTO;
+    this.props.fechaActualizacion = new Date();
+  }
 
-    getConsentimientoAceptado(): boolean {
-        return this.consentimeintoAceptado;
-    }
-
-    getRegistroConsumoAceptado(): boolean {
-        return this.registroConsumoAceptado;
-    }
-
-    getIdConsentimiento(): string {
-        return this.idConsentimiento;
-    }
-
-
+  completarRegistro(): void {
+    this.props.estadoRegistro = EstadoRegistro.REGISTRO_COMPLETO;
+    this.props.fechaActualizacion = new Date();
+  }
 }

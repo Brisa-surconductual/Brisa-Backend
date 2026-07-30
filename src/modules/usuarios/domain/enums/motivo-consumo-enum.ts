@@ -1,8 +1,8 @@
-export enum MotivoConsumo{
-    ESTRES,
-    PRESION_SOCIAL, 
-    CURIOSIDAD, 
-    ANSIEDAD, 
-    HABITO,
-    OTRO
+export enum MotivoConsumo {
+  ESTRES = 'ESTRES',
+  PRESION_SOCIAL = 'PRESION_SOCIAL',
+  CURIOSIDAD = 'CURIOSIDAD',
+  ANSIEDAD = 'ANSIEDAD',
+  HABITO = 'HABITO',
+  OTRO = 'OTRO',
 }
