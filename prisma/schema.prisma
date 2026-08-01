@@ -11,34 +11,15 @@ datasource db {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model consentimientos {
-  id_consentimiento           String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  version_consentimiento      String                        @unique(map: "uq_consentimientos_version") @db.VarChar(20)
-  vigente                     Boolean                       @default(true)
-  fecha_invalidacion          DateTime?                     @db.Timestamptz(6)
-  motivo_invalidacion         String?
-  url_contenido               String
-  titulo                      String                        @db.VarChar(35)
-  usuarios                    usuarios[]
-  aceptaciones_consentimiento aceptaciones_consentimiento[]
+  id_consentimiento      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  version_consentimiento String     @db.VarChar(20)
+  vigente                Boolean    @default(true)
+  fecha_invalidacion     DateTime?  @db.Timestamptz(6)
+  motivo_invalidacion    String?
+  url_contenido          String
+  titulo                 String     @db.VarChar(35)
+  usuarios               usuarios[]
 
-  @@schema("usuario")
-}
-
-model aceptaciones_consentimiento {
-  id_aceptacion              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  id_usuario                 String          @db.Uuid
-  id_consentimiento          String          @db.Uuid
-  tratamiento_datos_aceptado Boolean
-  registro_consumo_aceptado  Boolean
-  fecha_aceptacion           DateTime        @default(now()) @db.Timestamptz(6)
-  vigente                    Boolean         @default(true)
-  fecha_invalidacion         DateTime?       @db.Timestamptz(6)
-  motivo_invalidacion        String?
-  usuarios                   usuarios        @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_aceptacion_usuario")
-  consentimientos            consentimientos @relation(fields: [id_consentimiento], references: [id_consentimiento], onDelete: Restrict, onUpdate: NoAction, map: "fk_aceptacion_consentimiento")
-
-  @@index([id_usuario, vigente], map: "ix_aceptacion_usuario_vigente")
-  @@index([id_consentimiento], map: "ix_aceptacion_consentimiento")
   @@schema("usuario")
 }
 
@@ -58,7 +39,6 @@ model linea_base {
   frecuencia_consumo    Int
   fecha_creacion        DateTime               @default(now()) @db.Timestamptz(6)
   fecha_actualizacion   DateTime               @default(now()) @db.Timestamptz(6)
-  edad                  Int?
   fecha_nacimiento      DateTime?              @db.Date
   usuarios              usuarios               @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_linea_base_usuario")
   linea_base_historial  linea_base_historial[]
@@ -106,7 +86,7 @@ model solicitudes_recuperacion {
   correo_electronico String              @db.VarChar(255)
   id_usuario         String?             @db.Uuid
   direccion_ip       String              @db.VarChar(45)
-  codigo_hash        String?             @unique(map: "uq_recuperacion_codigo_hash")
+  codigo_hash        String?
   fecha_solicitud    DateTime            @default(now()) @db.Timestamptz(6)
   fecha_expiracion   DateTime?           @db.Timestamptz(6)
   estado_codigo      estado_codigo_enum? @default(ACTIVO)
@@ -121,23 +101,22 @@ model solicitudes_recuperacion {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model usuarios {
-  id_usuario                  String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  correo_electronico          String                        @unique(map: "uq_usuarios_correo") @db.VarChar(255)
-  contrasena_hash             String
-  rol                         rol_enum                      @default(ESTUDIANTE)
-  estado_registro             estado_registro_enum          @default(PENDIENTE_CONSENTIMIENTO)
-  estado_cuenta               estado_cuenta_enum            @default(ACTIVA)
-  fecha_registro              DateTime                      @default(now()) @db.Timestamptz(6)
-  fecha_actualizacion         DateTime                      @default(now()) @db.Timestamptz(6)
-  consentimiendo_aceptado     Boolean?
-  registro_consumo_aceptado   Boolean?
-  id_consentimiento           String?                       @db.Uuid
-  linea_base                  linea_base?
-  linea_base_historial        linea_base_historial[]
-  sesiones                    sesiones[]
-  solicitudes_recuperacion    solicitudes_recuperacion[]
-  consentimientos             consentimientos?              @relation(fields: [id_consentimiento], references: [id_consentimiento], onUpdate: NoAction, map: "fk_usuarios_consentimiento")
-  aceptaciones_consentimiento aceptaciones_consentimiento[]
+  id_usuario                String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correo_electronico        String                     @unique(map: "uq_usuarios_correo") @db.VarChar(255)
+  contrasena_hash           String
+  rol                       rol_enum                   @default(ESTUDIANTE)
+  estado_registro           estado_registro_enum       @default(PENDIENTE_CONSENTIMIENTO)
+  estado_cuenta             estado_cuenta_enum         @default(ACTIVA)
+  fecha_registro            DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion       DateTime                   @default(now()) @db.Timestamptz(6)
+  consentimiendo_aceptado   Boolean?
+  registro_consumo_aceptado Boolean?
+  id_consentimiento         String                     @db.Uuid
+  linea_base                linea_base?
+  linea_base_historial      linea_base_historial[]
+  sesiones                  sesiones[]
+  solicitudes_recuperacion  solicitudes_recuperacion[]
+  consentimientos           consentimientos            @relation(fields: [id_consentimiento], references: [id_consentimiento], onUpdate: NoAction, map: "fk_usuarios_consentimiento")
 
   @@index([estado_registro], map: "ix_usuarios_estado_registro")
   @@index([rol], map: "ix_usuarios_rol")

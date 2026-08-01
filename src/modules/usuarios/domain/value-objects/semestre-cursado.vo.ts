@@ -1,19 +1,13 @@
-import { DatosLineaBaseInvalidosException } from '../exceptions/usuario.exceptions';
-
-export class SemestreCursado {
-  constructor(private readonly semestreCursado: number) {
-    if (
-      !Number.isInteger(semestreCursado) ||
-      semestreCursado < 1 ||
-      semestreCursado > 20
-    ) {
-      throw new DatosLineaBaseInvalidosException(
-        'El semestre cursado debe estar entre 1 y 20.',
-      );
+export class semestreCursado{
+    constructor(
+        private readonly semestre_cursado: number
+    ){
+        if(semestre_cursado < 1 || semestre_cursado > 20){
+            throw new Error("El semestre cursado debe estar entre 1 y 20.");
+        }
     }
-  }
 
-  getValue(): number {
-    return this.semestreCursado;
-  }
+    getValue(): number {
+        return this.semestre_cursado;
+    }
 }

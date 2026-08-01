@@ -1,20 +1,19 @@
-import { CorreoInvalidoException } from '../exceptions/usuario.exceptions';
+export class CorreoElectronico{
 
-export class CorreoElectronico {
-  readonly value: string;
+    constructor(
+        readonly value:string
+    ){
 
-  constructor(value: string) {
-    const normalized = value.trim().toLowerCase();
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!regex.test(normalized) || normalized.length > 255) {
-      throw new CorreoInvalidoException();
+        if(!regex.test(value)){
+            throw new Error("Correo electrónico inválido.");
+        }
+
     }
 
-    this.value = normalized;
-  }
+    getValue(): string {
+        return this.value;
+    }
 
-  getValue(): string {
-    return this.value;
-  }
 }
