@@ -92,6 +92,7 @@ model solicitudes_recuperacion {
   estado_codigo      estado_codigo_enum? @default(ACTIVO)
   usuarios           usuarios?           @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction, map: "fk_recuperacion_usuario")
 
+  @@unique([codigo_hash, codigo_hash], map: "uq_codigo-hash")
   @@index([estado_codigo], map: "ix_recuperacion_estado")
   @@index([correo_electronico, direccion_ip, fecha_solicitud], map: "ix_recuperacion_rate_limit")
   @@schema("usuario")

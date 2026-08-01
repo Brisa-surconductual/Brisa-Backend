@@ -1,14 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { UsuarioRepository } from "../../domain/repositories/user.repository";
 import { PrismaService } from "../../../../../prisma/prisma.service"
-
-
 import { Usuario } from "../../domain/entities/usuarios.entity";
 import { LineaBase } from "../../domain/entities/linea-bases.entity";
 import { UsuarioMapper } from "../mappers/user.mapper";
 import { LineaBaseMapper } from "../mappers/linea-base.mapper";
 
-import {CorreoDuplicadoException} from "../../domain/exeption/correo-duplicado.exeption";
 
 @Injectable()
 export class PrismaUsuarioRepository  implements UsuarioRepository {

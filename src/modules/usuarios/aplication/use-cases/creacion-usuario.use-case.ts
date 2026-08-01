@@ -11,6 +11,7 @@ import { LineaBase } from '../../domain/entities/linea-bases.entity';
 import { fechasConsumoCoherentes } from '../../domain/value-objects/fechas-consumo-coherentes.vo';
 import {PasswordHasher} from '../ports/password-hasher';
 
+
 @Injectable()
 export class CreacionUsuarioUseCase{
     constructor(
@@ -48,7 +49,7 @@ export class CreacionUsuarioUseCase{
         );
 
         const lineaBase = LineaBase.crear(
-            usuario.getId(),
+            usuario.id_usuario,
             dto.ciudad,
             dto.entidad_educativa,
             dto.programa_academico,
@@ -64,8 +65,7 @@ export class CreacionUsuarioUseCase{
 
         await this.usuarioRepository.crear(usuario,lineaBase);
 
-
-        const response = new CreacionUsuarioDtoResponse();
-        return response;
+        return CreacionUsuarioDtoResponse.crear(usuario,lineaBase);
+    
     }
 }

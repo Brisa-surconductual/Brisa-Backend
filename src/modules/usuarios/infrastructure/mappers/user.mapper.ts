@@ -11,27 +11,27 @@ export class UsuarioMapper {
 
         return {
 
-            id_usuario: usuario.getId(),
+            id_usuario: usuario.id_usuario,
 
-            correo_electronico: usuario.getCorreo().getValue(), 
+            correo_electronico: usuario.correo.value, 
 
-            contrasena_hash: usuario.getContrasenaHash(),
+            contrasena_hash: usuario.contrasenaHash,
 
-            rol: usuario.getRol() as rol_enum,
+            rol: usuario.rol as rol_enum,
 
-            estado_registro: usuario.getEstadoRegistro(),
+            estado_registro: usuario.estadoRegistro,
 
-            estado_cuenta: usuario.getEstadoCuenta(),
+            estado_cuenta: usuario.estadoCuenta,
 
-            fecha_registro: usuario.getFechaRegistro(),
+            fecha_registro: usuario.fechaRegistro,
 
-            fecha_actualizacion: usuario.getFechaActualizacion(),
+            fecha_actualizacion: usuario.fechaActualizacion,
 
-            consentimiendo_aceptado: usuario.getConsentimientoAceptado(),
+            consentimiendo_aceptado: usuario.consentimeintoAceptado,
 
-            registro_consumo_aceptado: usuario.getRegistroConsumoAceptado(),
+            registro_consumo_aceptado: usuario.registroConsumoAceptado,
 
-            id_consentimiento: usuario.getIdConsentimiento(),
+            id_consentimiento: usuario.idConsentimiento
 
         };
 
