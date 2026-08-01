@@ -1,4 +1,4 @@
-export enum EstadoAplicacion {
-  ACTIVA = 'ACTIVA',
-  SEGUNDO_PLANO = 'SEGUNDO_PLANO',
+export enum EstadoAplicacion{
+    ACTIVA,
+    SEGUNDO_PLANO,
 }

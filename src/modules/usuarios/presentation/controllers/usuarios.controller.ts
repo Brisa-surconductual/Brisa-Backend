@@ -1,19 +1,24 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { CreacionUsuarioUseCase } from '../../application/use-cases/creacion-usuario.use-case';
-import { CrearUsuarioDto } from '../dto/crear-usuario.dto';
+import {  Body, Controller,
+    HttpCode,
+    HttpStatus,
+    Post,
+} from "@nestjs/common";
 
-@Controller('usuarios')
+import { CreacionUsuarioUseCase } from "../../aplication/use-cases/creacion-usuario.use-case";
+import { CreacionUsuarioDtoRequest } from "../../aplication/dto/creacion-usuario.dto-request";
+import { CreacionUsuarioDtoResponse } from "../../aplication/dto/creacion-usuario.dto-response";
+
+@Controller("/usuarios")
 export class UsuariosController {
-  constructor(private readonly creacionUsuario: CreacionUsuarioUseCase) {}
 
-  @Post()
-  async crear(@Body() dto: CrearUsuarioDto) {
-    return this.creacionUsuario.execute(dto);
-  }
+    constructor(
+        private readonly crearUsuario: CreacionUsuarioUseCase,
+    ) {}
 
-  @Post('crear')
-  @HttpCode(HttpStatus.CREATED)
-  async crearAlias(@Body() dto: CrearUsuarioDto) {
-    return this.creacionUsuario.execute(dto);
-  }
+    @Post("/crear")
+    @HttpCode(HttpStatus.CREATED)
+    async crear(@Body() dto: CreacionUsuarioDtoRequest,): Promise<CreacionUsuarioDtoResponse> {
+        return this.crearUsuario.execute(dto);
+    }
+
 }

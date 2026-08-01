@@ -1,5 +1,4 @@
-export enum EstadoCodigo {
-  ACTIVO = 'ACTIVO',
-  USADO = 'USADO',
-  EXPIRADO = 'EXPIRADO',
+export enum EstadoCodigo{
+    ACTIVA,
+    SEGUNDO_PLANO,
 }
