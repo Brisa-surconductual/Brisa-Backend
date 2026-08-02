@@ -35,20 +35,40 @@ export class SolicitudRecuperacion{
         );
     }
 
-    static cambiarEstadoCodigo(solicitud: SolicitudRecuperacion, nuevoEstado: EstadoCodigo): SolicitudRecuperacion {
+    marcarComoExpirada(): SolicitudRecuperacion {
         return new SolicitudRecuperacion(
-            solicitud.idSolicitudRecuperacion,
-            solicitud.correoElectronico,
-            solicitud.idUsuario,
-            solicitud.direccionIp,
-            solicitud.codigoHash,
-            solicitud.fechaSolicitud,
-            solicitud.fechaExpiracion,
-            nuevoEstado
+            this.idSolicitudRecuperacion,
+            this.correoElectronico,
+            this.idUsuario,
+            this.direccionIp,
+            this.codigoHash,
+            this.fechaSolicitud,
+            this.fechaExpiracion,
+            EstadoCodigo.EXPIRADO,
         );
-    
     }
 
+    marcarComoUsada(): SolicitudRecuperacion {
+        return new SolicitudRecuperacion(
+            this.idSolicitudRecuperacion,
+            this.correoElectronico,
+            this.idUsuario,
+            this.direccionIp,
+            this.codigoHash,
+            this.fechaSolicitud,
+            this.fechaExpiracion,
+            EstadoCodigo.USADO,
+        );
+    }
 
+    estaExpirada(): boolean {
+        return new Date() > this.fechaExpiracion;
+    }
 
+    esValida(): boolean {
+    return (
+        this.estadoCodigo === EstadoCodigo.ACTIVO &&
+        !this.estaExpirada()
+    );
+    }
 }

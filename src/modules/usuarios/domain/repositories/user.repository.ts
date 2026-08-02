@@ -12,4 +12,8 @@ export abstract class UsuarioRepository{
 
     abstract buscarPorCorreo(correo:string):Promise<Usuario | null>;
 
+    abstract buscarPorId(id_usuario:string):Promise<Usuario | null>;
+    abstract actualizar(usuario:Usuario):Promise<void>;
+
+
 }

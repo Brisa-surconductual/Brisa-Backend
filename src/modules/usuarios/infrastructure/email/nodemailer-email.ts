@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { EmailService } from "../../aplication/ports/email";
+import { EmailService } from "../../application/ports/email";
 import * as nodemailer from "nodemailer";
 import { TemplateEngine } from "./templete-engine";
 

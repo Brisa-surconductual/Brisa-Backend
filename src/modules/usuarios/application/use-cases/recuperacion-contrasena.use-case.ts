@@ -7,21 +7,22 @@ import { SolicitarRecuperacionDtoResponse } from "../dto/solicitar-recuperacion.
 import {RecoveryTokenGenerator} from '../ports/passhwor-recovery-token-generator';
 import {PasswordHasher} from '../ports/password-hasher';
 import { EmailService } from "../ports/email";
+import { RecoveryCodeHasher } from "../ports/recovery-code-hasher";
+import { CodigoRecuperacionInvalidoException } from "../../domain/exeption/codigo-recuperacion-invaliado.exeption";
 
 @Injectable()
 export class RecuperacionUseCase {
     constructor(
         private readonly recuperacionRepository: RecuperacionRepository,
-        private readonly passwordHasher: PasswordHasher,
         private readonly recoveryTokenGenerator: RecoveryTokenGenerator,
         private readonly emailService: EmailService,
+        private readonly recoveryCodeHasher: RecoveryCodeHasher
     ) {}
 
     async execute(solicitud: SolicitarRecuperacionDtoRequest, direccionIp: string): Promise<SolicitarRecuperacionDtoResponse> {
         
-        const token = this.recoveryTokenGenerator.generarToken();
-        const tokenHash = await this.passwordHasher.hash(token);
-
+        const codigo = this.recoveryTokenGenerator.generarToken();
+        const codigoHash = await this.recoveryCodeHasher.hash(codigo);
         
         const idUsuario = await this.recuperacionRepository.buscarIdUsuarioPorCorreo(solicitud.correoElectronico);
         if (!idUsuario) {
@@ -30,16 +31,18 @@ export class RecuperacionUseCase {
 
         const correoElectronico = new CorreoElectronico(solicitud.correoElectronico);
         
+        
+        
         const solicitudRecuperacion = SolicitudRecuperacion.crear(
             correoElectronico,
             direccionIp,
             idUsuario,
-            tokenHash
+            codigoHash
         );
 
         await this.recuperacionRepository.crear(solicitudRecuperacion);
 
-        await this.emailService.enviarRecuperacionContrasena(solicitud.correoElectronico, token);
+        await this.emailService.enviarRecuperacionContrasena(solicitud.correoElectronico, codigo);
 
         return  SolicitarRecuperacionDtoResponse.crear();
          

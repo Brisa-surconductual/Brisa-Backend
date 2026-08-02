@@ -27,7 +27,7 @@ export class CreacionUsuarioDtoResponse {
     static crear(usuario: Usuario, lineaBase: LineaBase): CreacionUsuarioDtoResponse {
         const dto = new CreacionUsuarioDtoResponse();
         dto.correo_electronico = usuario.correo.value;
-        dto.fecha_nacimiento = lineaBase.getFechaNacimiento();
+        dto.fecha_nacimiento = lineaBase.fechaNacimiento;
         dto.rol = usuario.rol;
         dto.fecha_registro = usuario.fechaRegistro;
         dto.estado_registro = usuario.estadoRegistro.toString();

@@ -8,7 +8,7 @@ import { LineaBaseMapper } from "../mappers/linea-base.mapper";
 
 
 @Injectable()
-export class PrismaUsuarioRepository  implements UsuarioRepository {
+export class PrismaUsuarioRepository implements UsuarioRepository {
     constructor(
         private readonly prisma: PrismaService
     ) {}
@@ -45,5 +45,25 @@ export class PrismaUsuarioRepository  implements UsuarioRepository {
 
             });
 
+        }
+
+        async buscarPorId(id_usuario: string): Promise<Usuario | null> {
+            const usuario = await this.prisma.usuarios.findUnique({
+                where: { id_usuario },
+            });
+
+            if (!usuario) return null;
+
+            return UsuarioMapper.toDomain(usuario);
+        }
+
+        async actualizar(usuario: Usuario): Promise<void> {
+            await this.prisma.usuarios.update({
+                where: { id_usuario: usuario.id_usuario },
+                data: {
+                    contrasena_hash: usuario.contrasenaHash,
+                    fecha_actualizacion: usuario.fechaActualizacion,
+                },
+            });
         }
 }

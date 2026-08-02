@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { PasswordHasher } from "../../aplication/ports/password-hasher";
-import {RecoveryTokenGenerator} from "../../aplication/ports/passhwor-recovery-token-generator";
+import { PasswordHasher } from "../../application/ports/password-hasher";
+import {RecoveryTokenGenerator} from "../../application/ports/passhwor-recovery-token-generator";
 import * as bcrypt from 'bcrypt';
 import {randomInt} from 'crypto';
 

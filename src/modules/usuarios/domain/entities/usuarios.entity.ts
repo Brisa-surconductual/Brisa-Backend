@@ -6,7 +6,7 @@ import { CorreoElectronico } from "../value-objects/correo_electronico.vo";
 
 export class Usuario {
 
-    private constructor(
+    constructor(
         readonly id_usuario: string,
         readonly correo: CorreoElectronico,
         readonly contrasenaHash: string,
@@ -48,4 +48,24 @@ export class Usuario {
 
     }
 
+    static actualizarContrasena(
+        usuario: Usuario,
+        nuevaContrasenaHash: string,
+    ): Usuario {
+        return new Usuario(
+            usuario.id_usuario,
+            usuario.correo,
+            nuevaContrasenaHash,
+            usuario.rol,
+            usuario.estadoRegistro,
+            usuario.estadoCuenta,
+            usuario.fechaRegistro,
+            new Date(),
+            usuario.consentimeintoAceptado,
+            usuario.registroConsumoAceptado,
+            usuario.idConsentimiento,
+        );
+    }
+
+    
 }

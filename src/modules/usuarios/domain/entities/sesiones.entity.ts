@@ -3,14 +3,14 @@ import {EstadoAplicacion} from "../enums/estado-aplicacion-enum";
 
 export class Sesion{
     constructor(
-        private readonly id_sesion:string,
-        private id_usuario:string,
-        private fecha_inicio_sesion:Date,
-        private fecha_ultima_interaccion:Date,
-        private limite_inactividad_minutos: number,
-        private estado_aplicacion: EstadoAplicacion,
-        private activa:Boolean, 
-        private fecha_cierre_sesion:Date,
-        private motivo_cierre_sesion:MotivoCierre
+        readonly id_sesion:string,
+        readonly id_usuario:string,
+        readonly fecha_inicio_sesion:Date,
+        readonly fecha_ultima_interaccion:Date,
+        readonly limite_inactividad_minutos: number,
+        readonly estado_aplicacion: EstadoAplicacion,
+        readonly activa:Boolean, 
+        readonly fecha_cierre_sesion:Date,
+        readonly motivo_cierre_sesion:MotivoCierre
     ){}
 }

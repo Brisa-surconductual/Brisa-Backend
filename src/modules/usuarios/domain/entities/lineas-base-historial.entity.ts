@@ -1,10 +1,10 @@
 export class lineaBaseHistorial{
     constructor(
-        private readonly id_linea_base_historial:string,
-        private readonly id_usuario:string,
-        private readonly id_linea_base:string,
-        private readonly campos_modificados:string[],
-        private readonly fecha_modificacion:Date,
-        private readonly datos_anteriores:JSON,
+        readonly id_linea_base_historial:string,
+        readonly id_usuario:string,
+        readonly id_linea_base:string,
+        readonly campos_modificados:string[],
+        readonly fecha_modificacion:Date,
+        readonly datos_anteriores:JSON,
     ){}
 }

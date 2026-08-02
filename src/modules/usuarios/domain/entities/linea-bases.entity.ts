@@ -6,22 +6,22 @@ import {MotivoConsumo} from "../enums/motivo-consumo-enum";
 
 export class LineaBase {
 
-    private constructor(
+    constructor(
 
-        private readonly id_linea_base: string,
-        private readonly id_usuario: string,
-        private ciudad: string,
-        private entidad_educativa: string,
-        private programa_academico: string,
-        private semestre: semestreCursado,
-        private nivelAcademico: NivelAcademico,
-        private fechaInicioConsumo: Date,
-        private fechaUltimoConsumo: Date,
-        private motivoInicioConsumo: MotivoConsumo,
-        private frecuenciaConsumo: frecuenciaConsumo,
-        private fechaCreacion: Date, 
-        private fechaActualizacion: Date,
-        private fechaNacimiento: Date
+        readonly id_linea_base: string,
+        readonly id_usuario: string,
+        readonly ciudad: string,
+        readonly entidad_educativa: string,
+        readonly programa_academico: string,
+        readonly semestre: semestreCursado,
+        readonly nivelAcademico: NivelAcademico,
+        readonly fechaInicioConsumo: Date,
+        readonly fechaUltimoConsumo: Date,
+        readonly motivoInicioConsumo: MotivoConsumo,
+        readonly frecuenciaConsumo: frecuenciaConsumo,
+        readonly fechaCreacion: Date, 
+        readonly fechaActualizacion: Date,
+        readonly fechaNacimiento: Date
 
     ) {}
 
@@ -59,61 +59,6 @@ export class LineaBase {
         );
 
     }
-
-    getId(): string {
-        return this.id_linea_base;
-    }
-
-    getUsuarioId(): string {
-        return this.id_usuario;
-    }
-
-    getCiudad(): string {
-        return this.ciudad;
-    }
-
-    getEntidadEducativa(): string {
-        return this.entidad_educativa;
-    }
-
-    getProgramaAcademico(): string {
-        return this.programa_academico;
-    }
-
-    getSemestre(): semestreCursado {
-        return this.semestre;
-    }   
-
-    getNivelAcademico(): NivelAcademico {
-        return this.nivelAcademico;
-    }
-
-    getFechaInicioConsumo(): Date {
-        return this.fechaInicioConsumo;
-    }   
-
-    getFechaUltimoConsumo(): Date {
-        return this.fechaUltimoConsumo;
-    }   
-
-    getMotivoInicioConsumo(): MotivoConsumo {
-        return this.motivoInicioConsumo;
-    }
-
-    getFrecuenciaConsumo(): frecuenciaConsumo {
-        return this.frecuenciaConsumo;
-    }
-
-    getFechaCreacion(): Date {
-        return this.fechaCreacion;
-    }   
-
-    getFechaActualizacion(): Date {
-        return this.fechaActualizacion;
-    }   
-
-    getFechaNacimiento(): Date {
-        return this.fechaNacimiento;
-    }   
+ 
 
 }

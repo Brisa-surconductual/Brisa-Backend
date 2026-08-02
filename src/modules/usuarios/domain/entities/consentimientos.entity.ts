@@ -2,14 +2,14 @@ import { randomUUID } from "crypto";
 
 export class Consentimiento {
 
-    private constructor(
+     constructor(
 
-        private readonly id_consentimiento: string,
-        private version_consentimiento: string,
-        private vigente: boolean,
-        private motivoInvalidacion: string,
-        private urlContenido: string,
-        private titulo: string,
+        readonly id_consentimiento: string,
+        readonly version_consentimiento: string,
+        readonly vigente: boolean,
+        readonly motivoInvalidacion: string,
+        readonly urlContenido: string,
+        readonly titulo: string,
 
     ) {}
 
