@@ -1,42 +1,35 @@
-import { LineaBase } from "../../domain/entities/linea-bases.entity";
-
+import { LineaBase } from '../../domain/entities/linea-bases.entity';
 
 export class LineaBaseMapper {
+  static toPrisma(lineaBase: LineaBase) {
+    return {
+      id_linea_base: lineaBase.id_linea_base,
 
-    static toPrisma(lineaBase: LineaBase) {
+      id_usuario: lineaBase.id_usuario,
 
-        return {
+      ciudad: lineaBase.ciudad,
 
-            id_linea_base: lineaBase.id_linea_base,
+      entidad_educativa: lineaBase.entidad_educativa,
 
-            id_usuario: lineaBase.id_usuario,
+      programa_academico: lineaBase.programa_academico,
 
-            ciudad: lineaBase.ciudad,
+      semestre_cursado: lineaBase.semestre.getValue(),
 
-            entidad_educativa: lineaBase.entidad_educativa,
+      nivel_academico: lineaBase.nivelAcademico,
 
-            programa_academico: lineaBase.programa_academico,
+      fecha_inicio_consumo: lineaBase.fechaInicioConsumo,
 
-            semestre_cursado: lineaBase.semestre,
+      fecha_ultimo_consumo: lineaBase.fechaUltimoConsumo,
 
-            nivel_academico: lineaBase.nivelAcademico,
+      motivo_inicio_consumo: lineaBase.motivoInicioConsumo,
 
-            fecha_inicio_consumo: lineaBase.fechaInicioConsumo,
+      frecuencia_consumo: lineaBase.frecuenciaConsumo.getValue(),
 
-            fecha_ultimo_consumo: lineaBase.fechaUltimoConsumo,
+      fecha_creacion: lineaBase.fechaCreacion,
 
-            motivo_inicio_consumo: lineaBase.motivoInicioConsumo,
+      fecha_actualizacion: lineaBase.fechaActualizacion,
 
-            frecuencia_consumo: lineaBase.frecuenciaConsumo,
-
-            fecha_creacion: lineaBase.fechaCreacion,
-
-            fecha_actualizacion: lineaBase.fechaActualizacion,
-
-            fecha_nacimiento: lineaBase.fechaNacimiento,
-
-        };
-
-    }
-
+      fecha_nacimiento: lineaBase.fechaNacimiento,
+    };
+  }
 }

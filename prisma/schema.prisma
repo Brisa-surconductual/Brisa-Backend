@@ -66,6 +66,9 @@ model linea_base_historial {
 model sesiones {
   id_sesion                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_usuario                 String                 @db.Uuid
+  token_hash                 String?                @unique(map: "uq_sesiones_token_hash")
+  csrf_token_hash            String?
+  alcance_sesion             alcance_sesion_enum    @default(LIMITADA)
   fecha_inicio_sesion        DateTime               @default(now()) @db.Timestamptz(6)
   fecha_ultima_interaccion   DateTime               @default(now()) @db.Timestamptz(6)
   limite_inactividad_minutos Int                    @default(15)
@@ -92,7 +95,7 @@ model solicitudes_recuperacion {
   estado_codigo      estado_codigo_enum? @default(ACTIVO)
   usuarios           usuarios?           @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction, map: "fk_recuperacion_usuario")
 
-  @@unique([codigo_hash, codigo_hash], map: "uq_codigo-hash")
+  @@unique([codigo_hash], map: "uq_codigo-hash")
   @@index([estado_codigo], map: "ix_recuperacion_estado")
   @@index([correo_electronico, direccion_ip, fecha_solicitud], map: "ix_recuperacion_rate_limit")
   @@schema("usuario")
@@ -127,6 +130,13 @@ model usuarios {
 enum estado_aplicacion_enum {
   ACTIVA
   SEGUNDO_PLANO
+
+  @@schema("usuario")
+}
+
+enum alcance_sesion_enum {
+  LIMITADA
+  COMPLETA
 
   @@schema("usuario")
 }
