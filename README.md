@@ -29,8 +29,10 @@
   - [2. Clonar el proyecto](#2-clonar-el-proyecto)
   - [3. Instalar dependencias](#3-instalar-dependencias)
   - [4. Configurar variables de entorno](#4-configurar-variables-de-entorno)
-  - [5. Restaurar el backup de la base de datos](#5-restaurar-el-backup-de-la-base-de-datos)
-  - [6. Sincronizar Prisma con la base de datos](#6-sincronizar-prisma-con-la-base-de-datos)
+  - [5. Configurar la base de datos](#5-configurar-la-base-de-datos)
+    - [Opción A · Restaurar el backup (recomendada)](#opción-a--restaurar-el-backup-recomendada)
+    - [Opción B · Crear el esquema con `prisma db push`](#opción-b--crear-el-esquema-con-prisma-db-push)
+  - [6. Generar el cliente de Prisma](#6-generar-el-cliente-de-prisma)
   - [7. Ejecutar el proyecto](#7-ejecutar-el-proyecto)
 - [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)
 - [Arquitectura](#arquitectura)
@@ -94,24 +96,28 @@ pnpm install
 Crea un archivo `.env` en la raíz del proyecto (puedes basarte en `.env.example` si existe):
 
 ```env
-DATABASE_URL=postgresql://usuario:password@localhost:5432/brisa_db
+DATABASE_URL=postgresql://usuario:password@localhost:5432/surconductual
 
 JWT_SECRET=
 
 PORT=3000
 ```
 
-> ⚠️ **Importante:** `DATABASE_URL` debe apuntar a la base de datos donde vas a restaurar el backup del siguiente paso. El nombre de la base de datos (`brisa_db` en el ejemplo) debe coincidir con el que uses al restaurar.
+> ⚠️ **Importante:** `DATABASE_URL` debe apuntar a la base de datos que vas a usar en el siguiente paso. El nombre de la base de datos (`brisa_db` en el ejemplo) debe coincidir con el que uses al crearla.
 
-### 5. Restaurar el backup de la base de datos
+### 5. Configurar la base de datos
 
-En la raíz del proyecto encontrarás un archivo de **backup** con la estructura y datos base de la aplicación. Antes de continuar, crea una base de datos vacía:
+En ambos casos, primero necesitas una base de datos **vacía** creada en tu instancia de PostgreSQL:
 
 ```bash
-createdb brisa_db
+createdb surconductual
 ```
 
-Luego restaura el backup según su formato:
+A partir de ahí, tienes **dos formas** de dejarla lista para trabajar. Elige la que más te convenga según tu situación.
+
+#### Opción A · Restaurar el backup
+
+Úsala si tienes acceso al archivo de backup del proyecto (en la raíz del repositorio) y quieres una base de datos con **estructura y datos base** ya cargados, idéntica a la que usa el resto del equipo.
 
 **Si el archivo es `.sql` (formato plano):**
 
@@ -125,25 +131,29 @@ psql -U <usuario> -d brisa_db -f nombre-del-backup.sql
 pg_restore -U <usuario> -d brisa_db nombre-del-backup.dump
 ```
 
-> 📌 Reemplaza `nombre-del-backup` por el nombre real del archivo que está en la raíz del repositorio. Este paso es **obligatorio** antes de continuar, ya que el proyecto no crea el esquema desde cero mediante migraciones de Prisma.
+> 📌 Reemplaza `nombre-del-backup` por el nombre real del archivo. Con esta opción, la base de datos queda como la fuente de verdad, y `schema.prisma` se sincroniza *a partir de ella* con `prisma db pull` (ver [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)).
 
-### 6. Sincronizar Prisma con la base de datos
+#### Opción B · Crear el esquema con `prisma db push` (recomendada)
 
-Este proyecto **no usa migraciones de Prisma** (`prisma migrate`). El flujo de trabajo es al revés: **la base de datos es la fuente de verdad**, y Prisma se sincroniza a partir de ella. Por eso, después de restaurar el backup, debes ejecutar:
+Úsala si **no tienes el archivo de backup a la mano**, o simplemente quieres levantar el proyecto rápido con una base de datos limpia (sin los datos base, solo la estructura). En este caso, es `schema.prisma` el que ya está versionado en el repositorio el que define la estructura, y Prisma la crea directamente en tu base de datos vacía:
 
 ```bash
-pnpm dlx prisma db pull
+pnpm dlx prisma db push
 ```
 
-Esto leerá el esquema real de la base de datos restaurada y actualizará el archivo `schema.prisma` en consecuencia.
+Esto crea en `brisa_db` todas las tablas, columnas y relaciones que ya están definidas en `schema.prisma`, sin necesidad de restaurar nada. Como la estructura resultante ya coincide con el esquema del repositorio, **no hace falta correr `prisma db pull`** después de esto — solo generar el cliente (paso 6).
 
-Después, genera el cliente de Prisma para que el proyecto pueda usarlo:
+> ⚠️ Ten en cuenta que con esta opción tu base de datos queda **sin los datos base** que sí trae el backup (usuarios de prueba, catálogos, etc.). Si tu tarea depende de esos datos, usa la Opción A.
+
+> ℹ️ Esta opción rompe momentáneamente la dirección normal del flujo del proyecto (ver siguiente sección): aquí es `schema.prisma` el que manda sobre la base de datos, no al revés. Está bien para levantar el entorno rápido, pero cualquier cambio de esquema *posterior* durante el desarrollo normal debe seguir haciéndose en la base de datos, seguido de `db pull` + `generate`, como ya está establecido en el proyecto.
+
+### 6. Generar el cliente de Prisma
+
+Sin importar qué opción hayas usado en el paso anterior, genera el cliente de Prisma para que el proyecto pueda usarlo con tipado seguro:
 
 ```bash
 pnpm dlx prisma generate
 ```
-
-> ℹ️ Ver la sección [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma) para entender por qué se trabaja así y qué hacer si necesitas cambiar el esquema.
 
 ### 7. Ejecutar el proyecto
 
@@ -166,7 +176,7 @@ Si todo salió bien, el backend debería quedar corriendo en `http://localhost:<
 
 ## Flujo de trabajo con Prisma
 
-A diferencia del flujo tradicional de Prisma (donde el esquema `schema.prisma` es la fuente de verdad y se generan migraciones con `prisma migrate dev`), en este proyecto se trabaja de forma inversa:
+A diferencia del flujo tradicional de Prisma (donde el esquema `schema.prisma` es la fuente de verdad y se generan migraciones con `prisma migrate dev`), en este proyecto se trabaja de forma inversa **durante el desarrollo del día a día**:
 
 1. **Los cambios en el esquema se hacen directamente en la base de datos** (tablas, columnas, relaciones, etc.), ya sea manualmente o mediante herramientas externas al proyecto.
 2. Una vez la base de datos refleja el estado deseado, se ejecuta:
@@ -185,6 +195,8 @@ A diferencia del flujo tradicional de Prisma (donde el esquema `schema.prisma` e
 - Si haces cambios en el esquema de la base de datos, **no olvides correr `db pull` + `generate`**, o el código quedará desincronizado con la estructura real.
 - Si notas que Prisma Client no reconoce un campo o tabla nueva, lo más probable es que falte ejecutar este flujo.
 - No se deben crear migraciones manuales de Prisma (`prisma migrate dev`) en este proyecto, ya que rompería la convención de trabajo actual.
+
+> ℹ️ La única excepción a este flujo es el arranque inicial del proyecto con la [Opción B](#opción-b--crear-el-esquema-con-prisma-db-push) de la sección anterior, donde se usa `db push` para crear la base de datos por primera vez a partir del `schema.prisma` ya existente en el repositorio. Una vez la base de datos está creada, el flujo normal (cambios en la BD → `db pull` → `generate`) vuelve a aplicar para cualquier cambio posterior.
 
 ---
 
@@ -415,7 +427,7 @@ De esta forma el dominio permanece independiente de cualquier tecnología.
 - No se debe acceder a la base de datos desde los controladores.
 - Toda la lógica del negocio debe implementarse mediante casos de uso.
 - Los repositorios del dominio son contratos, no implementaciones.
-- Los cambios de esquema se hacen en la base de datos, seguidos de `prisma db pull` + `prisma generate` (ver [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)).
+- Durante el desarrollo normal, los cambios de esquema se hacen en la base de datos, seguidos de `prisma db pull` + `prisma generate` (ver [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)). La excepción es el arranque inicial del proyecto con `prisma db push` (ver [Opción B](#opción-b--crear-el-esquema-con-prisma-db-push)).
 
 ---
 
