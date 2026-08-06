@@ -22,6 +22,20 @@ export class PrismaSesionRepository implements SesionRepository {
         token_hash: tokenHash,
         activa: true,
       },
+      select: {
+        id_sesion: true,
+        id_usuario: true,
+        token_hash: true,
+        csrf_token_hash: true,
+        alcance_sesion: true,
+        fecha_inicio_sesion: true,
+        fecha_ultima_interaccion: true,
+        limite_inactividad_minutos: true,
+        estado_aplicacion: true,
+        activa: true,
+        fecha_cierre_sesion: true,
+        motivo_cierre: true,
+      },
     });
 
     return sesion ? SesionMapper.toDomain(sesion) : null;
