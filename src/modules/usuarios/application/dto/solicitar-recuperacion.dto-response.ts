@@ -7,7 +7,7 @@ export class SolicitarRecuperacionDtoResponse {
 
     static crear(): SolicitarRecuperacionDtoResponse {
         const dto = new SolicitarRecuperacionDtoResponse();
-        dto.mensaje = "Si el correo está registrado, recibirás un código de recuperación.";
+        dto.mensaje = "Recibirás un código de recuperación al correo";
         return dto;
     }
 }

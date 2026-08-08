@@ -66,9 +66,6 @@ model linea_base_historial {
 model sesiones {
   id_sesion                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_usuario                 String                 @db.Uuid
-  token_hash                 String?                @unique(map: "uq_sesiones_token_hash")
-  csrf_token_hash            String?
-  alcance_sesion             alcance_sesion_enum    @default(LIMITADA)
   fecha_inicio_sesion        DateTime               @default(now()) @db.Timestamptz(6)
   fecha_ultima_interaccion   DateTime               @default(now()) @db.Timestamptz(6)
   limite_inactividad_minutos Int                    @default(15)
@@ -76,6 +73,9 @@ model sesiones {
   activa                     Boolean                @default(true)
   fecha_cierre_sesion        DateTime?              @db.Timestamptz(6)
   motivo_cierre              motivo_cierre_enum?
+  alcance_sesion             alcance_sesion_enum    @default(LIMITADA)
+  csrf_token_hash            String?
+  token_hash                 String?                @unique(map: "uq_sesiones_token_hash")
   usuarios                   usuarios               @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_sesiones_usuario")
 
   @@index([fecha_ultima_interaccion], map: "ix_sesiones_activa_ultima_interaccion", where: raw("(activa = true)"))
@@ -89,13 +89,12 @@ model solicitudes_recuperacion {
   correo_electronico String              @db.VarChar(255)
   id_usuario         String?             @db.Uuid
   direccion_ip       String              @db.VarChar(45)
-  codigo_hash        String?
+  codigo_hash        String?             @unique(map: "uq_codigo-hash")
   fecha_solicitud    DateTime            @default(now()) @db.Timestamptz(6)
   fecha_expiracion   DateTime?           @db.Timestamptz(6)
   estado_codigo      estado_codigo_enum? @default(ACTIVO)
   usuarios           usuarios?           @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction, map: "fk_recuperacion_usuario")
 
-  @@unique([codigo_hash], map: "uq_codigo-hash")
   @@index([estado_codigo], map: "ix_recuperacion_estado")
   @@index([correo_electronico, direccion_ip, fecha_solicitud], map: "ix_recuperacion_rate_limit")
   @@schema("usuario")
@@ -152,7 +151,7 @@ enum estado_codigo_enum {
 enum estado_cuenta_enum {
   PENDIENTE_ACTIVACION
   ACTIVA
-  INACTIVA
+  BLOQUEADA
 
   @@schema("usuario")
 }
