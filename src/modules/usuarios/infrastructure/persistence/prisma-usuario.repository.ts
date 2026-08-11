@@ -5,7 +5,8 @@ import { Usuario } from "../../domain/entities/usuarios.entity";
 import { LineaBase } from "../../domain/entities/linea-bases.entity";
 import { UsuarioMapper } from "../mappers/user.mapper";
 import { LineaBaseMapper } from "../mappers/linea-base.mapper";
-
+import { Sesion } from "../../domain/entities/sesiones.entity";
+import { SesionMapper } from "../mappers/sesion.mapper";
 
 @Injectable()
 export class PrismaUsuarioRepository implements UsuarioRepository {
@@ -31,6 +32,7 @@ export class PrismaUsuarioRepository implements UsuarioRepository {
         async crear(
             usuario: Usuario,
             lineaBase: LineaBase,
+            sesion: Sesion
         ): Promise<void> {
 
             await this.prisma.$transaction(async (tx) => {
@@ -42,6 +44,10 @@ export class PrismaUsuarioRepository implements UsuarioRepository {
                 await tx.linea_base.create({
                     data: LineaBaseMapper.toPrisma(lineaBase) as any,
                 });
+
+                await tx.sesiones.create({
+                    data: SesionMapper.toPrisma(sesion) as any,
+                })
 
             });
 

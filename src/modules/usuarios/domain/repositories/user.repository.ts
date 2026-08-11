@@ -1,11 +1,13 @@
 import { Usuario } from "../entities/usuarios.entity";
 import {LineaBase} from "../entities/linea-bases.entity";
+import {Sesion} from "../entities/sesiones.entity";
 
 export abstract class UsuarioRepository{
 
     abstract crear(
         usuario:Usuario,
-        lineaBase:LineaBase
+        lineaBase:LineaBase,
+        sesion:Sesion
     ):Promise<void>;
 
 
@@ -16,6 +18,5 @@ export abstract class UsuarioRepository{
     abstract actualizar(usuario:Usuario):Promise<void>;
 
     abstract crearAdministrador(usuario:Usuario):Promise<void>;
-
 
 }
