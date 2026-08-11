@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["usuario"]
+  schemas  = ["cronograma", "usuario"]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -104,26 +104,202 @@ model solicitudes_recuperacion {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model usuarios {
-  id_usuario                String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  correo_electronico        String                     @unique(map: "uq_usuarios_correo") @db.VarChar(255)
-  contrasena_hash           String
-  rol                       rol_enum                   @default(ESTUDIANTE)
-  estado_registro           estado_registro_enum       @default(PENDIENTE_CONSENTIMIENTO)
-  estado_cuenta             estado_cuenta_enum         @default(ACTIVA)
-  fecha_registro            DateTime                   @default(now()) @db.Timestamptz(6)
-  fecha_actualizacion       DateTime                   @default(now()) @db.Timestamptz(6)
-  consentimiendo_aceptado   Boolean?
-  registro_consumo_aceptado Boolean?
-  id_consentimiento         String                     @db.Uuid
-  linea_base                linea_base?
-  linea_base_historial      linea_base_historial[]
-  sesiones                  sesiones[]
-  solicitudes_recuperacion  solicitudes_recuperacion[]
-  consentimientos           consentimientos            @relation(fields: [id_consentimiento], references: [id_consentimiento], onUpdate: NoAction, map: "fk_usuarios_consentimiento")
+  id_usuario                                                                        String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correo_electronico                                                                String                     @unique(map: "uq_usuarios_correo") @db.VarChar(255)
+  contrasena_hash                                                                   String
+  rol                                                                               rol_enum                   @default(ESTUDIANTE)
+  estado_registro                                                                   estado_registro_enum       @default(PENDIENTE_CONSENTIMIENTO)
+  estado_cuenta                                                                     estado_cuenta_enum         @default(ACTIVA)
+  fecha_registro                                                                    DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion                                                               DateTime                   @default(now()) @db.Timestamptz(6)
+  consentimiendo_aceptado                                                           Boolean?
+  registro_consumo_aceptado                                                         Boolean?
+  id_consentimiento                                                                 String                     @db.Uuid
+  cronogramas_usuario                                                               cronogramas_usuario?
+  pausas_administrativas_pausas_administrativas_id_usuarioTousuarios                pausas_administrativas[]   @relation("pausas_administrativas_id_usuarioTousuarios")
+  pausas_administrativas_pausas_administrativas_id_usuario_administrativoTousuarios pausas_administrativas[]   @relation("pausas_administrativas_id_usuario_administrativoTousuarios")
+  linea_base                                                                        linea_base?
+  linea_base_historial                                                              linea_base_historial[]
+  sesiones                                                                          sesiones[]
+  solicitudes_recuperacion                                                          solicitudes_recuperacion[]
+  consentimientos                                                                   consentimientos            @relation(fields: [id_consentimiento], references: [id_consentimiento], onUpdate: NoAction, map: "fk_usuarios_consentimiento")
 
   @@index([estado_registro], map: "ix_usuarios_estado_registro")
   @@index([rol], map: "ix_usuarios_rol")
   @@schema("usuario")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model contenidos {
+  id_contenido               String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre_contenido           String                       @db.VarChar(255)
+  fecha_creacion             DateTime                     @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion        DateTime                     @default(now()) @db.Timestamptz(6)
+  tipo_contenido             tipo_contenido_enum
+  contenidos_cronograma      contenidos_cronograma?
+  contenidos_modulos_destino contenidos_modulos_destino[]
+  recursos_contenido         recursos_contenido[]
+
+  @@schema("cronograma")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model contenidos_cronograma {
+  id_contenido_cronograma     String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_contenido                String              @unique(map: "uq_contenido_unico_en_cronograma") @db.Uuid
+  id_unidad_temporal          String              @db.Uuid
+  id_cronograma               String              @db.Uuid
+  orden_contenido             Int?
+  fecha_inicio_disponibilidad DateTime?           @db.Timestamptz(6)
+  fecha_fin_disponibilidad    DateTime?           @db.Timestamptz(6)
+  fecha_creacion              DateTime            @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion         DateTime            @default(now()) @db.Timestamptz(6)
+  cronogramas                 cronogramas         @relation(fields: [id_cronograma], references: [id_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_contenido_cronograma")
+  contenidos                  contenidos          @relation(fields: [id_contenido], references: [id_contenido], onUpdate: NoAction, map: "fk_contenido_cronograma_contenido")
+  unidades_temporales         unidades_temporales @relation(fields: [id_unidad_temporal], references: [id_unidad_temporal], onUpdate: NoAction, map: "fk_contenido_unidad_temporal")
+  eventos_contenido           eventos_contenido[]
+
+  @@unique([id_cronograma, orden_contenido], map: "uq_contenido_orden_en_cronograma", where: raw("(orden_contenido IS NOT NULL)"))
+  @@index([id_cronograma], map: "ix_contenidos_cronograma_cronograma")
+  @@index([fecha_inicio_disponibilidad, fecha_fin_disponibilidad], map: "ix_contenidos_cronograma_disponibilidad")
+  @@index([id_unidad_temporal], map: "ix_contenidos_cronograma_unidad")
+  @@schema("cronograma")
+}
+
+model contenidos_modulos_destino {
+  id_contenido     String          @db.Uuid
+  id_modulo        String          @db.Uuid
+  fecha_asignacion DateTime        @default(now()) @db.Timestamptz(6)
+  contenidos       contenidos      @relation(fields: [id_contenido], references: [id_contenido], onDelete: Cascade, onUpdate: NoAction, map: "fk_cmd_contenido")
+  modulos_sistema  modulos_sistema @relation(fields: [id_modulo], references: [id_modulo], onUpdate: NoAction, map: "fk_cmd_modulo")
+
+  @@id([id_contenido, id_modulo])
+  @@schema("cronograma")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model cronogramas {
+  id_cronograma         String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre_cronograma     String                  @db.VarChar(150)
+  estado                estado_cronograma_enum  @default(INACTIVO)
+  es_base               Boolean                 @unique(map: "uq_cronogramas_base_activo", where: raw("((es_base = true) AND (estado = 'ACTIVO'::cronograma.estado_cronograma_enum))")) @default(false)
+  fecha_activacion      DateTime?               @db.Timestamptz(6)
+  fecha_creacion        DateTime                @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion   DateTime                @default(now()) @db.Timestamptz(6)
+  contenidos_cronograma contenidos_cronograma[]
+  cronogramas_usuario   cronogramas_usuario[]
+  eventos_contenido     eventos_contenido[]
+  unidades_temporales   unidades_temporales[]
+
+  @@schema("cronograma")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model cronogramas_usuario {
+  id_cronograma_usuario  String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_usuario             String                   @unique(map: "uq_cronograma_usuario_unico") @db.Uuid
+  id_cronograma          String                   @db.Uuid
+  fecha_inicio_usuario   DateTime                 @default(now()) @db.Timestamptz(6)
+  fecha_creacion         DateTime                 @default(now()) @db.Timestamptz(6)
+  cronogramas            cronogramas              @relation(fields: [id_cronograma], references: [id_cronograma], onUpdate: NoAction, map: "fk_cronograma_usuario_cronograma")
+  usuarios               usuarios                 @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_cronograma_usuario_usuario")
+  pausas_administrativas pausas_administrativas[]
+
+  @@index([id_cronograma], map: "ix_cronogramas_usuario_cronograma")
+  @@schema("cronograma")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model eventos_contenido {
+  id_evento               BigInt                 @id @default(autoincrement())
+  id_contenido_cronograma String                 @db.Uuid
+  id_cronograma           String                 @db.Uuid
+  estado_anterior         estado_contenido_enum?
+  estado_nuevo            estado_contenido_enum
+  fecha_cambio            DateTime               @default(now()) @db.Timestamptz(6)
+  version_evento          String                 @default("1.0") @db.VarChar(10)
+  payload                 Json
+  contenidos_cronograma   contenidos_cronograma  @relation(fields: [id_contenido_cronograma], references: [id_contenido_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_contenido")
+  cronogramas             cronogramas            @relation(fields: [id_cronograma], references: [id_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_cronograma")
+
+  @@unique([id_contenido_cronograma, estado_nuevo], map: "uq_evento_contenido_transicion")
+  @@index([id_cronograma, fecha_cambio], map: "ix_eventos_contenido_cronograma")
+  @@schema("cronograma")
+}
+
+model modulos_sistema {
+  id_modulo                  String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo_modulo              String                       @unique(map: "uq_modulo_codigo") @db.VarChar(10)
+  nombre_modulo              String                       @db.VarChar(100)
+  activo                     Boolean                      @default(true)
+  contenidos_modulos_destino contenidos_modulos_destino[]
+
+  @@schema("cronograma")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model pausas_administrativas {
+  id_pausa                                                            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_usuario                                                          String              @db.Uuid
+  id_cronograma_usuario                                               String              @db.Uuid
+  fecha_inicio_pausa                                                  DateTime            @db.Timestamptz(6)
+  fecha_fin_pausa                                                     DateTime            @db.Timestamptz(6)
+  motivo_pausa                                                        String
+  id_usuario_administrativo                                           String              @db.Uuid
+  fecha_registro                                                      DateTime            @default(now()) @db.Timestamptz(6)
+  estado_pausa                                                        estado_pausa_enum   @default(ACTIVA)
+  cronogramas_usuario                                                 cronogramas_usuario @relation(fields: [id_cronograma_usuario], references: [id_cronograma_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_pausa_cronograma_usuario")
+  usuarios_pausas_administrativas_id_usuarioTousuarios                usuarios            @relation("pausas_administrativas_id_usuarioTousuarios", fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_pausa_usuario")
+  usuarios_pausas_administrativas_id_usuario_administrativoTousuarios usuarios            @relation("pausas_administrativas_id_usuario_administrativoTousuarios", fields: [id_usuario_administrativo], references: [id_usuario], onUpdate: NoAction, map: "fk_pausa_usuario_administrativo")
+
+  @@index([id_cronograma_usuario], map: "ix_pausas_cronograma_usuario")
+  @@index([id_usuario], map: "ix_pausas_usuario")
+  @@schema("cronograma")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model recursos_contenido {
+  id_recurso           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_contenido         String            @db.Uuid
+  tipo_recurso         tipo_recurso_enum
+  orden_bloque         Int
+  texto_contenido      String?
+  clave_almacenamiento String?
+  mime_type            String?           @db.VarChar(100)
+  tamano_bytes         BigInt?
+  duracion_segundos    Int?
+  texto_alternativo    String?           @db.VarChar(255)
+  fecha_creacion       DateTime          @default(now()) @db.Timestamptz(6)
+  contenidos           contenidos        @relation(fields: [id_contenido], references: [id_contenido], onDelete: Cascade, onUpdate: NoAction, map: "fk_recurso_contenido")
+
+  @@unique([id_contenido, orden_bloque], map: "uq_recurso_orden")
+  @@schema("cronograma")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model unidades_temporales {
+  id_unidad_temporal     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_cronograma          String                  @db.Uuid
+  nombre_unidad          String                  @db.VarChar(150)
+  orden_unidad           Int
+  fecha_inicio           DateTime                @db.Date
+  fecha_fin              DateTime                @db.Date
+  utilizada_por_usuarios Boolean                 @default(false)
+  fecha_creacion         DateTime                @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion    DateTime                @default(now()) @db.Timestamptz(6)
+  contenidos_cronograma  contenidos_cronograma[]
+  cronogramas            cronogramas             @relation(fields: [id_cronograma], references: [id_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_unidad_temporal_cronograma")
+
+  @@unique([id_cronograma, orden_unidad], map: "uq_unidad_temporal_orden")
+  @@index([id_cronograma], map: "ix_unidades_temporales_cronograma")
+  @@schema("cronograma")
 }
 
 enum estado_aplicacion_enum {
@@ -195,4 +371,45 @@ enum rol_enum {
   ADMINISTRATIVO
 
   @@schema("usuario")
+}
+
+enum estado_contenido_enum {
+  PROGRAMADO
+  ACTIVO
+  FINALIZADO
+
+  @@schema("cronograma")
+}
+
+enum estado_cronograma_enum {
+  INACTIVO
+  ACTIVO
+
+  @@schema("cronograma")
+}
+
+enum estado_pausa_enum {
+  ACTIVA
+  FINALIZADA
+  ANULADA
+
+  @@schema("cronograma")
+}
+
+enum tipo_contenido_enum {
+  INFORMATIVO
+  ACTIVIDAD
+  MULTIMEDIA
+
+  @@schema("cronograma")
+}
+
+enum tipo_recurso_enum {
+  TEXTO
+  IMAGEN
+  VIDEO
+  AUDIO
+  DOCUMENTO
+
+  @@schema("cronograma")
 }

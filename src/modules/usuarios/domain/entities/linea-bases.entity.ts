@@ -36,7 +36,6 @@ export class LineaBase {
         fechaUltimoConsumo: Date,
         motivoInicioConsumo: MotivoConsumo,
         frecuencia: frecuenciaConsumo,
-        fechaCreacion: Date,
         fechaNacimiento: Date,
 
     ): LineaBase {

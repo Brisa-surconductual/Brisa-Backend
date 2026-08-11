@@ -20,29 +20,22 @@ export class Usuario {
         readonly idConsentimiento: string,
     ) {}
 
-    static crear(
+    static crearEstudiante(
         correo: CorreoElectronico,
         contrasenaHash: string,
-        rol: Rol,
-        estadoRegistro: EstadoRegistro,
-        estadoCuenta: EstadoCuenta,
-        fechaRegistro: Date = new Date(),
-        consentimeintoAceptado,
-        registroConsumoAceptado,
-        idConsentimiento
+        idConsentimiento: string,
     ): Usuario {
-
         return new Usuario(
             randomUUID(),
             correo,
             contrasenaHash,
-            rol,
-            estadoRegistro,
-            estadoCuenta,
+            Rol.ESTUDIANTE,
+            EstadoRegistro.REGISTRO_COMPLETO,
+            EstadoCuenta.ACTIVA,
             new Date(),
             new Date(),
-            consentimeintoAceptado,
-            registroConsumoAceptado,
+            true,
+            true,
             idConsentimiento
         );
 
@@ -66,6 +59,4 @@ export class Usuario {
             usuario.idConsentimiento,
         );
     }
-
-    
 }

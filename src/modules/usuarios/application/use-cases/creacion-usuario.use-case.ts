@@ -10,13 +10,14 @@ import { CorreoElectronico } from '../../domain/value-objects/correo_electronico
 import { LineaBase } from '../../domain/entities/linea-bases.entity';
 import { fechasConsumoCoherentes } from '../../domain/value-objects/fechas-consumo-coherentes.vo';
 import {PasswordHasher} from '../ports/password-hasher';
-
+import {ConsentimientosRepository} from '../../domain/repositories/consetimientos.repository';  
 
 @Injectable()
 export class CreacionUsuarioUseCase{
     constructor(
         private readonly usuarioRepository:UsuarioRepository,
-        private readonly passwordHasher:PasswordHasher
+        private readonly passwordHasher:PasswordHasher,
+        private readonly consentimientosRepository:ConsentimientosRepository
     ){}
 
     async execute(dto: CreacionUsuarioDtoRequest):Promise<CreacionUsuarioDtoResponse>{
@@ -25,8 +26,7 @@ export class CreacionUsuarioUseCase{
        const frecuencia = new frecuenciaConsumo(dto.frecuenciaConsumo);
        const semestre = new semestreCursado(dto.semestre);
        const fechasCoherentes = new fechasConsumoCoherentes( dto.fechaInicioConsumo, dto.fechaUltimoConsumo);
-       const hash = await this.passwordHasher.hash(dto.constrasenaHash);
-        
+       const hash = await this.passwordHasher.hash(dto.contrasena);
 
        const existe = await this.usuarioRepository.buscarPorCorreo(dto.correoElectronico);
        if(existe)
@@ -34,18 +34,18 @@ export class CreacionUsuarioUseCase{
                 throw new CorreoDuplicadoException();
             }
 
+        const idConsentimiento = await this.consentimientosRepository.obtenerIdConsitimientoVigente();
+        if(!idConsentimiento)
+            {
+                throw new Error('No se encontró un consentimiento vigente');
+            }
 
 
-        const usuario = Usuario.crear(
+        const usuario = Usuario.crearEstudiante(
             correo,
             hash,
-            dto.rol,
-            dto.estadoRegistro,
-            dto.estadoCuenta,
-            dto.fechaRegistro ,
-            dto.consentimientoAceptado,
-            dto.registroConsumoAceptado,
-            dto.idConsentimiento
+            idConsentimiento,
+            
         );
 
         const lineaBase = LineaBase.crear(
@@ -59,7 +59,6 @@ export class CreacionUsuarioUseCase{
             fechasCoherentes.fechaUltimo,
             dto.motivoInicioConsumo,
             frecuencia,
-            dto.fechaCreacion, 
             dto.fechaNacimiento
         );
 

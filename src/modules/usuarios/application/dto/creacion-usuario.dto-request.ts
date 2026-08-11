@@ -1,68 +1,41 @@
-import { IsEmail, MinLength, IsDate, IsBoolean, IsString, IsNumber } from 'class-validator';
-import {Rol} from '../../domain/enums/rol.enum';
-import {EstadoRegistro} from '../../domain/enums/estado-registro.enum';
-import {EstadoCuenta} from '../../domain/enums/estado-cuenta';
+import { IsEmail, MinLength, IsDate, IsBoolean, IsString, IsNumber, IsEnum } from 'class-validator';
 import { NivelAcademico } from '../../domain/enums/nivel-academico-enum';
 import { MotivoConsumo } from '../../domain/enums/motivo-consumo-enum';
 
-
 export class CreacionUsuarioDtoRequest {
     @IsEmail()
-    correoElectronico!:string;
+    correoElectronico!: string;
 
     @MinLength(8)
-    constrasenaHash!:string;
+    contrasena!: string;
 
     @IsDate()
-    fechaNacimiento!:Date;
+    fechaNacimiento!: Date;
 
     @IsString()
-    rol!:Rol;
-
-    estadoRegistro!:EstadoRegistro;
-
-    estadoCuenta!:EstadoCuenta;
-
-    @IsDate()
-    fechaRegistro!:Date;
-
-    @IsBoolean()
-    registroConsumoAceptado!:boolean;
-    
-    @IsBoolean()
-    consentimientoAceptado!:boolean;
+    ciudad!: string;
 
     @IsString()
-    idConsentimiento!:string;
-    
+    entidad_educativa!: string;
 
     @IsString()
-    ciudad!:string;
-
-    @IsString()
-    entidad_educativa!:string;
-
-    @IsString()
-    programa_academico!:string;
+    programa_academico!: string;
 
     @IsNumber()
-    semestre!:number;
+    semestre!: number;
 
-    @IsString()
-    nivelAcademico!:NivelAcademico;
-
-    @IsDate()
-    fechaInicioConsumo!:Date;
+    @IsEnum(NivelAcademico)
+    nivelAcademico!: NivelAcademico;
 
     @IsDate()
-    fechaUltimoConsumo!:Date;
+    fechaInicioConsumo!: Date;
 
-    @IsString()
-    motivoInicioConsumo!:MotivoConsumo;
+    @IsDate()
+    fechaUltimoConsumo!: Date;
+
+    @IsEnum(MotivoConsumo)
+    motivoInicioConsumo!: MotivoConsumo;
 
     @IsNumber()
-    frecuenciaConsumo!:number;
-
-    @IsDate()
-    fechaCreacion!:Date;
+    frecuenciaConsumo!: number;
 }

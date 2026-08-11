@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: dev_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Samuel,2005
+      POSTGRES_DB: surconductual
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql   # <-- antes era /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dev_backend
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:Samuel%2C2005@db:5432/surconductual
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "pnpm prisma db push && pnpm run start:dev"
+
+volumes:
+  postgres_data:
