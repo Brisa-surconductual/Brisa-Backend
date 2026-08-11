@@ -17,7 +17,7 @@ export class Usuario {
         readonly fechaActualizacion: Date, 
         readonly consentimeintoAceptado: boolean,
         readonly registroConsumoAceptado: boolean,
-        readonly idConsentimiento: string,
+        readonly idConsentimiento: string | null,
     ) {}
 
     static crearEstudiante(
@@ -39,6 +39,25 @@ export class Usuario {
             idConsentimiento
         );
 
+    }
+
+    static crearAdministrativo(
+        correo: CorreoElectronico,
+        contrasenaHash: string,
+    ): Usuario {
+        return new Usuario(
+            randomUUID(),
+            correo,
+            contrasenaHash,
+            Rol.ADMINISTRATIVO,
+            EstadoRegistro.REGISTRO_COMPLETO,
+            EstadoCuenta.ACTIVA,
+            new Date(),
+            new Date(),
+            false,
+            false,
+            null
+        );
     }
 
     static actualizarContrasena(

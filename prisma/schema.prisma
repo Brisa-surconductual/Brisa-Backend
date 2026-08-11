@@ -114,7 +114,7 @@ model usuarios {
   fecha_actualizacion                                                               DateTime                   @default(now()) @db.Timestamptz(6)
   consentimiendo_aceptado                                                           Boolean?
   registro_consumo_aceptado                                                         Boolean?
-  id_consentimiento                                                                 String                     @db.Uuid
+  id_consentimiento                                                                 String?                    @db.Uuid
   cronogramas_usuario                                                               cronogramas_usuario?
   pausas_administrativas_pausas_administrativas_id_usuarioTousuarios                pausas_administrativas[]   @relation("pausas_administrativas_id_usuarioTousuarios")
   pausas_administrativas_pausas_administrativas_id_usuario_administrativoTousuarios pausas_administrativas[]   @relation("pausas_administrativas_id_usuario_administrativoTousuarios")
@@ -122,7 +122,7 @@ model usuarios {
   linea_base_historial                                                              linea_base_historial[]
   sesiones                                                                          sesiones[]
   solicitudes_recuperacion                                                          solicitudes_recuperacion[]
-  consentimientos                                                                   consentimientos            @relation(fields: [id_consentimiento], references: [id_consentimiento], onUpdate: NoAction, map: "fk_usuarios_consentimiento")
+  consentimientos                                                                   consentimientos?           @relation(fields: [id_consentimiento], references: [id_consentimiento], onDelete: Restrict, onUpdate: NoAction, map: "fk_usuarios_consentimiento")
 
   @@index([estado_registro], map: "ix_usuarios_estado_registro")
   @@index([rol], map: "ix_usuarios_rol")

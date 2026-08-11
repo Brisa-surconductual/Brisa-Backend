@@ -15,5 +15,7 @@ export abstract class UsuarioRepository{
     abstract buscarPorId(id_usuario:string):Promise<Usuario | null>;
     abstract actualizar(usuario:Usuario):Promise<void>;
 
+    abstract crearAdministrador(usuario:Usuario):Promise<void>;
+
 
 }

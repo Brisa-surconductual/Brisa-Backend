@@ -10,6 +10,8 @@ import { RecoveryTokenGenerator } from "../application/ports/passhwor-recovery-t
 import {ExpirarCodigosCron} from "./cron/expirar-codigos.cron";
 import { RecoveryCodeHasher } from "../application/ports/recovery-code-hasher";
 import { Sha256RecoveryCodeHasher } from "./security/sha256-recovery-code-hasher";
+import {PrismaConsentimientoRepository} from "./persistence/prisma-consentimiento.repository";
+import {ConsentimientosRepository} from "../domain/repositories/consetimientos.repository";
 
 export const UsuarioInfraestructureProviders = [
 
@@ -43,6 +45,11 @@ export const UsuarioInfraestructureProviders = [
     {
         provide: RecoveryCodeHasher,
         useClass: Sha256RecoveryCodeHasher,
+    },
+
+    {
+        provide: ConsentimientosRepository,
+        useClass: PrismaConsentimientoRepository,
     },
 
      ExpirarCodigosCron

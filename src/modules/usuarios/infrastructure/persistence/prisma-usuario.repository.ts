@@ -66,4 +66,10 @@ export class PrismaUsuarioRepository implements UsuarioRepository {
                 },
             });
         }
+
+        async crearAdministrador(usuario: Usuario): Promise<void> {
+            await this.prisma.usuarios.create({
+                data: UsuarioMapper.toPrisma(usuario) as any,
+            });
+        }
 }

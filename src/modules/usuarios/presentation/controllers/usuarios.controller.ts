@@ -10,6 +10,9 @@ import { RecuperacionUseCase } from "../../application/use-cases/recuperacion-co
 import { ActualizarContrasenaUseCase } from "../../application/use-cases/actualizar-contraseña.use-case";
 import { ActualizacionContrasenaDtoRequest } from "../../application/dto/actualizacion-contrasena.dto-request";
 import { ActualizacionContrasenaDtoResponse } from "../../application/dto/actualizacion-contrasena.dto-response";
+import { CreacionUsuarioAdminDtoResponse } from "../../application/dto/crear-administrativo.dto-response";
+import { CreacionUsuarioAdminDtoRequest } from "../../application/dto/crear-administrativo.dto-request";
+import { CreacionAdministradorUseCase } from "../../application/use-cases/creacion-adimistrador.use-case";
 
 @Controller("/usuarios")
 export class UsuariosController {
@@ -18,12 +21,19 @@ export class UsuariosController {
         private readonly actualizarContrasenaUse: ActualizarContrasenaUseCase,
         private readonly recuperacion: RecuperacionUseCase,
         private readonly crearUsuario: CreacionUsuarioUseCase,
+        private readonly crearAdministrador: CreacionAdministradorUseCase,
     ) {}
 
-    @Post("/crear")
+    @Post("/crear/estudiante")
     @HttpCode(HttpStatus.CREATED)
     async crear(@Body() dto: CreacionUsuarioDtoRequest): Promise<CreacionUsuarioDtoResponse> {
         return this.crearUsuario.execute(dto);
+    }
+
+    @Post("/crear/administrativo")
+    @HttpCode(HttpStatus.CREATED)
+    async crearAdministrativo(@Body() dto: CreacionUsuarioAdminDtoRequest): Promise<CreacionUsuarioAdminDtoResponse> {
+        return this.crearAdministrador.execute(dto);
     }
 
     @Post("/envio-codigo-recuperacion")
