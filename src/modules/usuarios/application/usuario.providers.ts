@@ -3,6 +3,7 @@ import { RecuperacionUseCase } from './use-cases/recuperacion-contrasena.use-cas
 import { ActualizarContrasenaUseCase } from './use-cases/actualizar-contraseña.use-case';
 import { ExpirarCodigosUseCase } from './use-cases/expirar-codigos.use-case';
 import {CreacionAdministradorUseCase} from "./use-cases/creacion-adimistrador.use-case";
+import { SessionService } from './services/sesion.service';
 
 export const UsuarioAplicationProviders = [
 
@@ -11,5 +12,6 @@ export const UsuarioAplicationProviders = [
     ActualizarContrasenaUseCase,
     ExpirarCodigosUseCase,
     CreacionAdministradorUseCase,
+    SessionService,
     
 ];

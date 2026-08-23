@@ -1,5 +1,5 @@
-import {  Body, Controller, HttpCode, HttpStatus, Post, Req} from "@nestjs/common";
-import type { Request } from "express";
+import {  Body, Controller, HttpCode, HttpStatus, Post, Req, Res} from "@nestjs/common";
+import type { Request, Response } from "express";
 
 import { CreacionUsuarioUseCase } from "../../application/use-cases/creacion-usuario.use-case";
 import { CreacionUsuarioDtoRequest } from "../../application/dto/creacion-usuario.dto-request";
@@ -13,6 +13,7 @@ import { ActualizacionContrasenaDtoResponse } from "../../application/dto/actual
 import { CreacionUsuarioAdminDtoResponse } from "../../application/dto/crear-administrativo.dto-response";
 import { CreacionUsuarioAdminDtoRequest } from "../../application/dto/crear-administrativo.dto-request";
 import { CreacionAdministradorUseCase } from "../../application/use-cases/creacion-adimistrador.use-case";
+import { SessionCookieConfig } from '../../application/ports/session-cookie-config';
 
 @Controller("/usuarios")
 export class UsuariosController {
@@ -22,12 +23,26 @@ export class UsuariosController {
         private readonly recuperacion: RecuperacionUseCase,
         private readonly crearUsuario: CreacionUsuarioUseCase,
         private readonly crearAdministrador: CreacionAdministradorUseCase,
+        private readonly cookieConfig: SessionCookieConfig,
+        
     ) {}
 
     @Post("/crear/estudiante")
     @HttpCode(HttpStatus.CREATED)
-    async crear(@Body() dto: CreacionUsuarioDtoRequest): Promise<CreacionUsuarioDtoResponse> {
-        return this.crearUsuario.execute(dto);
+    async crear(@Body() dto: CreacionUsuarioDtoRequest,
+                @Res({ passthrough: true }) response: Response,
+                ): Promise<CreacionUsuarioDtoResponse> {
+       const resultado = await this.crearUsuario.execute(dto);
+
+        response.cookie(
+            this.cookieConfig.obtenerNombreCookie(),
+            resultado.tokenSesion,
+            this.cookieConfig.obtenerOpcionesCookie(),
+        );
+
+        return resultado.respuesta;
+
+    
     }
 
     @Post("/crear/administrativo")

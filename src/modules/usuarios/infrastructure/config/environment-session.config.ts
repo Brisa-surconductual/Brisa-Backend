@@ -4,6 +4,7 @@ import {
   SessionCookieConfig,
   SessionCookieSameSite,
 } from '../../application/ports/session-cookie-config';
+import { CookieOptions } from 'express';
 
 @Injectable()
 export class EnvironmentSessionConfig
@@ -32,6 +33,18 @@ export class EnvironmentSessionConfig
         ? '__Host-brisa_session'
         : 'brisa_session')
     );
+  }
+
+
+    obtenerOpcionesCookie(): CookieOptions {
+      return {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 1000 * 60 * 60,
+        path: '/',
+      };
+
   }
 
   esSegura(): boolean {

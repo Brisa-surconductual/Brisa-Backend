@@ -1,16 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Post,
-  Req,
-  Res,
-  UseGuards,
-  UsePipes,
-  ValidationPipe,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UseGuards,UsePipes, ValidationPipe} from '@nestjs/common';
 import type { CookieOptions, Response } from 'express';
 import { IniciarSesionUseCase } from '../../application/use-cases/iniciar-sesion.use-case';
 import { CerrarSesionUseCase } from '../../application/use-cases/cerrar-sesion.use-case';
@@ -58,7 +46,7 @@ export class SesionesController {
     response.cookie(
       this.cookieConfig.obtenerNombreCookie(),
       resultado.tokenSesion,
-      this.obtenerOpcionesCookie(),
+      this.cookieConfig.obtenerOpcionesCookie(),
     );
     this.aplicarNoStore(response);
 
@@ -116,6 +104,7 @@ export class SesionesController {
 
     return SesionActualDtoResponse.crear({
       idUsuario: usuario.id_usuario,
+      correoElectronico: usuario.correo.value,
       alcance: sesion.alcance_sesion,
       estadoRegistro: this.obtenerNombreEstadoRegistro(usuario.estadoRegistro),
       rol: String(usuario.rol),
