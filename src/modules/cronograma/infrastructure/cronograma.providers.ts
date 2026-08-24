@@ -5,6 +5,8 @@ import { InicializarCronogramasPendientesCron } from './cron/inicializar-cronogr
 import { PrismaCondicionesInicializacionUsuarioRepository } from './persistence/prisma-condiciones-inicializacion-usuario.repository';
 import { PrismaCronogramaRepository } from './persistence/prisma-cronograma.repository';
 import { PrismaCronogramaUsuarioRepository } from './persistence/prisma-cronograma-usuario.repository';
+import { PrismaUnidadTemporalRepository } from './persistence/prisma-unidad-temporal.repository';
+import {UnidadTemporalRepository} from "../domain/repositories/unidad-temporal.repository";
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -18,6 +20,10 @@ export const CronogramaInfrastructureProviders = [
   {
     provide: CronogramaUsuarioRepository,
     useClass: PrismaCronogramaUsuarioRepository,
+  },
+  {
+    provide: UnidadTemporalRepository,
+    useClass: PrismaUnidadTemporalRepository,
   },
   InicializarCronogramasPendientesCron,
 ];
