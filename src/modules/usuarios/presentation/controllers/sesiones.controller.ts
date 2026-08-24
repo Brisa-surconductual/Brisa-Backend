@@ -20,13 +20,6 @@ import { EstadoRegistro } from '../../domain/enums/estado-registro.enum';
 import type { AuthenticatedSessionRequest } from '../http/authenticated-session-request';
 
 @Controller('/usuarios')
-@UsePipes(
-  new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: true,
-  }),
-)
 export class SesionesController {
   constructor(
     private readonly iniciarSesionUseCase: IniciarSesionUseCase,
