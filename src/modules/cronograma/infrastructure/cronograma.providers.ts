@@ -6,7 +6,16 @@ import { PrismaCondicionesInicializacionUsuarioRepository } from './persistence/
 import { PrismaCronogramaRepository } from './persistence/prisma-cronograma.repository';
 import { PrismaCronogramaUsuarioRepository } from './persistence/prisma-cronograma-usuario.repository';
 import { PrismaUnidadTemporalRepository } from './persistence/prisma-unidad-temporal.repository';
-import {UnidadTemporalRepository} from "../domain/repositories/unidad-temporal.repository";
+import { UnidadTemporalRepository } from '../domain/repositories/unidad-temporal.repository';
+import { ContenidoRepository } from '../domain/repositories/contenido.repository';
+import { PrismaContenidoRepository } from './persistence/prisma-contenido.repository';
+import { RecursoContenidoRepository } from '../domain/repositories/recurso-contenido.repository';
+import { PrismaRecursoContenidoRepository } from './persistence/prisma-recurso-contenido.repository';
+import { EventoContenidoRepository } from '../domain/repositories/evento-contenido.repository';
+import { EventoContenidoPublisher } from '../application/ports/evento-contenido.publisher';
+import { PublicarEventosContenidoCron } from './cron/publicar-eventos-contenido.cron';
+import { NestEventoContenidoPublisher } from './messaging/nest-evento-contenido.publisher';
+import { PrismaEventoContenidoRepository } from './persistence/prisma-evento-contenido.repository';
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -25,5 +34,22 @@ export const CronogramaInfrastructureProviders = [
     provide: UnidadTemporalRepository,
     useClass: PrismaUnidadTemporalRepository,
   },
+  {
+    provide: ContenidoRepository,
+    useClass: PrismaContenidoRepository,
+  },
+  {
+    provide: RecursoContenidoRepository,
+    useClass: PrismaRecursoContenidoRepository,
+  },
+  {
+    provide: EventoContenidoRepository,
+    useClass: PrismaEventoContenidoRepository,
+  },
+  {
+    provide: EventoContenidoPublisher,
+    useClass: NestEventoContenidoPublisher,
+  },
   InicializarCronogramasPendientesCron,
+  PublicarEventosContenidoCron,
 ];

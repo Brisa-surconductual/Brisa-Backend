@@ -131,14 +131,13 @@ model usuarios {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model contenidos {
-  id_contenido               String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre_contenido           String                       @db.VarChar(255)
-  fecha_creacion             DateTime                     @default(now()) @db.Timestamptz(6)
-  fecha_actualizacion        DateTime                     @default(now()) @db.Timestamptz(6)
-  tipo_contenido             tipo_contenido_enum
-  contenidos_cronograma      contenidos_cronograma?
-  contenidos_modulos_destino contenidos_modulos_destino[]
-  recursos_contenido         recursos_contenido[]
+  id_contenido          String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre_contenido      String                 @db.VarChar(255)
+  fecha_creacion        DateTime               @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion   DateTime               @default(now()) @db.Timestamptz(6)
+  tipo_contenido        tipo_contenido_enum
+  contenidos_cronograma contenidos_cronograma?
+  recursos_contenido    recursos_contenido[]
 
   @@schema("cronograma")
 }
@@ -164,17 +163,6 @@ model contenidos_cronograma {
   @@index([id_cronograma], map: "ix_contenidos_cronograma_cronograma")
   @@index([fecha_inicio_disponibilidad, fecha_fin_disponibilidad], map: "ix_contenidos_cronograma_disponibilidad")
   @@index([id_unidad_temporal], map: "ix_contenidos_cronograma_unidad")
-  @@schema("cronograma")
-}
-
-model contenidos_modulos_destino {
-  id_contenido     String          @db.Uuid
-  id_modulo        String          @db.Uuid
-  fecha_asignacion DateTime        @default(now()) @db.Timestamptz(6)
-  contenidos       contenidos      @relation(fields: [id_contenido], references: [id_contenido], onDelete: Cascade, onUpdate: NoAction, map: "fk_cmd_contenido")
-  modulos_sistema  modulos_sistema @relation(fields: [id_modulo], references: [id_modulo], onUpdate: NoAction, map: "fk_cmd_modulo")
-
-  @@id([id_contenido, id_modulo])
   @@schema("cronograma")
 }
 
@@ -231,11 +219,11 @@ model eventos_contenido {
 }
 
 model modulos_sistema {
-  id_modulo                  String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  codigo_modulo              String                       @unique(map: "uq_modulo_codigo") @db.VarChar(10)
-  nombre_modulo              String                       @db.VarChar(100)
-  activo                     Boolean                      @default(true)
-  contenidos_modulos_destino contenidos_modulos_destino[]
+  id_modulo                String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo_modulo            String                     @unique(map: "uq_modulo_codigo") @db.VarChar(10)
+  nombre_modulo            String                     @db.VarChar(100)
+  activo                   Boolean                    @default(true)
+  recursos_modulos_destino recursos_modulos_destino[]
 
   @@schema("cronograma")
 }
@@ -264,20 +252,32 @@ model pausas_administrativas {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model recursos_contenido {
-  id_recurso           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  id_contenido         String            @db.Uuid
-  tipo_recurso         tipo_recurso_enum
-  orden_bloque         Int
-  texto_contenido      String?
-  clave_almacenamiento String?
-  mime_type            String?           @db.VarChar(100)
-  tamano_bytes         BigInt?
-  duracion_segundos    Int?
-  texto_alternativo    String?           @db.VarChar(255)
-  fecha_creacion       DateTime          @default(now()) @db.Timestamptz(6)
-  contenidos           contenidos        @relation(fields: [id_contenido], references: [id_contenido], onDelete: Cascade, onUpdate: NoAction, map: "fk_recurso_contenido")
+  id_recurso               String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_contenido             String                     @db.Uuid
+  tipo_recurso             tipo_recurso_enum
+  orden_bloque             Int
+  texto_contenido          String?
+  clave_almacenamiento     String?
+  mime_type                String?                    @db.VarChar(100)
+  tamano_bytes             BigInt?
+  duracion_segundos        Int?
+  texto_alternativo        String?                    @db.VarChar(255)
+  fecha_creacion           DateTime                   @default(now()) @db.Timestamptz(6)
+  contenidos               contenidos                 @relation(fields: [id_contenido], references: [id_contenido], onDelete: Cascade, onUpdate: NoAction, map: "fk_recurso_contenido")
+  recursos_modulos_destino recursos_modulos_destino[]
 
   @@unique([id_contenido, orden_bloque], map: "uq_recurso_orden")
+  @@schema("cronograma")
+}
+
+model recursos_modulos_destino {
+  id_recurso       String             @db.Uuid
+  id_modulo        String             @db.Uuid
+  fecha_asignacion DateTime           @default(now()) @db.Timestamptz(6)
+  recursos         recursos_contenido @relation(fields: [id_recurso], references: [id_recurso], onDelete: Cascade, onUpdate: NoAction, map: "fk_rmd_recurso")
+  modulos_sistema  modulos_sistema    @relation(fields: [id_modulo], references: [id_modulo], onDelete: Restrict, onUpdate: NoAction, map: "fk_rmd_modulo")
+
+  @@id([id_recurso, id_modulo])
   @@schema("cronograma")
 }
 

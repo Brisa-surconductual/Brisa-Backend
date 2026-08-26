@@ -9,10 +9,12 @@ import { SesionInfrastructureProviders } from './infrastructure/sesion.providers
 import { SesionPresentationProviders } from './presentation/sesion-presentation.providers';
 import { SesionRepository } from './domain/repositories/sesion.repository';
 import { SessionAuthGuard } from './presentation/guards/session-auth.guard';
-import {UsuarioRepository} from "./domain/repositories/user.repository";
+import { UsuarioRepository } from './domain/repositories/user.repository';
 import { SessionConfig } from './application/ports/session-config';
 import { SessionCookieConfig } from './application/ports/session-cookie-config';
 import { SessionTokenHasher } from './application/ports/session-token-hasher';
+import { CsrfSessionGuard } from './presentation/guards/csrf-session.guard';
+import { SessionScopeGuard } from './presentation/guards/session-scope.guard';
 
 @Module({
   controllers: [UsuariosController, SesionesController],
@@ -31,9 +33,11 @@ import { SessionTokenHasher } from './application/ports/session-token-hasher';
     UsuarioRepository,
     SesionRepository,
     SessionAuthGuard,
+    CsrfSessionGuard,
+    SessionScopeGuard,
     SessionConfig,
     SessionCookieConfig,
     SessionTokenHasher,
-  ]
+  ],
 })
 export class UsersModule {}
