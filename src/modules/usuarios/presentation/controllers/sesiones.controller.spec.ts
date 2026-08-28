@@ -14,6 +14,12 @@ describe('SesionesController', () => {
     obtenerNombreCookie: jest.fn().mockReturnValue('brisa_session'),
     esSegura: jest.fn().mockReturnValue(true),
     obtenerSameSite: jest.fn().mockReturnValue('lax'),
+    obtenerOpcionesCookie: jest.fn().mockReturnValue({
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/',
+    }),
   };
 
   let controller: SesionesController;
