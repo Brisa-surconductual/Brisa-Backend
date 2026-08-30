@@ -29,6 +29,9 @@ import { EliminarContenidoUseCase } from '../application/use-cases/eliminar-cont
 import { CrearRecursoContenidoDtoRequest } from '../application/dto/crear-recurso-contenido.dto-request';
 import { RecursoContenidoDtoResponse } from '../application/dto/recurso-contenido.dto-response';
 import { CrearRecursoContenidoUseCase } from '../application/use-cases/crear-recurso-contenido.use-case';
+import { AsociarContenidoUnidadTemporalUseCase } from '../application/use-cases/asociar-contenido-unidad-temporal.use-case';
+import {crearContenidoCronogramaDtoRequest} from "../application/dto/crear-contenido-cronograma.dto-request";
+import {crearContenidoCronogramaDtoResponse} from "../application/dto/crear-contenido-cronograma.dto-response.dto";
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -38,12 +41,13 @@ export class CronogramaController {
     private readonly actualizarContenidoUseCase: ActualizarContenidoUseCase,
     private readonly eliminarContenidoUseCase: EliminarContenidoUseCase,
     private readonly crearRecursoContenidoUseCase: CrearRecursoContenidoUseCase,
+    private readonly asociarContenidoUnidadTemporalUseCase: AsociarContenidoUnidadTemporalUseCase,
   ) {}
 
   @Post('/crear/unidad-temporal')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
   @Roles('ADMINISTRATIVO')
-  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async crearUnidadTemporal(
     @Body() dto: UnidadTemporalDtoRequest,
   ): Promise<UnidadTemporalDtoResponse> {
@@ -89,5 +93,12 @@ export class CronogramaController {
     @Body() dto: CrearRecursoContenidoDtoRequest,
   ): Promise<RecursoContenidoDtoResponse> {
     return this.crearRecursoContenidoUseCase.execute(dto);
+  }
+
+  @Post('/asociar-contenido-unidad-temporal')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async asociarContenidoUnidadTemporal( @Body() dto: crearContenidoCronogramaDtoRequest): Promise<crearContenidoCronogramaDtoResponse> {
+    return this.asociarContenidoUnidadTemporalUseCase.execute(dto);
   }
 }

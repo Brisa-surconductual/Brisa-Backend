@@ -2,10 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { ContenidoEstadoPendiente } from '../../domain/entities/contenido-estado-pendiente.entity';
-import {
-  EventoContenido,
-  ModuloDestinoEvento,
-} from '../../domain/entities/evento-contenido.entity';
+import { EventoContenido, ModuloDestinoEvento} from '../../domain/entities/evento-contenido.entity';
 import { EstadoContenido } from '../../domain/enums/estado-contenido.enum';
 import { DatosEventoContenidoInvalidosException } from '../../domain/exeption/datos-evento-contenido-invalidos.exception';
 import { EventoContenidoRepository } from '../../domain/repositories/evento-contenido.repository';
