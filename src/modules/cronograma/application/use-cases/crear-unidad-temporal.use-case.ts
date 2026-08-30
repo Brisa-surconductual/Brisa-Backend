@@ -5,8 +5,8 @@ import { UnidadTemporalDtoRequest } from "../dto/crear-unidad-temporal.dto-reque
 import { UnidadTemporalDtoResponse } from "../dto/crear-unidad-temporal.dto-response";
 import { ConsistenciaFechasVO } from "../../domain/value-objects/cosistencia-fechas.vo";
 import { CronogramaRepository } from "../../domain/repositories/cronograma.repository";
-import { ValidarSolapamientoUnidadTemporalService } from "../service/validar-solapamiento-unidad-temporal.service";
-import { CalculoOrdenUnidadTemporalService } from "../service/calculo-orden-unidad-temporal.service";
+import { ValidarSolapamientoTemporalService } from "../service/validar-solapamiento-temporal.service";
+import { CalculoOrdenTemporalService } from "../service/calculo-orden-temporal.service";
 import { CronogramaNoEncontradoException } from "../../domain/exeption/cronograma-no-encontrado.exeption";
 import { CronogramaNoActivoException } from "../../domain/exeption/cronograma-no-activo.exeptio";
 
@@ -15,8 +15,8 @@ export class CreacionUnidadTemporalUseCase {
   constructor(
     private readonly unidadTemporalRepository: UnidadTemporalRepository,
     private readonly cronogramaRepository: CronogramaRepository,
-    private readonly validarSolapamientoUnidadTemporalService: ValidarSolapamientoUnidadTemporalService,
-    private readonly calculoOrdenUnidadTemporalService: CalculoOrdenUnidadTemporalService,
+    private readonly validarSolapamientoTemporalService: ValidarSolapamientoTemporalService,
+    private readonly calculoOrdenTemporalService: CalculoOrdenTemporalService,
   ) {}
 
   async execute(dto: UnidadTemporalDtoRequest): Promise<UnidadTemporalDtoResponse> {
@@ -35,9 +35,9 @@ export class CreacionUnidadTemporalUseCase {
       dto.id_cronograma,
     );
 
-    const ordenUnidad = this.calculoOrdenUnidadTemporalService.calcularSiguienteOrden(unidadesExistentes);
+    const ordenUnidad = this.calculoOrdenTemporalService.calcularSiguienteOrden(unidadesExistentes);
 
-    this.validarSolapamientoUnidadTemporalService.validarSolapamiento(unidadesExistentes, dto.fecha_inicio, dto.fecha_fin);
+    this.validarSolapamientoTemporalService.validarSolapamiento(unidadesExistentes, dto.fecha_inicio, dto.fecha_fin);
 
     const nuevaUnidadTemporal = UnidadTemporal.crear(
       dto.id_cronograma,

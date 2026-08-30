@@ -16,6 +16,8 @@ import { EventoContenidoPublisher } from '../application/ports/evento-contenido.
 import { PublicarEventosContenidoCron } from './cron/publicar-eventos-contenido.cron';
 import { NestEventoContenidoPublisher } from './messaging/nest-evento-contenido.publisher';
 import { PrismaEventoContenidoRepository } from './persistence/prisma-evento-contenido.repository';
+import {PrismaContenidoCronogramaRepository} from "./persistence/primsa-contenido-cronograma.repository";
+import {ContenidoCronogramaRepository} from "../domain/repositories/contenido-cronograma.repository";
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -50,6 +52,12 @@ export const CronogramaInfrastructureProviders = [
     provide: EventoContenidoPublisher,
     useClass: NestEventoContenidoPublisher,
   },
+
+  {
+    provide: ContenidoCronogramaRepository,
+    useClass: PrismaContenidoCronogramaRepository,
+  },
+
   InicializarCronogramasPendientesCron,
   PublicarEventosContenidoCron,
 ];
