@@ -52,10 +52,13 @@ describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
     );
     expect(modulos).toEqual([idModulo]);
     expect(resultado).toMatchObject({
-      id_contenido: idContenido,
-      id_modulos: [idModulo],
+      id_recurso: expect.any(String),
       mensaje: 'Recurso creado y asociado a sus módulos correctamente.',
     });
+    expect(resultado).not.toHaveProperty('id_contenido');
+    expect(resultado).not.toHaveProperty('texto_contenido');
+    expect(resultado).not.toHaveProperty('clave_almacenamiento');
+    expect(resultado).not.toHaveProperty('id_modulos');
   });
 
   it('normaliza módulos repetidos antes de persistir', async () => {

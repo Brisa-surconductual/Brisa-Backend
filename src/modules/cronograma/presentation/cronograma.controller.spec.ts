@@ -86,6 +86,7 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
   });
 
   it.each([
+    'crearUnidadTemporal',
     'crearContenido',
     'actualizarContenido',
     'eliminarContenido',

@@ -42,8 +42,8 @@ export class CronogramaController {
 
   @Post('/crear/unidad-temporal')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles('ADMINISTRATIVO')
-  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async crearUnidadTemporal(
     @Body() dto: UnidadTemporalDtoRequest,
   ): Promise<UnidadTemporalDtoResponse> {
