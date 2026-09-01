@@ -9,6 +9,8 @@ import { CrearRecursoContenidoUseCase } from './use-cases/crear-recurso-contenid
 import { AutorizarConsumoEventoContenidoService } from './service/autorizar-consumo-evento-contenido.service';
 import { PublicarEventosCambioEstadoUseCase } from './use-cases/publicar-eventos-cambio-estado.use-case';
 import {AsociarContenidoUnidadTemporalUseCase} from "./use-cases/asociar-contenido-unidad-temporal.use-case";
+import {ActualizarDisponibilidadContenidoUseCase} from "./use-cases/actualizar-disponibilidad-contenido.use-case";
+import {ReordenarContenidoTemporalService} from "./service/reordenar-contenido-temporal.service";
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -22,4 +24,6 @@ export const CronogramaApplicationProviders = [
   AutorizarConsumoEventoContenidoService,
   PublicarEventosCambioEstadoUseCase,
   AsociarContenidoUnidadTemporalUseCase,
+  ActualizarDisponibilidadContenidoUseCase,
+  ReordenarContenidoTemporalService,
 ];

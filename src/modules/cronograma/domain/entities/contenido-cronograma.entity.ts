@@ -5,7 +5,6 @@ export class ContenidoCronograma {
         readonly id_contenido_cronograma: string,
         readonly id_contenido: string,
         readonly id_unidad_temporal: string,
-        readonly id_cronograma: string,
         readonly orden_contenido: number,
         readonly fecha_inicio_disponibilidad: Date,
         readonly fecha_fin_disponibilidad: Date,
@@ -16,7 +15,6 @@ export class ContenidoCronograma {
     static crear(
         idContenido: string,
         idUnidadTemporal: string,
-        idCronograma: string,
         ordenContenido: number,
         fechaInicioDisponibilidad: Date,
         fechaFinDisponibilidad: Date,
@@ -25,11 +23,28 @@ export class ContenidoCronograma {
             randomUUID(),
             idContenido,
             idUnidadTemporal,
-            idCronograma,
             ordenContenido,
             fechaInicioDisponibilidad,
             fechaFinDisponibilidad,
             new Date(),
+            new Date(),
+        );
+    }
+
+    static actualizarAsociacion(
+        contenidoCronograma: ContenidoCronograma,
+        ordenContenido: number,
+        fechaInicioDisponibilidad: Date,
+        fechaFinDisponibilidad: Date,
+    ): ContenidoCronograma {
+        return new ContenidoCronograma(
+            contenidoCronograma.id_contenido_cronograma,
+            contenidoCronograma.id_contenido,
+            contenidoCronograma.id_unidad_temporal,
+            ordenContenido,
+            fechaInicioDisponibilidad,
+            fechaFinDisponibilidad,
+            contenidoCronograma.fecha_creacion,
             new Date(),
         );
     }
