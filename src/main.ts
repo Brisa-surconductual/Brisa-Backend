@@ -1,11 +1,12 @@
 import * as dotenv from 'dotenv';
-dotenv.config({ path: './config/.env' });
-
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+
+
+dotenv.config({ path: './config/.env' });
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);

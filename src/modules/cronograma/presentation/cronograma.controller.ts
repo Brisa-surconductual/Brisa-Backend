@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Param, ParseUUIDPipe, Patch, Post, UseGuards, } from '@nestjs/common';
 import { CreacionUnidadTemporalUseCase } from '../application/use-cases/crear-unidad-temporal.use-case';
 import { UnidadTemporalDtoRequest } from '../application/dto/crear-unidad-temporal.dto-request';
 import { UnidadTemporalDtoResponse } from '../application/dto/crear-unidad-temporal.dto-response';
@@ -29,6 +20,12 @@ import { EliminarContenidoUseCase } from '../application/use-cases/eliminar-cont
 import { CrearRecursoContenidoDtoRequest } from '../application/dto/crear-recurso-contenido.dto-request';
 import { RecursoContenidoDtoResponse } from '../application/dto/recurso-contenido.dto-response';
 import { CrearRecursoContenidoUseCase } from '../application/use-cases/crear-recurso-contenido.use-case';
+import { AsociarContenidoUnidadTemporalUseCase } from '../application/use-cases/asociar-contenido-unidad-temporal.use-case';
+import {crearContenidoCronogramaDtoRequest} from "../application/dto/crear-contenido-cronograma.dto-request";
+import {crearContenidoCronogramaDtoResponse} from "../application/dto/crear-contenido-cronograma.dto-response.dto";
+import {ActualizarDisponibilidadContenidoUseCase} from "../application/use-cases/actualizar-disponibilidad-contenido.use-case";
+import { ActualizarDisponibilidadContenidoDtoRequest } from '../application/dto/actualizar-disponibilidad-contenido.dto-request';
+import { ActualizarDisponibilidadContenidoDtoResponse } from '../application/dto/actualizar-disponibilidad-contenido.dto-response';
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -38,11 +35,13 @@ export class CronogramaController {
     private readonly actualizarContenidoUseCase: ActualizarContenidoUseCase,
     private readonly eliminarContenidoUseCase: EliminarContenidoUseCase,
     private readonly crearRecursoContenidoUseCase: CrearRecursoContenidoUseCase,
+    private readonly asociarContenidoUnidadTemporalUseCase: AsociarContenidoUnidadTemporalUseCase,
+    private readonly actualizarDisponibilidadContenido: ActualizarDisponibilidadContenidoUseCase,
   ) {}
 
   @Post('/crear/unidad-temporal')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles('ADMINISTRATIVO')
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async crearUnidadTemporal(
     @Body() dto: UnidadTemporalDtoRequest,
@@ -90,4 +89,21 @@ export class CronogramaController {
   ): Promise<RecursoContenidoDtoResponse> {
     return this.crearRecursoContenidoUseCase.execute(dto);
   }
+
+  @Post('/asociar-contenido-unidad-temporal')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async asociarContenidoUnidadTemporal( @Body() dto: crearContenidoCronogramaDtoRequest): Promise<crearContenidoCronogramaDtoResponse> {
+    return this.asociarContenidoUnidadTemporalUseCase.execute(dto);
+  }
+
+  @Patch('/actualizar-disponibilidad-contenido')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async actualizarDisponibilidadContenidoAsociado(
+    @Body() dto: ActualizarDisponibilidadContenidoDtoRequest,
+  ): Promise<ActualizarDisponibilidadContenidoDtoResponse> {
+    return this.actualizarDisponibilidadContenido.execute(dto);
+  }
+
 }
