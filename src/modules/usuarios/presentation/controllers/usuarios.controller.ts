@@ -1,4 +1,13 @@
-import {  Body, Controller, HttpCode, HttpStatus, Post, Req, Res} from "@nestjs/common";
+import {
+    Body,
+    Controller,
+    HttpCode,
+    HttpStatus,
+    Post,
+    Req,
+    Res,
+    UseGuards,
+} from "@nestjs/common";
 import type { Request, Response } from "express";
 import { CreacionUsuarioUseCase } from "../../application/use-cases/creacion-usuario.use-case";
 import { CreacionUsuarioDtoRequest } from "../../application/dto/creacion-usuario.dto-request";
@@ -13,6 +22,14 @@ import { CreacionUsuarioAdminDtoResponse } from "../../application/dto/crear-adm
 import { CreacionUsuarioAdminDtoRequest } from "../../application/dto/crear-administrativo.dto-request";
 import { CreacionAdministradorUseCase } from "../../application/use-cases/creacion-adimistrador.use-case";
 import { SessionCookieConfig } from '../../application/ports/session-cookie-config';
+import { AlcanceSesion } from '../../domain/enums/alcance-sesion.enum';
+import { Rol } from '../../domain/enums/rol.enum';
+import { AlcancesSesion } from '../decorators/alcances-sesion.decorator';
+import { CsrfSessionGuard } from '../guards/csrf-session.guard';
+import { SessionAuthGuard } from '../guards/session-auth.guard';
+import { SessionScopeGuard } from '../guards/session-scope.guard';
+import { Roles } from '../../../../shared/presentation/decorators/roles.decorator';
+import { RolesGuard } from '../../../../shared/presentation/guards/role-guard';
 
 @Controller("/usuarios")
 export class UsuariosController {
@@ -46,6 +63,9 @@ export class UsuariosController {
 
     @Post("/crear/administrativo")
     @HttpCode(HttpStatus.CREATED)
+    @AlcancesSesion(AlcanceSesion.COMPLETA)
+    @Roles(Rol.ADMINISTRATIVO)
+    @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
     async crearAdministrativo(@Body() dto: CreacionUsuarioAdminDtoRequest): Promise<CreacionUsuarioAdminDtoResponse> {
         return this.crearAdministrador.execute(dto);
     }

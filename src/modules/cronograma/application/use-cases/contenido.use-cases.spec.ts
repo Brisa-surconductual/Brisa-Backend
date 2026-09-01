@@ -37,11 +37,13 @@ describe('Casos de uso de contenido psicoeducativo (RF-152)', () => {
       }),
     );
     expect(resultado).toMatchObject({
-      nombre_contenido: 'Prevención del consumo',
-      tipo_contenido: TipoContenido.INFORMATIVO,
+      id_contenido: expect.any(String),
       mensaje: 'Contenido psicoeducativo creado correctamente.',
     });
-    expect(resultado.id_contenido).toEqual(expect.any(String));
+    expect(resultado).not.toHaveProperty('nombre_contenido');
+    expect(resultado).not.toHaveProperty('tipo_contenido');
+    expect(resultado).not.toHaveProperty('fecha_creacion');
+    expect(resultado).not.toHaveProperty('fecha_actualizacion');
   });
 
   it('actualiza solo los campos proporcionados', async () => {
@@ -62,7 +64,10 @@ describe('Casos de uso de contenido psicoeducativo (RF-152)', () => {
         tipo_contenido: TipoContenido.ACTIVIDAD,
       }),
     );
-    expect(resultado.nombre_contenido).toBe('Contenido actualizado');
+    expect(resultado).toEqual({
+      id_contenido: idContenido,
+      mensaje: 'Contenido psicoeducativo actualizado correctamente.',
+    });
   });
 
   it('retorna 400 cuando no se indica ningún campo para actualizar', async () => {

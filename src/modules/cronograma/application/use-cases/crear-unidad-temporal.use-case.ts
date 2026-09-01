@@ -19,25 +19,34 @@ export class CreacionUnidadTemporalUseCase {
     private readonly calculoOrdenTemporalService: CalculoOrdenTemporalService,
   ) {}
 
-  async execute(dto: UnidadTemporalDtoRequest): Promise<UnidadTemporalDtoResponse> {
+  async execute(
+    dto: UnidadTemporalDtoRequest,
+  ): Promise<UnidadTemporalDtoResponse> {
     new ConsistenciaFechasVO(dto.fecha_inicio, dto.fecha_fin);
 
-    const cronograma = await this.cronogramaRepository.buscarPorId(dto.id_cronograma);
+    const cronograma = await this.cronogramaRepository.buscarPorId(
+      dto.id_cronograma,
+    );
 
     if (!cronograma) {
       throw new CronogramaNoEncontradoException();
     }
-    if (cronograma.estado !== "ACTIVO") {
+    if (cronograma.estado !== 'ACTIVO') {
       throw new CronogramaNoActivoException();
     }
 
-    const unidadesExistentes = await this.unidadTemporalRepository.obtenerPorCronograma(
-      dto.id_cronograma,
-    );
+    const unidadesExistentes =
+      await this.unidadTemporalRepository.obtenerPorCronograma(
+        dto.id_cronograma,
+      );
 
     const ordenUnidad = this.calculoOrdenTemporalService.calcularSiguienteOrden(unidadesExistentes);
 
-    this.validarSolapamientoTemporalService.validarSolapamiento(unidadesExistentes, dto.fecha_inicio, dto.fecha_fin);
+    this.validarSolapamientoTemporalService.validarSolapamiento(
+      unidadesExistentes,
+      dto.fecha_inicio,
+      dto.fecha_fin,
+    );
 
     const nuevaUnidadTemporal = UnidadTemporal.crear(
       dto.id_cronograma,
@@ -47,10 +56,10 @@ export class CreacionUnidadTemporalUseCase {
       dto.fecha_fin,
     );
 
-    const unidadCreada = await this.unidadTemporalRepository.crearUnidadTemporal(
-      nuevaUnidadTemporal
+    await this.unidadTemporalRepository.crearUnidadTemporal(
+      nuevaUnidadTemporal,
     );
 
-    return UnidadTemporalDtoResponse.crear(unidadCreada);
+    return UnidadTemporalDtoResponse.crear();
   }
 }

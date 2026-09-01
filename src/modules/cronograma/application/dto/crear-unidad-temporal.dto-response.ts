@@ -1,13 +1,9 @@
-import { UnidadTemporal } from "../../domain/entities/unidad-temporal.entity";
-
 export class UnidadTemporalDtoResponse {
+  mensaje!: string;
 
-    messaje!: string;
-
-    static crear(unidad: UnidadTemporal): UnidadTemporalDtoResponse {
-        const dto = new UnidadTemporalDtoResponse();
-        dto.messaje = "Unidad temporal creada correctamente.";
-        return dto;
-    }
-
+  static crear(): UnidadTemporalDtoResponse {
+    const dto = new UnidadTemporalDtoResponse();
+    dto.mensaje = 'Unidad temporal creada correctamente.';
+    return dto;
+  }
 }

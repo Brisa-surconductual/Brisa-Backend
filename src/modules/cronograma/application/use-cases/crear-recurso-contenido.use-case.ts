@@ -52,6 +52,6 @@ export class CrearRecursoContenidoUseCase {
       idModulos,
     );
 
-    return RecursoContenidoDtoResponse.crear(recursoCreado, idModulos);
+    return RecursoContenidoDtoResponse.crear(recursoCreado);
   }
 }
