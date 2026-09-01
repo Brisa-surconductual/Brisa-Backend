@@ -11,14 +11,16 @@ import {ContenidoRepository} from "../../domain/repositories/contenido.repositor
 import {ContenidoCronogramaContenidoNoEncontradoException} from "../../domain/exeption/contenido-cronograma-contenido-no-encontrado.exeption";
 import {UnidadTemporalNoEncontradaException} from "../../domain/exeption/unidad-temporal-no-encotrada.exception";
 import {ContenidoUnicaUnidadTemporalException} from "../../domain/exeption/contenido-unica-unidad-temporal.exeption";
+import {ReordenarContenidoTemporalService} from "../service/reordenar-contenido-temporal.service";
+import { DisponibilidadFueraDeRangoException } from "../../domain/exeption/disponibilidad-fuera-de-rango.exeption";
 
 @Injectable()
 export class AsociarContenidoUnidadTemporalUseCase {
     constructor(
-        private readonly calculoOrdenTemporalService: CalculoOrdenTemporalService,
         private readonly validarSolapamientoTemporalService: ValidarSolapamientoTemporalService,
         private readonly unidadTemporalRepository: UnidadTemporalRepository,
         private readonly contenidoCronogramaRepository: ContenidoCronogramaRepository,
+        private readonly reordenarContenidoTemporalService: ReordenarContenidoTemporalService,
         private readonly contenidoRepository: ContenidoRepository
     ) {}
 
@@ -44,49 +46,68 @@ export class AsociarContenidoUnidadTemporalUseCase {
             throw new ContenidoUnicaUnidadTemporalException();
         }
 
-
-
         const consistenciaFechas = new ConsistenciaFechasVO(
             contenido.fechaInicioDisponibilidad,
             contenido.fechaFinDisponibilidad,
         );
 
-        const idCronograma = await this.unidadTemporalRepository.obtnerIdCronogramaPorIdUnidadTemporal(
-            contenido.idUnidadTemporal,
-        );
-        
 
         const contenidosExistente = await this.contenidoCronogramaRepository.obtnerPorIdUnidadTemporal(
             contenido.idUnidadTemporal,
         );
 
-        const ordenContenido = this.calculoOrdenTemporalService.calcularSiguienteOrden(contenidosExistente);
         
+        const nuevaAsociacionTentativa = ContenidoCronograma.crear(
+            contenido.idContenido,
+            contenido.idUnidadTemporal,
+            0, 
+            consistenciaFechas.fecha_inicio,
+            consistenciaFechas.fecha_fin,
+        );
+
+        const nuevoOrden = this.reordenarContenidoTemporalService.recalcularOrden([
+            ...contenidosExistente,
+            nuevaAsociacionTentativa,
+        ]);
+
+        const ordenAsignado = nuevoOrden.find(
+            (o) => o.id_contenido_cronograma === nuevaAsociacionTentativa.id_contenido_cronograma,
+        )!.orden_contenido;
+
+
         this.validarSolapamientoTemporalService.validarSolapamiento(
             contenidosExistente,
             consistenciaFechas.fecha_inicio,
             consistenciaFechas.fecha_fin
         );
 
-        const finalizacionUnidadTemporal = await this.unidadTemporalRepository.obtenerPorIdUnidadTemporal(
-            contenido.idUnidadTemporal,
-        );
-        if (unidadTemporal.fecha_fin < new Date()) {
-            throw new Error("La unidad temporal ya ha finalizado no se puede asociar contenido");
-        }
+        if (
+              consistenciaFechas.fecha_inicio < unidadTemporal.fecha_inicio ||
+              consistenciaFechas.fecha_fin > unidadTemporal.fecha_fin
+            ) {
+              throw new DisponibilidadFueraDeRangoException();
+            }
 
         const asociacionCronogramaUnidadTemporal = ContenidoCronograma.crear(
             contenido.idContenido,
             contenido.idUnidadTemporal,
-            idCronograma,
-            ordenContenido,
+            ordenAsignado,
             consistenciaFechas.fecha_inicio,
             consistenciaFechas.fecha_fin,
         );
 
-       await this.contenidoCronogramaRepository.crear(asociacionCronogramaUnidadTemporal);
 
-        return crearContenidoCronogramaDtoResponse.crear(ordenContenido);
+       const ordenParaHermanas = nuevoOrden.filter(
+            (o) => o.id_contenido_cronograma !== nuevaAsociacionTentativa.id_contenido_cronograma,
+        );
+
+        await this.contenidoCronogramaRepository.crearConReordenamiento(
+            asociacionCronogramaUnidadTemporal,
+            ordenParaHermanas,
+        );
+
+        return crearContenidoCronogramaDtoResponse.crear(ordenAsignado);
+   
     }
 
 

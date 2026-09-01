@@ -4,8 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  schemas  = ["cronograma", "usuario"]
+  provider  = "postgresql"
+  schemas   = ["cronograma", "usuario"]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -148,19 +148,16 @@ model contenidos_cronograma {
   id_contenido_cronograma     String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_contenido                String              @unique(map: "uq_contenido_unico_en_cronograma") @db.Uuid
   id_unidad_temporal          String              @db.Uuid
-  id_cronograma               String              @db.Uuid
   orden_contenido             Int?
   fecha_inicio_disponibilidad DateTime?           @db.Timestamptz(6)
   fecha_fin_disponibilidad    DateTime?           @db.Timestamptz(6)
   fecha_creacion              DateTime            @default(now()) @db.Timestamptz(6)
   fecha_actualizacion         DateTime            @default(now()) @db.Timestamptz(6)
-  cronogramas                 cronogramas         @relation(fields: [id_cronograma], references: [id_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_contenido_cronograma")
   contenidos                  contenidos          @relation(fields: [id_contenido], references: [id_contenido], onUpdate: NoAction, map: "fk_contenido_cronograma_contenido")
   unidades_temporales         unidades_temporales @relation(fields: [id_unidad_temporal], references: [id_unidad_temporal], onUpdate: NoAction, map: "fk_contenido_unidad_temporal")
   eventos_contenido           eventos_contenido[]
 
-  @@unique([id_cronograma, orden_contenido], map: "uq_contenido_orden_en_cronograma", where: raw("(orden_contenido IS NOT NULL)"))
-  @@index([id_cronograma], map: "ix_contenidos_cronograma_cronograma")
+  @@unique([id_unidad_temporal, orden_contenido], map: "uq_contenido_orden_en_unidad_temporal", where: raw("(orden_contenido IS NOT NULL)"))
   @@index([fecha_inicio_disponibilidad, fecha_fin_disponibilidad], map: "ix_contenidos_cronograma_disponibilidad")
   @@index([id_unidad_temporal], map: "ix_contenidos_cronograma_unidad")
   @@schema("cronograma")
@@ -176,7 +173,6 @@ model cronogramas {
   fecha_activacion      DateTime?               @db.Timestamptz(6)
   fecha_creacion        DateTime                @default(now()) @db.Timestamptz(6)
   fecha_actualizacion   DateTime                @default(now()) @db.Timestamptz(6)
-  contenidos_cronograma contenidos_cronograma[]
   cronogramas_usuario   cronogramas_usuario[]
   eventos_contenido     eventos_contenido[]
   unidades_temporales   unidades_temporales[]
