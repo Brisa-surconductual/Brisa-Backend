@@ -30,8 +30,8 @@
   - [3. Instalar dependencias](#3-instalar-dependencias)
   - [4. Configurar variables de entorno](#4-configurar-variables-de-entorno)
   - [5. Configurar la base de datos](#5-configurar-la-base-de-datos)
-    - [Opción A · Restaurar el backup (recomendada)](#opción-a--restaurar-el-backup-recomendada)
-    - [Opción B · Crear el esquema con `prisma db push`](#opción-b--crear-el-esquema-con-prisma-db-push)
+    - [Opción A · Restaurar el backup](#opción-a--restaurar-el-backup)
+    - [Opción B · Aplicar las migraciones (recomendada)](#opción-b--aplicar-las-migraciones-recomendada)
   - [6. Generar el cliente de Prisma](#6-generar-el-cliente-de-prisma)
   - [7. Ejecutar el proyecto](#7-ejecutar-el-proyecto)
 - [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)
@@ -96,56 +96,60 @@ pnpm install
 Crea un archivo `.env` en la raíz del proyecto (puedes basarte en `.env.example` si existe):
 
 ```env
-DATABASE_URL=postgresql://usuario:password@localhost:5432/surconductual
+DATABASE_URL=
+
+SHADOW_DATABASE_URL=
 
 JWT_SECRET=
 
 PORT=3000
 ```
 
-> ⚠️ **Importante:** `DATABASE_URL` debe apuntar a la base de datos que vas a usar en el siguiente paso. El nombre de la base de datos (`brisa_db` en el ejemplo) debe coincidir con el que uses al crearla.
+> ⚠️ **Importante:** `DATABASE_URL` y `SHADOW_DATABASE_URL` son las únicas variables que Prisma necesita para trabajar con la base de datos y las migraciones. Toda la configuración adicional de migraciones (datasource, shadow database, etc.) vive en `prisma.config.ts`, ya versionado en el repositorio — no hay que tocarlo para levantar el proyecto, solo completar estas dos URLs.
+>
+> Pide los valores reales de ambas variables en el canal privado del equipo. Nunca se suben credenciales reales al repositorio.
 
 ### 5. Configurar la base de datos
 
-En ambos casos, primero necesitas una base de datos **vacía** creada en tu instancia de PostgreSQL:
+Este proyecto usa **una única base de datos compartida en Supabase** para todo el equipo — no cada desarrollador trabaja contra su propia base de datos aislada. Esto significa que, en la mayoría de los casos, **no necesitas crear ni migrar nada tú mismo**: la base de datos ya existe y ya tiene la estructura al día.
+
+Elige la opción según tu situación:
+
+#### Opción A · Restaurar el backup
+
+Úsala únicamente si vas a trabajar contra una base de datos **local**, separada de la compartida en Supabase (por ejemplo, para pruebas aisladas o mientras no tienes conexión a internet).
+
+Primero crea una base de datos vacía:
 
 ```bash
 createdb surconductual
 ```
 
-A partir de ahí, tienes **dos formas** de dejarla lista para trabajar. Elige la que más te convenga según tu situación.
-
-#### Opción A · Restaurar el backup
-
-Úsala si tienes acceso al archivo de backup del proyecto (en la raíz del repositorio) y quieres una base de datos con **estructura y datos base** ya cargados, idéntica a la que usa el resto del equipo.
-
-**Si el archivo es `.sql` (formato plano):**
+**Si el archivo de backup es `.sql` (formato plano):**
 
 ```bash
-psql -U <usuario> -d brisa_db -f nombre-del-backup.sql
+psql -U <usuario> -d surconductual -f nombre-del-backup.sql
 ```
 
 **Si el archivo es `.dump` o `.backup` (formato binario/custom de pg_dump):**
 
 ```bash
-pg_restore -U <usuario> -d brisa_db nombre-del-backup.dump
+pg_restore -U <usuario> -d surconductual nombre-del-backup.dump
 ```
 
-> 📌 Reemplaza `nombre-del-backup` por el nombre real del archivo. Con esta opción, la base de datos queda como la fuente de verdad, y `schema.prisma` se sincroniza *a partir de ella* con `prisma db pull` (ver [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)).
+> 📌 Reemplaza `nombre-del-backup` por el nombre real del archivo, y apunta tu `DATABASE_URL` local a esta base de datos restaurada.
 
-#### Opción B · Crear el esquema con `prisma db push` (recomendada)
+#### Opción B · Aplicar las migraciones (recomendada)
 
-Úsala si **no tienes el archivo de backup a la mano**, o simplemente quieres levantar el proyecto rápido con una base de datos limpia (sin los datos base, solo la estructura). En este caso, es `schema.prisma` el que ya está versionado en el repositorio el que define la estructura, y Prisma la crea directamente en tu base de datos vacía:
+Úsala cuando tu `DATABASE_URL` ya apunta a la base de datos compartida de Supabase (el caso normal para el día a día del equipo). El historial de migraciones versionado en `prisma/migrations/` ya refleja el estado real de esa base de datos, así que no hace falta crear ni restaurar nada — solo confirmar que tu entorno está alineado:
 
 ```bash
-pnpm dlx prisma db push
+pnpm dlx prisma migrate deploy
 ```
 
-Esto crea en `brisa_db` todas las tablas, columnas y relaciones que ya están definidas en `schema.prisma`, sin necesidad de restaurar nada. Como la estructura resultante ya coincide con el esquema del repositorio, **no hace falta correr `prisma db pull`** después de esto — solo generar el cliente (paso 6).
+Este comando aplica cualquier migración pendiente que aún no se haya ejecutado contra la base de datos (por ejemplo, si alguien del equipo generó una migración nueva después de tu último `git pull`). Si la base de datos ya está al día, el comando simplemente no hace nada — es seguro ejecutarlo siempre que quieras confirmar que estás sincronizado.
 
-> ⚠️ Ten en cuenta que con esta opción tu base de datos queda **sin los datos base** que sí trae el backup (usuarios de prueba, catálogos, etc.). Si tu tarea depende de esos datos, usa la Opción A.
-
-> ℹ️ Esta opción rompe momentáneamente la dirección normal del flujo del proyecto (ver siguiente sección): aquí es `schema.prisma` el que manda sobre la base de datos, no al revés. Está bien para levantar el entorno rápido, pero cualquier cambio de esquema *posterior* durante el desarrollo normal debe seguir haciéndose en la base de datos, seguido de `db pull` + `generate`, como ya está establecido en el proyecto.
+> ⚠️ Este comando **nunca genera** una migración nueva ni te pide confirmación de cambios — solo aplica las que ya existen en el repositorio. Para generar una migración nueva a partir de un cambio de esquema, ve a [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma).
 
 ### 6. Generar el cliente de Prisma
 
@@ -154,6 +158,8 @@ Sin importar qué opción hayas usado en el paso anterior, genera el cliente de 
 ```bash
 pnpm dlx prisma generate
 ```
+
+> 📌 Si en algún momento `nest start` marca errores de tipos que no cuadran con tu código (una tabla o columna que "no existe" según TypeScript), lo primero que debes revisar es si te falta correr este comando después de un `git pull`.
 
 ### 7. Ejecutar el proyecto
 
@@ -176,27 +182,39 @@ Si todo salió bien, el backend debería quedar corriendo en `http://localhost:<
 
 ## Flujo de trabajo con Prisma
 
-A diferencia del flujo tradicional de Prisma (donde el esquema `schema.prisma` es la fuente de verdad y se generan migraciones con `prisma migrate dev`), en este proyecto se trabaja de forma inversa **durante el desarrollo del día a día**:
+Este proyecto usa **migraciones versionadas de Prisma** (`prisma migrate`). El esquema `schema.prisma` es la fuente de verdad: todo cambio de estructura se hace primero ahí, y luego se convierte en una migración versionada que queda registrada en `prisma/migrations/` y se aplica de forma reproducible sobre la base de datos compartida.
 
-1. **Los cambios en el esquema se hacen directamente en la base de datos** (tablas, columnas, relaciones, etc.), ya sea manualmente o mediante herramientas externas al proyecto.
-2. Una vez la base de datos refleja el estado deseado, se ejecuta:
+**La base de datos de Supabase nunca se edita a mano** (ni desde el SQL Editor del panel, ni con `psql` manual, ni con herramientas externas) para cambios de estructura. Todo pasa por este flujo.
+
+### Si solo vas a trabajar con el esquema tal como está
+
+No necesitas hacer nada especial más allá de lo descrito en la [Guía de inicio rápido](#5-configurar-la-base-de-datos): cada vez que hagas `git pull` y veas una carpeta nueva en `prisma/migrations/`, corre:
+
+```bash
+pnpm dlx prisma generate
+```
+
+Esto es suficiente porque la migración ya fue aplicada una sola vez, contra la base de datos compartida, por quien la generó. No hace falta que cada desarrollador la vuelva a aplicar.
+
+### Si necesitas cambiar el esquema (agregar una tabla, columna, relación, etc.)
+
+1. Edita `schema.prisma` con el cambio que necesitas.
+2. **Avisa en el canal del equipo antes de continuar.** Como todos comparten la misma base de datos en Supabase, solo una persona debe estar migrando a la vez para evitar choques.
+3. Genera y aplica la migración:
    ```bash
-   pnpm dlx prisma db pull
+   pnpm dlx prisma migrate dev --name descripcion_corta_del_cambio
    ```
-   Este comando introspecciona la base de datos y regenera `schema.prisma` para que coincida con la estructura real.
-3. Finalmente, se ejecuta:
-   ```bash
-   pnpm dlx prisma generate
-   ```
-   Esto regenera el **Prisma Client**, que es lo que el código de la aplicación (capa de `infrastructure`) usa para interactuar con la base de datos con tipado seguro.
+   Este comando compara tu `schema.prisma` contra el historial de migraciones existente, genera el SQL de diferencia, te lo muestra para revisión (presta especial atención si incluye algo potencialmente destructivo, como un `DROP COLUMN`), lo aplica contra la base de datos real, y regenera el cliente de Prisma automáticamente.
+4. Commitea la carpeta nueva de `prisma/migrations/<timestamp>_descripcion_corta_del_cambio/` junto con tu cambio de código — es parte del repositorio, no se ignora en git.
+5. Avisa al equipo que ya se aplicó, para que cada quien corra `git pull` seguido de `pnpm dlx prisma generate`.
 
-**¿Por qué es importante esto para el equipo?**
+### Reglas del equipo
 
-- Si haces cambios en el esquema de la base de datos, **no olvides correr `db pull` + `generate`**, o el código quedará desincronizado con la estructura real.
-- Si notas que Prisma Client no reconoce un campo o tabla nueva, lo más probable es que falte ejecutar este flujo.
-- No se deben crear migraciones manuales de Prisma (`prisma migrate dev`) en este proyecto, ya que rompería la convención de trabajo actual.
-
-> ℹ️ La única excepción a este flujo es el arranque inicial del proyecto con la [Opción B](#opción-b--crear-el-esquema-con-prisma-db-push) de la sección anterior, donde se usa `db push` para crear la base de datos por primera vez a partir del `schema.prisma` ya existente en el repositorio. Una vez la base de datos está creada, el flujo normal (cambios en la BD → `db pull` → `generate`) vuelve a aplicar para cualquier cambio posterior.
+- **Nunca se editan tablas, columnas o constraints directamente en Supabase.** Todo cambio de esquema pasa por `schema.prisma` + `prisma migrate dev`.
+- **No se usa `prisma db push`** para cambios de esquema del día a día — no deja registro en `prisma/migrations/` y desincroniza el historial del equipo.
+- **Solo una persona migra a la vez.** Confirma con el equipo antes de correr `migrate dev` contra la base de datos compartida.
+- Si un comando de migración falla a mitad de camino, no sigas intentando comandos al azar — revisa el mensaje de error completo y coordina con el equipo antes de forzar cualquier `migrate resolve`.
+- La configuración de conexión para migraciones (incluida la shadow database) vive en `prisma.config.ts`, ya versionado — no debe modificarse sin coordinarlo con el equipo, ya que afecta a todos por igual.
 
 ---
 
@@ -427,7 +445,7 @@ De esta forma el dominio permanece independiente de cualquier tecnología.
 - No se debe acceder a la base de datos desde los controladores.
 - Toda la lógica del negocio debe implementarse mediante casos de uso.
 - Los repositorios del dominio son contratos, no implementaciones.
-- Durante el desarrollo normal, los cambios de esquema se hacen en la base de datos, seguidos de `prisma db pull` + `prisma generate` (ver [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)). La excepción es el arranque inicial del proyecto con `prisma db push` (ver [Opción B](#opción-b--crear-el-esquema-con-prisma-db-push)).
+- Los cambios de esquema se hacen siempre en `schema.prisma` y se convierten en migraciones versionadas con `prisma migrate dev` (ver [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)). Nunca se edita la base de datos de Supabase directamente.
 
 ---
 
