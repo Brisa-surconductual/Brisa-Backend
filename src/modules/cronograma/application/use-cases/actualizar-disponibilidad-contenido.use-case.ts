@@ -12,6 +12,9 @@ import { SolapamientoConLimiteException } from '../../domain/exeption/solapamine
 import { calcularLimitesDisponibles, construirMensajeLimite } from '../service/calcular-limite-disponible.service';
 import { ActualizarDisponibilidadContenidoDtoRequest } from '../dto/actualizar-disponibilidad-contenido.dto-request';
 import { ActualizarDisponibilidadContenidoDtoResponse } from '../dto/actualizar-disponibilidad-contenido.dto-response';
+import {CalculoEstadoContenidoPort} from "../ports/calculo-estado-contenido.port";
+import { ContenidoNoProgramadoException } from '../../domain/exeption/contenido-no-programado.exeption';
+import { EstadoContenido } from '../../domain/enums/estado-contenido.enum';
 
 @Injectable()
 export class ActualizarDisponibilidadContenidoUseCase {
@@ -20,6 +23,7 @@ export class ActualizarDisponibilidadContenidoUseCase {
     private readonly unidadTemporalRepository: UnidadTemporalRepository,
     private readonly validarSolapamientoTemporalService: ValidarSolapamientoTemporalService,
     private readonly reordenarContenidoTemporalService: ReordenarContenidoTemporalService,
+    private readonly calculoEstadoContenidoPort: CalculoEstadoContenidoPort,
   ) {}
 
   async execute(
@@ -31,6 +35,14 @@ export class ActualizarDisponibilidadContenidoUseCase {
     );
     if (!asociacionActual) {
       throw new ContenidoNoAsociadoException();
+    }
+
+    const estadoActual = await this.calculoEstadoContenidoPort.calcular(
+      asociacionActual.fecha_inicio_disponibilidad,
+      asociacionActual.fecha_fin_disponibilidad,
+    );
+    if (estadoActual !== EstadoContenido.PROGRAMADO) {
+      throw new ContenidoNoProgramadoException();
     }
 
     // 400 — fecha_inicio < fecha_fin
