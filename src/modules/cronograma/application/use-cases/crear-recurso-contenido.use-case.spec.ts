@@ -26,6 +26,7 @@ describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
       crearConModulosDestino: jest
         .fn()
         .mockImplementation((recurso) => Promise.resolve(recurso)),
+      reordenar: jest.fn(),
     };
     almacenamientoRecursos = {
       crearUrlSubida: jest.fn(),

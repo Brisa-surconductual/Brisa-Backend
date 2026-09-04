@@ -10,13 +10,17 @@ describe('PrismaRecursoContenidoRepository (RF-153/RF-154)', () => {
   const idModuloDos = '00000000-0000-4000-8000-000000000004';
   const tx = {
     modulos_sistema: { findMany: jest.fn() },
-    recursos_contenido: { create: jest.fn() },
+    recursos_contenido: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+    },
     recursos_modulos_destino: { createMany: jest.fn() },
   };
   const prisma = {
     $transaction: jest.fn(),
   };
-  type EjecutarTransaccion = (cliente: typeof tx) => Promise<RecursoContenido>;
+  type EjecutarTransaccion = (cliente: typeof tx) => Promise<unknown>;
   let repository: PrismaRecursoContenidoRepository;
 
   beforeEach(() => {
@@ -29,6 +33,11 @@ describe('PrismaRecursoContenidoRepository (RF-153/RF-154)', () => {
       { id_modulo: idModuloDos },
     ]);
     tx.recursos_contenido.create.mockResolvedValue(recursoPrisma());
+    tx.recursos_contenido.findMany.mockResolvedValue([
+      { id_recurso: idRecurso },
+      { id_recurso: idModuloDos },
+    ]);
+    tx.recursos_contenido.update.mockResolvedValue({});
     tx.recursos_modulos_destino.createMany.mockResolvedValue({ count: 2 });
     repository = new PrismaRecursoContenidoRepository(prisma as never);
   });
@@ -116,6 +125,44 @@ describe('PrismaRecursoContenidoRepository (RF-153/RF-154)', () => {
     await expect(
       repository.crearConModulosDestino(recurso(), [idModuloUno]),
     ).rejects.toBe(error);
+  });
+
+  it('reordena todos los recursos en dos fases dentro de una transacción', async () => {
+    await repository.reordenar(idContenido, [idModuloDos, idRecurso]);
+
+    expect(tx.recursos_contenido.update.mock.calls).toEqual([
+      [
+        {
+          where: { id_recurso: idModuloDos },
+          data: { orden_bloque: -1 },
+        },
+      ],
+      [
+        {
+          where: { id_recurso: idRecurso },
+          data: { orden_bloque: -2 },
+        },
+      ],
+      [
+        {
+          where: { id_recurso: idModuloDos },
+          data: { orden_bloque: 1 },
+        },
+      ],
+      [
+        {
+          where: { id_recurso: idRecurso },
+          data: { orden_bloque: 2 },
+        },
+      ],
+    ]);
+  });
+
+  it('rechaza un orden parcial o con recursos ajenos', async () => {
+    await expect(
+      repository.reordenar(idContenido, [idRecurso]),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(tx.recursos_contenido.update.mock.calls).toHaveLength(0);
   });
 
   function recurso(): RecursoContenido {

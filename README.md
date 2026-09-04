@@ -198,13 +198,19 @@ arbitraria.
 
 Flujo para una PWA autenticada como administrativo:
 
-1. Solicita una URL con `POST /cronograma/recursos/url-subida`, enviando
+1. Consulta los módulos disponibles con `GET /cronograma/modulos-destino`.
+2. Solicita una URL con `POST /cronograma/recursos/url-subida`, enviando
    `id_contenido`, `tipo_recurso`, `mime_type` y `tamano_bytes`.
-2. Sube el archivo con `PUT` directamente a `url_subida`, usando exactamente los
+3. Sube el archivo con `PUT` directamente a `url_subida`, usando exactamente los
    encabezados devueltos por el backend. El binario nunca pasa por NestJS.
-3. Confirma la creación con `POST /cronograma/recursos`, enviando la
+4. Confirma la creación con `POST /cronograma/recursos`, enviando la
    `clave_almacenamiento` recibida, el mismo MIME/tamaño y al menos un módulo
    destino. Antes de persistir, el backend verifica el objeto con S3.
+
+Para cambiar el orden de los bloques, envía todos los `id_recurso` del contenido
+en el orden deseado a
+`PATCH /cronograma/contenidos/:id_contenido/recursos/orden`. La actualización se
+realiza en una única transacción para conservar la unicidad de `orden_bloque`.
 
 Para texto no se solicita URL: se usa directamente `POST /cronograma/recursos`
 con `tipo_recurso: "TEXTO"` y `texto_contenido`.

@@ -12,6 +12,8 @@ import { AsociarContenidoUnidadTemporalUseCase } from './use-cases/asociar-conte
 import { ActualizarDisponibilidadContenidoUseCase } from './use-cases/actualizar-disponibilidad-contenido.use-case';
 import { ReordenarContenidoTemporalService } from './service/reordenar-contenido-temporal.service';
 import { SolicitarUrlSubidaRecursoUseCase } from './use-cases/solicitar-url-subida-recurso.use-case';
+import { ListarModulosDestinoUseCase } from './use-cases/listar-modulos-destino.use-case';
+import { ReordenarRecursosContenidoUseCase } from './use-cases/reordenar-recursos-contenido.use-case';
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -23,6 +25,8 @@ export const CronogramaApplicationProviders = [
   EliminarContenidoUseCase,
   CrearRecursoContenidoUseCase,
   SolicitarUrlSubidaRecursoUseCase,
+  ListarModulosDestinoUseCase,
+  ReordenarRecursosContenidoUseCase,
   AutorizarConsumoEventoContenidoService,
   PublicarEventosCambioEstadoUseCase,
   AsociarContenidoUnidadTemporalUseCase,
