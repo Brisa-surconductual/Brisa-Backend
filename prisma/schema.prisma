@@ -153,7 +153,7 @@ model contenidos_cronograma {
   fecha_fin_disponibilidad    DateTime?           @db.Timestamptz(6)
   fecha_creacion              DateTime            @default(now()) @db.Timestamptz(6)
   fecha_actualizacion         DateTime            @default(now()) @db.Timestamptz(6)
-  contenidos                  contenidos          @relation(fields: [id_contenido], references: [id_contenido], onUpdate: NoAction, map: "fk_contenido_cronograma_contenido")
+  contenidos                  contenidos          @relation(fields: [id_contenido], references: [id_contenido], onDelete: Cascade, onUpdate: NoAction, map: "fk_contenido_cronograma_contenido")
   unidades_temporales         unidades_temporales @relation(fields: [id_unidad_temporal], references: [id_unidad_temporal], onUpdate: NoAction, map: "fk_contenido_unidad_temporal")
   eventos_contenido           eventos_contenido[]
 
@@ -198,16 +198,17 @@ model cronogramas_usuario {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model eventos_contenido {
-  id_evento               BigInt                 @id @default(autoincrement())
-  id_contenido_cronograma String                 @db.Uuid
-  id_cronograma           String                 @db.Uuid
-  estado_anterior         estado_contenido_enum?
-  estado_nuevo            estado_contenido_enum
-  fecha_cambio            DateTime               @default(now()) @db.Timestamptz(6)
-  version_evento          String                 @default("1.0") @db.VarChar(10)
-  payload                 Json
-  contenidos_cronograma   contenidos_cronograma  @relation(fields: [id_contenido_cronograma], references: [id_contenido_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_contenido")
-  cronogramas             cronogramas            @relation(fields: [id_cronograma], references: [id_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_cronograma")
+  id_evento                 BigInt                      @id @default(autoincrement())
+  id_contenido_cronograma   String                      @db.Uuid
+  id_cronograma             String                      @db.Uuid
+  estado_anterior           estado_contenido_enum?
+  estado_nuevo              estado_contenido_enum
+  fecha_cambio              DateTime                    @default(now()) @db.Timestamptz(6)
+  version_evento            String                      @default("1.0") @db.VarChar(10)
+  payload                   Json
+  contenidos_cronograma     contenidos_cronograma       @relation(fields: [id_contenido_cronograma], references: [id_contenido_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_contenido")
+  cronogramas               cronogramas                 @relation(fields: [id_cronograma], references: [id_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_cronograma")
+  entregas_evento_contenido entregas_evento_contenido[]
 
   @@unique([id_contenido_cronograma, estado_nuevo], map: "uq_evento_contenido_transicion")
   @@index([id_cronograma, fecha_cambio], map: "ix_eventos_contenido_cronograma")
@@ -215,12 +216,29 @@ model eventos_contenido {
 }
 
 model modulos_sistema {
-  id_modulo                String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  codigo_modulo            String                     @unique(map: "uq_modulo_codigo") @db.VarChar(10)
-  nombre_modulo            String                     @db.VarChar(100)
-  activo                   Boolean                    @default(true)
-  recursos_modulos_destino recursos_modulos_destino[]
+  id_modulo                 String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo_modulo             String                      @unique(map: "uq_modulo_codigo") @db.VarChar(10)
+  nombre_modulo             String                      @db.VarChar(100)
+  activo                    Boolean                     @default(true)
+  recursos_modulos_destino  recursos_modulos_destino[]
+  entregas_evento_contenido entregas_evento_contenido[]
 
+  @@schema("cronograma")
+}
+
+model entregas_evento_contenido {
+  id_evento            BigInt
+  id_modulo            String            @db.Uuid
+  fecha_creacion       DateTime          @default(now()) @db.Timestamptz(6)
+  intentos_publicacion Int               @default(0)
+  fecha_ultimo_intento DateTime?         @db.Timestamptz(6)
+  fecha_publicacion    DateTime?         @db.Timestamptz(6)
+  ultimo_error         String?           @db.VarChar(500)
+  eventos_contenido    eventos_contenido @relation(fields: [id_evento], references: [id_evento], onDelete: Cascade, onUpdate: NoAction, map: "fk_entrega_evento")
+  modulos_sistema      modulos_sistema   @relation(fields: [id_modulo], references: [id_modulo], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_modulo")
+
+  @@id([id_evento, id_modulo])
+  @@index([fecha_creacion], map: "ix_entregas_evento_pendientes", where: raw("(fecha_publicacion IS NULL)"))
   @@schema("cronograma")
 }
 

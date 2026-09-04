@@ -31,6 +31,17 @@ export interface EventoContenidoPayloadV1 {
   readonly modulos_destino: readonly ModuloDestinoEvento[];
 }
 
+export interface DatosEventoContenidoPersistido {
+  readonly id_evento: bigint;
+  readonly id_contenido_cronograma: string;
+  readonly id_cronograma: string;
+  readonly estado_anterior: EstadoContenido | null;
+  readonly estado_nuevo: EstadoContenido;
+  readonly fecha_cambio: Date;
+  readonly version_evento: string;
+  readonly payload: unknown;
+}
+
 export class EventoContenido {
   private constructor(
     readonly id_evento: bigint | null,
@@ -73,6 +84,7 @@ export class EventoContenido {
       !contenido.id_contenido ||
       !contenido.id_cronograma ||
       Number.isNaN(fechaCambio.getTime()) ||
+      modulosUnicos.length === 0 ||
       this.contieneNulos(payload)
     ) {
       throw new DatosEventoContenidoInvalidosException();
@@ -86,6 +98,43 @@ export class EventoContenido {
       transicion.estado_nuevo,
       new Date(fechaCambio),
       VERSION_EVENTO_CONTENIDO,
+      this.congelar(payload),
+    );
+  }
+
+  static rehidratar(datos: DatosEventoContenidoPersistido): EventoContenido {
+    const payload = this.convertirPayload(datos.payload);
+    const estadoAnteriorPayload = payload.estado_anterior ?? null;
+
+    if (
+      datos.id_evento <= 0n ||
+      datos.version_evento !== VERSION_EVENTO_CONTENIDO ||
+      payload.tipo_evento !== TIPO_EVENTO_CAMBIO_ESTADO_CONTENIDO ||
+      payload.version !== VERSION_EVENTO_CONTENIDO ||
+      payload.id_contenido_cronograma !== datos.id_contenido_cronograma ||
+      !payload.id_contenido ||
+      payload.id_cronograma !== datos.id_cronograma ||
+      estadoAnteriorPayload !== datos.estado_anterior ||
+      payload.estado_nuevo !== datos.estado_nuevo ||
+      payload.fecha_cambio !== datos.fecha_cambio.toISOString() ||
+      payload.modulos_destino.length === 0 ||
+      !this.esTransicionValida({
+        estado_anterior: datos.estado_anterior,
+        estado_nuevo: datos.estado_nuevo,
+      }) ||
+      this.contieneNulos(payload)
+    ) {
+      throw new DatosEventoContenidoInvalidosException();
+    }
+
+    return new EventoContenido(
+      datos.id_evento,
+      datos.id_contenido_cronograma,
+      datos.id_cronograma,
+      datos.estado_anterior,
+      datos.estado_nuevo,
+      new Date(datos.fecha_cambio),
+      datos.version_evento,
       this.congelar(payload),
     );
   }
@@ -109,7 +158,13 @@ export class EventoContenido {
     const unicos = new Map<string, ModuloDestinoEvento>();
 
     for (const modulo of modulos) {
-      if (!modulo.id_modulo || !modulo.codigo_modulo || !modulo.nombre_modulo) {
+      if (
+        typeof modulo !== 'object' ||
+        modulo === null ||
+        !modulo.id_modulo ||
+        !modulo.codigo_modulo ||
+        !modulo.nombre_modulo
+      ) {
         throw new DatosEventoContenidoInvalidosException();
       }
 
@@ -136,6 +191,65 @@ export class EventoContenido {
       (transicion.estado_anterior === EstadoContenido.ACTIVO &&
         transicion.estado_nuevo === EstadoContenido.FINALIZADO)
     );
+  }
+
+  private static convertirPayload(valor: unknown): EventoContenidoPayloadV1 {
+    if (typeof valor !== 'object' || valor === null || Array.isArray(valor)) {
+      throw new DatosEventoContenidoInvalidosException();
+    }
+
+    const payload = valor as Record<string, unknown>;
+    const modulos = payload.modulos_destino;
+
+    if (
+      typeof payload.tipo_evento !== 'string' ||
+      typeof payload.version !== 'string' ||
+      typeof payload.id_contenido_cronograma !== 'string' ||
+      typeof payload.id_contenido !== 'string' ||
+      typeof payload.id_cronograma !== 'string' ||
+      typeof payload.estado_nuevo !== 'string' ||
+      typeof payload.fecha_cambio !== 'string' ||
+      !Array.isArray(modulos)
+    ) {
+      throw new DatosEventoContenidoInvalidosException();
+    }
+
+    const estadoAnterior = payload.estado_anterior;
+    if (
+      estadoAnterior !== undefined &&
+      !Object.values(EstadoContenido).includes(
+        estadoAnterior as EstadoContenido,
+      )
+    ) {
+      throw new DatosEventoContenidoInvalidosException();
+    }
+
+    if (
+      !Object.values(EstadoContenido).includes(
+        payload.estado_nuevo as EstadoContenido,
+      )
+    ) {
+      throw new DatosEventoContenidoInvalidosException();
+    }
+
+    const modulosNormalizados = this.normalizarModulos(
+      modulos as ModuloDestinoEvento[],
+    );
+
+    return {
+      tipo_evento:
+        payload.tipo_evento as typeof TIPO_EVENTO_CAMBIO_ESTADO_CONTENIDO,
+      version: payload.version as typeof VERSION_EVENTO_CONTENIDO,
+      id_contenido_cronograma: payload.id_contenido_cronograma,
+      id_contenido: payload.id_contenido,
+      id_cronograma: payload.id_cronograma,
+      ...(estadoAnterior
+        ? { estado_anterior: estadoAnterior as EstadoContenido }
+        : {}),
+      estado_nuevo: payload.estado_nuevo as EstadoContenido,
+      fecha_cambio: payload.fecha_cambio,
+      modulos_destino: modulosNormalizados,
+    };
   }
 
   private static contieneNulos(valor: unknown): boolean {

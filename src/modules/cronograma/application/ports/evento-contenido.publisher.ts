@@ -1,4 +1,7 @@
-import { EventoContenido } from '../../domain/entities/evento-contenido.entity';
+import {
+  EventoContenido,
+  ModuloDestinoEvento,
+} from '../../domain/entities/evento-contenido.entity';
 
 export const TOPICO_EVENTO_CONTENIDO = 'cronograma.contenido.estado-cambiado';
 
@@ -9,5 +12,8 @@ export function construirTopicoModuloEventoContenido(
 }
 
 export abstract class EventoContenidoPublisher {
-  abstract publicar(evento: EventoContenido): Promise<void>;
+  abstract publicar(
+    evento: EventoContenido,
+    modulo: ModuloDestinoEvento,
+  ): Promise<void>;
 }
