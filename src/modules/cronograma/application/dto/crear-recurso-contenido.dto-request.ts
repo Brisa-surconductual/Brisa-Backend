@@ -30,26 +30,39 @@ export class CrearRecursoContenidoDtoRequest {
   @Min(1)
   orden_bloque!: number;
 
-  @ValidateIf((_, value: unknown) => value !== undefined)
+  @ValidateIf(
+    (dto: CrearRecursoContenidoDtoRequest, value: unknown) =>
+      dto.tipo_recurso === TipoRecurso.TEXTO || value !== undefined,
+  )
   @Transform(trimString)
   @IsString()
   @IsNotEmpty()
   texto_contenido?: string;
 
-  @ValidateIf((_, value: unknown) => value !== undefined)
+  @ValidateIf(
+    (dto: CrearRecursoContenidoDtoRequest, value: unknown) =>
+      dto.tipo_recurso !== TipoRecurso.TEXTO || value !== undefined,
+  )
   @Transform(trimString)
   @IsString()
   @IsNotEmpty()
+  @MaxLength(1024)
   clave_almacenamiento?: string;
 
-  @ValidateIf((_, value: unknown) => value !== undefined)
+  @ValidateIf(
+    (dto: CrearRecursoContenidoDtoRequest, value: unknown) =>
+      dto.tipo_recurso !== TipoRecurso.TEXTO || value !== undefined,
+  )
   @Transform(trimString)
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
   mime_type?: string;
 
-  @ValidateIf((_, value: unknown) => value !== undefined)
+  @ValidateIf(
+    (dto: CrearRecursoContenidoDtoRequest, value: unknown) =>
+      dto.tipo_recurso !== TipoRecurso.TEXTO || value !== undefined,
+  )
   @IsInt()
   @Min(1)
   @Max(Number.MAX_SAFE_INTEGER)

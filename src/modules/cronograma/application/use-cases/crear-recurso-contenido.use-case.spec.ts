@@ -4,6 +4,7 @@ import { TipoRecurso } from '../../domain/enums/tipo-recurso.enum';
 import { ModuloDestinoNoDisponibleException } from '../../domain/exeption/modulo-destino-no-disponible.exception';
 import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
 import { RecursoContenidoRepository } from '../../domain/repositories/recurso-contenido.repository';
+import { AlmacenamientoRecursosPort } from '../ports/almacenamiento-recursos.port';
 import { CrearRecursoContenidoUseCase } from './crear-recurso-contenido.use-case';
 
 describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
@@ -11,6 +12,7 @@ describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
   const idModulo = '00000000-0000-4000-8000-000000000002';
   let contenidoRepository: jest.Mocked<ContenidoRepository>;
   let recursoRepository: jest.Mocked<RecursoContenidoRepository>;
+  let almacenamientoRecursos: jest.Mocked<AlmacenamientoRecursosPort>;
   let useCase: CrearRecursoContenidoUseCase;
 
   beforeEach(() => {
@@ -25,9 +27,17 @@ describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
         .fn()
         .mockImplementation((recurso) => Promise.resolve(recurso)),
     };
+    almacenamientoRecursos = {
+      crearUrlSubida: jest.fn(),
+      obtenerMetadatos: jest.fn().mockResolvedValue({
+        mimeType: 'image/png',
+        tamanoBytes: 1024,
+      }),
+    };
     useCase = new CrearRecursoContenidoUseCase(
       contenidoRepository,
       recursoRepository,
+      almacenamientoRecursos,
     );
   });
 
@@ -51,14 +61,15 @@ describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
       }),
     );
     expect(modulos).toEqual([idModulo]);
-    expect(resultado).toMatchObject({
-      id_recurso: expect.any(String),
-      mensaje: 'Recurso creado y asociado a sus módulos correctamente.',
-    });
+    expect(typeof resultado.id_recurso).toBe('string');
+    expect(resultado.mensaje).toBe(
+      'Recurso creado y asociado a sus módulos correctamente.',
+    );
     expect(resultado).not.toHaveProperty('id_contenido');
     expect(resultado).not.toHaveProperty('texto_contenido');
     expect(resultado).not.toHaveProperty('clave_almacenamiento');
     expect(resultado).not.toHaveProperty('id_modulos');
+    expect(almacenamientoRecursos.obtenerMetadatos.mock.calls).toHaveLength(0);
   });
 
   it('normaliza módulos repetidos antes de persistir', async () => {
@@ -66,7 +77,9 @@ describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
       id_contenido: idContenido,
       tipo_recurso: TipoRecurso.IMAGEN,
       orden_bloque: 2,
-      clave_almacenamiento: 'cronograma/imagenes/recurso.png',
+      clave_almacenamiento: `cronograma/recursos/${idContenido}/00000000-0000-4000-8000-000000000010`,
+      mime_type: 'image/png',
+      tamano_bytes: 1024,
       id_modulos: [idModulo, idModulo],
     });
 
@@ -106,12 +119,16 @@ describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
         tipo_recurso: TipoRecurso.VIDEO,
         texto_contenido: 'Contenido incorrecto',
         clave_almacenamiento: 'video.mp4',
+        mime_type: 'video/mp4',
+        tamano_bytes: 1024,
       },
     ],
     [
       'multimedia sin clave de almacenamiento',
       {
         tipo_recurso: TipoRecurso.AUDIO,
+        mime_type: 'audio/mpeg',
+        tamano_bytes: 1024,
       },
     ],
   ])('retorna 400 para %s', async (_, datos) => {
@@ -142,6 +159,10 @@ describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
   });
 
   it('conserva el 404 de un módulo inexistente o inactivo', async () => {
+    almacenamientoRecursos.obtenerMetadatos.mockResolvedValue({
+      mimeType: 'application/pdf',
+      tamanoBytes: 2048,
+    });
     recursoRepository.crearConModulosDestino.mockRejectedValue(
       new ModuloDestinoNoDisponibleException(),
     );
@@ -151,7 +172,9 @@ describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
         id_contenido: idContenido,
         tipo_recurso: TipoRecurso.DOCUMENTO,
         orden_bloque: 3,
-        clave_almacenamiento: 'cronograma/documentos/guia.pdf',
+        clave_almacenamiento: `cronograma/recursos/${idContenido}/00000000-0000-4000-8000-000000000011`,
+        mime_type: 'application/pdf',
+        tamano_bytes: 2048,
         id_modulos: [idModulo],
       }),
     ).rejects.toMatchObject({
@@ -159,6 +182,41 @@ describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
       message: 'Uno o más módulos destino no existen o están inactivos.',
     });
   });
+
+  it('no persiste multimedia si el objeto no existe en S3', async () => {
+    almacenamientoRecursos.obtenerMetadatos.mockResolvedValue(null);
+
+    await expect(useCase.execute(recursoImagen())).rejects.toMatchObject({
+      status: 400,
+    });
+    expect(recursoRepository.crearConModulosDestino.mock.calls).toHaveLength(0);
+  });
+
+  it('no persiste multimedia si el MIME o tamaño real no coincide', async () => {
+    almacenamientoRecursos.obtenerMetadatos.mockResolvedValue({
+      mimeType: 'image/jpeg',
+      tamanoBytes: 1024,
+    });
+
+    await expect(useCase.execute(recursoImagen())).rejects.toMatchObject({
+      status: 400,
+      message:
+        'El MIME type o el tamaño informado no coincide con el archivo almacenado.',
+    });
+    expect(recursoRepository.crearConModulosDestino.mock.calls).toHaveLength(0);
+  });
+
+  function recursoImagen() {
+    return {
+      id_contenido: idContenido,
+      tipo_recurso: TipoRecurso.IMAGEN,
+      orden_bloque: 2,
+      clave_almacenamiento: `cronograma/recursos/${idContenido}/00000000-0000-4000-8000-000000000010`,
+      mime_type: 'image/png',
+      tamano_bytes: 1024,
+      id_modulos: [idModulo],
+    };
+  }
 
   function contenidoExistente(): Contenido {
     return new Contenido(

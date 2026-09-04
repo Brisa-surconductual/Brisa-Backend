@@ -6,18 +6,30 @@ export class CoherenciaDatosRecursoVO {
     tipoRecurso: TipoRecurso,
     textoContenido?: string,
     claveAlmacenamiento?: string,
+    mimeType?: string,
+    tamanoBytes?: number,
   ) {
     const tieneTexto = Boolean(textoContenido?.trim());
     const tieneClave = Boolean(claveAlmacenamiento?.trim());
+    const tieneMimeType = Boolean(mimeType?.trim());
+    const tieneTamano =
+      tamanoBytes !== undefined &&
+      Number.isSafeInteger(tamanoBytes) &&
+      tamanoBytes > 0;
 
     if (tipoRecurso === TipoRecurso.TEXTO) {
-      if (!tieneTexto || tieneClave) {
+      if (
+        !tieneTexto ||
+        tieneClave ||
+        tieneMimeType ||
+        tamanoBytes !== undefined
+      ) {
         throw new DatosRecursoIncoherentesException();
       }
       return;
     }
 
-    if (!tieneClave || tieneTexto) {
+    if (!tieneClave || !tieneMimeType || !tieneTamano || tieneTexto) {
       throw new DatosRecursoIncoherentesException();
     }
   }

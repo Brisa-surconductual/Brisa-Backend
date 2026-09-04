@@ -16,6 +16,9 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
   const actualizarContenidoUseCase = { execute: jest.fn() };
   const eliminarContenidoUseCase = { execute: jest.fn() };
   const crearRecursoContenidoUseCase = { execute: jest.fn() };
+  const solicitarUrlSubidaRecursoUseCase = { execute: jest.fn() };
+  const asociarContenidoUnidadTemporalUseCase = { execute: jest.fn() };
+  const actualizarDisponibilidadContenidoUseCase = { execute: jest.fn() };
   const idContenido = '00000000-0000-4000-8000-000000000001';
   let controller: CronogramaController;
 
@@ -27,6 +30,9 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
       actualizarContenidoUseCase as never,
       eliminarContenidoUseCase as never,
       crearRecursoContenidoUseCase as never,
+      solicitarUrlSubidaRecursoUseCase as never,
+      asociarContenidoUnidadTemporalUseCase as never,
+      actualizarDisponibilidadContenidoUseCase as never,
     );
   });
 
@@ -85,11 +91,28 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
     expect(crearRecursoContenidoUseCase.execute).toHaveBeenCalledWith(dto);
   });
 
+  it('delega la solicitud de URL firmada sin recibir el binario', async () => {
+    const dto = {
+      id_contenido: idContenido,
+      tipo_recurso: TipoRecurso.IMAGEN,
+      mime_type: 'image/png',
+      tamano_bytes: 1024,
+    };
+    solicitarUrlSubidaRecursoUseCase.execute.mockResolvedValue({
+      url_subida: 'https://bucket.s3.amazonaws.com/firma',
+    });
+
+    await controller.solicitarUrlSubidaRecurso(dto);
+
+    expect(solicitarUrlSubidaRecursoUseCase.execute).toHaveBeenCalledWith(dto);
+  });
+
   it.each([
     'crearUnidadTemporal',
     'crearContenido',
     'actualizarContenido',
     'eliminarContenido',
+    'solicitarUrlSubidaRecurso',
     'crearRecursoContenido',
   ] as const)(
     'protege %s con sesión completa, rol administrativo y CSRF',

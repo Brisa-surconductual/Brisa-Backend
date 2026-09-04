@@ -77,6 +77,26 @@ describe('DTO de recurso con módulos destino (RF-153/RF-154)', () => {
         id_modulos: [idModulo],
       },
     ],
+    [
+      'texto sin contenido',
+      {
+        id_contenido: idContenido,
+        tipo_recurso: TipoRecurso.TEXTO,
+        orden_bloque: 1,
+        id_modulos: [idModulo],
+      },
+    ],
+    [
+      'multimedia sin MIME ni tamaño',
+      {
+        id_contenido: idContenido,
+        tipo_recurso: TipoRecurso.IMAGEN,
+        orden_bloque: 1,
+        clave_almacenamiento:
+          'cronograma/recursos/00000000-0000-4000-8000-000000000010',
+        id_modulos: [idModulo],
+      },
+    ],
   ])('rechaza una solicitud con %s', async (_, datos) => {
     const dto = plainToInstance(CrearRecursoContenidoDtoRequest, datos);
 

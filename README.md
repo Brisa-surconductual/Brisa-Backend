@@ -34,6 +34,7 @@
     - [Opción B · Aplicar las migraciones (recomendada)](#opción-b--aplicar-las-migraciones-recomendada)
   - [6. Generar el cliente de Prisma](#6-generar-el-cliente-de-prisma)
   - [7. Ejecutar el proyecto](#7-ejecutar-el-proyecto)
+- [Recursos multimedia con S3](#recursos-multimedia-con-s3)
 - [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)
 - [Arquitectura](#arquitectura)
 - [Organización del proyecto](#organización-del-proyecto)
@@ -93,7 +94,7 @@ pnpm install
 
 ### 4. Configurar variables de entorno
 
-Crea un archivo `.env` en la raíz del proyecto (puedes basarte en `.env.example` si existe):
+Crea el archivo `config/.env` (puedes basarte en `config/env.txt`):
 
 ```env
 DATABASE_URL=
@@ -103,6 +104,14 @@ SHADOW_DATABASE_URL=
 JWT_SECRET=
 
 PORT=3000
+
+AWS_REGION=us-east-2
+AWS_S3_BUCKET=
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_SESSION_TOKEN=
+AWS_S3_UPLOAD_EXPIRATION_SECONDS=300
+AWS_S3_RESOURCE_PREFIX=cronograma/recursos
 ```
 
 > ⚠️ **Importante:** `DATABASE_URL` y `SHADOW_DATABASE_URL` son las únicas variables que Prisma necesita para trabajar con la base de datos y las migraciones. Toda la configuración adicional de migraciones (datasource, shadow database, etc.) vive en `prisma.config.ts`, ya versionado en el repositorio — no hay que tocarlo para levantar el proyecto, solo completar estas dos URLs.
@@ -176,7 +185,35 @@ pnpm build
 pnpm start:prod
 ```
 
-Si todo salió bien, el backend debería quedar corriendo en `http://localhost:<PORT>` (el puerto que definiste en tu `.env`).
+Si todo salió bien, el backend debería quedar corriendo en `http://localhost:<PORT>` (el puerto que definiste en `config/.env`).
+
+---
+
+## Recursos multimedia con S3
+
+El bucket debe permanecer privado. La aplicación genera claves únicamente bajo
+`AWS_S3_RESOURCE_PREFIX` y siempre utiliza el bucket definido en
+`AWS_S3_BUCKET`; el cliente nunca puede elegir otro bucket ni enviar una clave
+arbitraria.
+
+Flujo para una PWA autenticada como administrativo:
+
+1. Solicita una URL con `POST /cronograma/recursos/url-subida`, enviando
+   `id_contenido`, `tipo_recurso`, `mime_type` y `tamano_bytes`.
+2. Sube el archivo con `PUT` directamente a `url_subida`, usando exactamente los
+   encabezados devueltos por el backend. El binario nunca pasa por NestJS.
+3. Confirma la creación con `POST /cronograma/recursos`, enviando la
+   `clave_almacenamiento` recibida, el mismo MIME/tamaño y al menos un módulo
+   destino. Antes de persistir, el backend verifica el objeto con S3.
+
+Para texto no se solicita URL: se usa directamente `POST /cronograma/recursos`
+con `tipo_recurso: "TEXTO"` y `texto_contenido`.
+
+El usuario o rol IAM de la aplicación necesita solamente `s3:PutObject` y
+`s3:GetObject` (requerido por `HeadObject`) sobre
+`arn:aws:s3:::<bucket>/cronograma/recursos/*`. En despliegue se recomienda un rol
+IAM; las variables `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY` pueden omitirse
+cuando el entorno ya proporciona credenciales mediante dicho rol.
 
 ---
 

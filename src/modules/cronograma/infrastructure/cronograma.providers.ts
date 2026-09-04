@@ -16,8 +16,11 @@ import { EventoContenidoPublisher } from '../application/ports/evento-contenido.
 import { PublicarEventosContenidoCron } from './cron/publicar-eventos-contenido.cron';
 import { NestEventoContenidoPublisher } from './messaging/nest-evento-contenido.publisher';
 import { PrismaEventoContenidoRepository } from './persistence/prisma-evento-contenido.repository';
-import {PrismaContenidoCronogramaRepository} from "./persistence/primsa-contenido-cronograma.repository";
-import {ContenidoCronogramaRepository} from "../domain/repositories/contenido-cronograma.repository";
+import { PrismaContenidoCronogramaRepository } from './persistence/primsa-contenido-cronograma.repository';
+import { ContenidoCronogramaRepository } from '../domain/repositories/contenido-cronograma.repository';
+import { AlmacenamientoRecursosPort } from '../application/ports/almacenamiento-recursos.port';
+import { S3AlmacenamientoRecursosAdapter } from './storage/s3-almacenamiento-recursos.adapter';
+import { crearS3Client, S3_CLIENT } from './storage/s3-client.provider';
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -52,7 +55,14 @@ export const CronogramaInfrastructureProviders = [
     provide: EventoContenidoPublisher,
     useClass: NestEventoContenidoPublisher,
   },
-
+  {
+    provide: S3_CLIENT,
+    useFactory: crearS3Client,
+  },
+  {
+    provide: AlmacenamientoRecursosPort,
+    useClass: S3AlmacenamientoRecursosAdapter,
+  },
   {
     provide: ContenidoCronogramaRepository,
     useClass: PrismaContenidoCronogramaRepository,
