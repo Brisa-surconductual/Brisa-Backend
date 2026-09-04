@@ -221,3 +221,16 @@ CREATE TRIGGER trg_contenido_bloqueo_cronograma_activo
 BEFORE UPDATE OR DELETE ON cronograma.contenidos
 FOR EACH ROW
 EXECUTE FUNCTION cronograma.fn_contenido_bloqueo_cronograma_activo();
+
+-- Si el cronograma está inactivo, RF-152 permite eliminar el contenido. La
+-- asociación se elimina por cascada después de que el trigger anterior haya
+-- comprobado que el contenido no pertenece a un cronograma activo.
+ALTER TABLE cronograma.contenidos_cronograma
+  DROP CONSTRAINT IF EXISTS fk_contenido_cronograma_contenido;
+
+ALTER TABLE cronograma.contenidos_cronograma
+  ADD CONSTRAINT fk_contenido_cronograma_contenido
+  FOREIGN KEY (id_contenido)
+  REFERENCES cronograma.contenidos(id_contenido)
+  ON DELETE CASCADE
+  ON UPDATE NO ACTION;

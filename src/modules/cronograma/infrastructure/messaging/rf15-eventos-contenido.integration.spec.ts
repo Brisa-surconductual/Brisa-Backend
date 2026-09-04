@@ -10,6 +10,7 @@ import { ContenidoEstadoPendiente } from '../../domain/entities/contenido-estado
 import { EventoContenido } from '../../domain/entities/evento-contenido.entity';
 import { EstadoContenido } from '../../domain/enums/estado-contenido.enum';
 import { ModuloEventoNoAutorizadoException } from '../../domain/exeption/modulo-evento-no-autorizado.exception';
+import { PublicacionEventoContenidoException } from '../../domain/exeption/publicacion-evento-contenido.exception';
 import { EventoContenidoRepository } from '../../domain/repositories/evento-contenido.repository';
 import { NestEventoContenidoPublisher } from './nest-evento-contenido.publisher';
 
@@ -126,5 +127,50 @@ describe('RF-15 - integración Nest con bus interno', () => {
       ModuloEventoNoAutorizadoException,
     );
     expect(new ModuloEventoNoAutorizadoException().getStatus()).toBe(403);
+  });
+
+  it('mantiene pendiente la entrega cuando el módulo no tiene consumidor registrado', async () => {
+    const moduloDestino = {
+      id_modulo: '00000000-0000-4000-8000-000000000010',
+      codigo_modulo: 'CHAT',
+      nombre_modulo: 'Chat',
+    };
+    const evento = EventoContenido.crear(
+      {
+        id_contenido_cronograma: '00000000-0000-4000-8000-000000000001',
+        id_contenido: idContenido,
+        id_cronograma: '00000000-0000-4000-8000-000000000003',
+      },
+      {
+        estado_anterior: EstadoContenido.PROGRAMADO,
+        estado_nuevo: EstadoContenido.ACTIVO,
+      },
+      [moduloDestino],
+      new Date('2026-08-26T14:00:00.000Z'),
+    ).marcarPersistido(2n);
+
+    repository.buscarCambiosPendientes.mockResolvedValue([]);
+    repository.buscarModulosDestinoPorContenido.mockResolvedValue(new Map());
+    repository.buscarEntregasPendientes.mockResolvedValue([
+      { evento, modulo: moduloDestino },
+    ]);
+    repository.registrarFalloEntrega.mockResolvedValue(undefined);
+
+    const resultado = await useCase.execute(
+      new Date('2026-08-26T14:00:00.000Z'),
+    );
+
+    expect(resultado).toMatchObject({
+      eventos_publicados: 0,
+      entregas_publicadas: 0,
+      entregas_fallidas: 1,
+    });
+    expect(repository.marcarEntregaPublicada).not.toHaveBeenCalled();
+    expect(repository.registrarFalloEntrega).toHaveBeenCalledWith(
+      2n,
+      moduloDestino.id_modulo,
+      expect.any(Date),
+      new PublicacionEventoContenidoException().message,
+    );
   });
 });

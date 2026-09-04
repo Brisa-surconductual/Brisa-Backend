@@ -153,7 +153,7 @@ model contenidos_cronograma {
   fecha_fin_disponibilidad    DateTime?           @db.Timestamptz(6)
   fecha_creacion              DateTime            @default(now()) @db.Timestamptz(6)
   fecha_actualizacion         DateTime            @default(now()) @db.Timestamptz(6)
-  contenidos                  contenidos          @relation(fields: [id_contenido], references: [id_contenido], onUpdate: NoAction, map: "fk_contenido_cronograma_contenido")
+  contenidos                  contenidos          @relation(fields: [id_contenido], references: [id_contenido], onDelete: Cascade, onUpdate: NoAction, map: "fk_contenido_cronograma_contenido")
   unidades_temporales         unidades_temporales @relation(fields: [id_unidad_temporal], references: [id_unidad_temporal], onUpdate: NoAction, map: "fk_contenido_unidad_temporal")
   eventos_contenido           eventos_contenido[]
 
