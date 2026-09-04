@@ -36,6 +36,18 @@ export class PublicarEventosContenidoCron {
         );
       }
 
+      if (resultado.contenidos_sin_modulos > 0) {
+        this.logger.warn(
+          `Se aplazaron ${resultado.contenidos_sin_modulos} contenidos sin módulos destino activos.`,
+        );
+      }
+
+      if (resultado.entregas_fallidas > 0) {
+        this.logger.warn(
+          `${resultado.entregas_fallidas} entregas al bus quedaron pendientes para reintento.`,
+        );
+      }
+
       if (duracion >= 2000) {
         this.logger.warn(
           `La generación de eventos tardó ${duracion} ms y superó el objetivo de RF-15.`,

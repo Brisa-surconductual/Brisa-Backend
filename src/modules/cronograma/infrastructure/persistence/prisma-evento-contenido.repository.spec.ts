@@ -17,15 +17,22 @@ describe('PrismaEventoContenidoRepository (RF-15)', () => {
   const idCronograma = '00000000-0000-4000-8000-000000000003';
   const idModulo = '00000000-0000-4000-8000-000000000010';
   const queryRaw = jest.fn<Promise<unknown[]>, [Prisma.Sql]>();
+  const executeRaw = jest.fn<Promise<number>, [Prisma.Sql]>();
   const buscarRecursos = jest.fn<Promise<unknown[]>, [BuscarRecursosArgs]>();
   const prisma = {
     $queryRaw: queryRaw,
+    $executeRaw: executeRaw,
+    $transaction: jest.fn(
+      (operacion: (transaccion: unknown) => Promise<unknown>) =>
+        operacion({ $queryRaw: queryRaw, $executeRaw: executeRaw }),
+    ),
     recursos_contenido: { findMany: buscarRecursos },
   };
   let repository: PrismaEventoContenidoRepository;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    executeRaw.mockResolvedValue(1);
     repository = new PrismaEventoContenidoRepository(prisma as never);
   });
 
@@ -81,6 +88,9 @@ describe('PrismaEventoContenidoRepository (RF-15)', () => {
       'ON CONFLICT (id_contenido_cronograma, estado_nuevo) DO NOTHING',
     );
     expect(sqlEjecutado(0)).toContain('CAST(? AS jsonb)');
+    expect(sqlActualizacion(0)).toContain(
+      'INSERT INTO cronograma.entregas_evento_contenido',
+    );
     expect(resultado?.id_evento).toBe(25n);
   });
 
@@ -88,6 +98,53 @@ describe('PrismaEventoContenidoRepository (RF-15)', () => {
     queryRaw.mockResolvedValue([]);
 
     await expect(repository.registrarSiNoExiste(evento())).resolves.toBeNull();
+    expect(executeRaw).not.toHaveBeenCalled();
+  });
+
+  it('rehidrata las entregas pendientes de módulos activos', async () => {
+    const eventoPersistido = evento().marcarPersistido(25n);
+    queryRaw.mockResolvedValue([
+      {
+        id_evento: 25n,
+        id_contenido_cronograma: idContenidoCronograma,
+        id_cronograma: idCronograma,
+        estado_anterior: 'PROGRAMADO',
+        estado_nuevo: 'ACTIVO',
+        fecha_cambio: eventoPersistido.fecha_cambio,
+        version_evento: eventoPersistido.version_evento,
+        payload: eventoPersistido.payload,
+        id_modulo: idModulo,
+      },
+    ]);
+
+    const resultado = await repository.buscarEntregasPendientes(500);
+
+    expect(sqlEjecutado(0)).toContain('cronograma.entregas_evento_contenido');
+    expect(sqlEjecutado(0)).toContain('modulo.activo = true');
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0].evento.id_evento).toBe(25n);
+    expect(resultado[0].modulo.id_modulo).toBe(idModulo);
+  });
+
+  it('marca el éxito o fallo sin modificar el evento inmutable', async () => {
+    const fecha = new Date('2026-08-26T14:01:00.000Z');
+
+    await repository.marcarEntregaPublicada(25n, idModulo, fecha);
+    await repository.registrarFalloEntrega(
+      26n,
+      idModulo,
+      fecha,
+      'listener failed',
+    );
+
+    expect(sqlActualizacion(0)).toContain('SET fecha_publicacion = ?');
+    expect(sqlActualizacion(0)).not.toContain(
+      'UPDATE cronograma.eventos_contenido',
+    );
+    expect(sqlActualizacion(1)).toContain(
+      'intentos_publicacion = intentos_publicacion + 1',
+    );
+    expect(sqlActualizacion(1)).toContain('ultimo_error = ?');
   });
 
   function evento(): EventoContenido {
@@ -129,6 +186,11 @@ describe('PrismaEventoContenidoRepository (RF-15)', () => {
 
   function sqlEjecutado(indice: number): string {
     const consulta = queryRaw.mock.calls[indice][0];
+    return consulta.strings.join('?').replace(/\s+/g, ' ').trim();
+  }
+
+  function sqlActualizacion(indice: number): string {
+    const consulta = executeRaw.mock.calls[indice][0];
     return consulta.strings.join('?').replace(/\s+/g, ' ').trim();
   }
 });

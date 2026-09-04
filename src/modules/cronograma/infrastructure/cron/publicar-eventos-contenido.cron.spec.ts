@@ -7,6 +7,9 @@ describe('PublicarEventosContenidoCron (RF-15)', () => {
     eventos_publicados: 0,
     eventos_duplicados: 0,
     cambios_invalidos: 0,
+    contenidos_sin_modulos: 0,
+    entregas_publicadas: 0,
+    entregas_fallidas: 0,
   };
   const useCase = { execute: jest.fn() };
   let cron: PublicarEventosContenidoCron;

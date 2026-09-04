@@ -19,6 +19,9 @@ describe('RF-15 - integración Nest con bus interno', () => {
     buscarCambiosPendientes: jest.fn(),
     buscarModulosDestinoPorContenido: jest.fn(),
     registrarSiNoExiste: jest.fn(),
+    buscarEntregasPendientes: jest.fn(),
+    marcarEntregaPublicada: jest.fn(),
+    registrarFalloEntrega: jest.fn(),
   };
   let modulo: TestingModule;
   let useCase: PublicarEventosCambioEstadoUseCase;
@@ -95,8 +98,20 @@ describe('RF-15 - integración Nest con bus interno', () => {
       ]),
     );
     repository.registrarSiNoExiste.mockImplementation(
-      (evento: EventoContenido) => Promise.resolve(evento.marcarPersistido(1n)),
+      (evento: EventoContenido) => {
+        const registrado = evento.marcarPersistido(1n);
+        repository.buscarEntregasPendientes.mockResolvedValue(
+          registrado.payload.modulos_destino.map((modulo) => ({
+            evento: registrado,
+            modulo,
+          })),
+        );
+        return Promise.resolve(registrado);
+      },
     );
+    repository.buscarEntregasPendientes.mockResolvedValue([]);
+    repository.marcarEntregaPublicada.mockResolvedValue(undefined);
+    repository.registrarFalloEntrega.mockResolvedValue(undefined);
 
     const resultado = await useCase.execute(
       new Date('2026-08-26T14:00:00.000Z'),

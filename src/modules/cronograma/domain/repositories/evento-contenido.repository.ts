@@ -4,6 +4,11 @@ import {
   ModuloDestinoEvento,
 } from '../entities/evento-contenido.entity';
 
+export interface EntregaEventoContenidoPendiente {
+  readonly evento: EventoContenido;
+  readonly modulo: ModuloDestinoEvento;
+}
+
 export abstract class EventoContenidoRepository {
   abstract buscarCambiosPendientes(
     limite: number,
@@ -16,4 +21,21 @@ export abstract class EventoContenidoRepository {
   abstract registrarSiNoExiste(
     evento: EventoContenido,
   ): Promise<EventoContenido | null>;
+
+  abstract buscarEntregasPendientes(
+    limite: number,
+  ): Promise<EntregaEventoContenidoPendiente[]>;
+
+  abstract marcarEntregaPublicada(
+    idEvento: bigint,
+    idModulo: string,
+    fechaPublicacion: Date,
+  ): Promise<void>;
+
+  abstract registrarFalloEntrega(
+    idEvento: bigint,
+    idModulo: string,
+    fechaIntento: Date,
+    detalle: string,
+  ): Promise<void>;
 }

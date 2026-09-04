@@ -5,7 +5,10 @@ import {
   EventoContenidoPublisher,
 } from '../../application/ports/evento-contenido.publisher';
 import { AutorizarConsumoEventoContenidoService } from '../../application/service/autorizar-consumo-evento-contenido.service';
-import { EventoContenido } from '../../domain/entities/evento-contenido.entity';
+import {
+  EventoContenido,
+  ModuloDestinoEvento,
+} from '../../domain/entities/evento-contenido.entity';
 
 @Injectable()
 export class NestEventoContenidoPublisher implements EventoContenidoPublisher {
@@ -14,13 +17,14 @@ export class NestEventoContenidoPublisher implements EventoContenidoPublisher {
     private readonly autorizacion: AutorizarConsumoEventoContenidoService,
   ) {}
 
-  async publicar(evento: EventoContenido): Promise<void> {
-    for (const modulo of evento.payload.modulos_destino) {
-      this.autorizacion.validar(modulo.codigo_modulo, evento);
-      await this.eventEmitter.emitAsync(
-        construirTopicoModuloEventoContenido(modulo.codigo_modulo),
-        evento,
-      );
-    }
+  async publicar(
+    evento: EventoContenido,
+    modulo: ModuloDestinoEvento,
+  ): Promise<void> {
+    this.autorizacion.validar(modulo.codigo_modulo, evento);
+    await this.eventEmitter.emitAsync(
+      construirTopicoModuloEventoContenido(modulo.codigo_modulo),
+      evento,
+    );
   }
 }

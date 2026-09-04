@@ -3,7 +3,6 @@ import { TransicionEstadoContenido } from '../../domain/entities/contenido-estad
 import { EventoContenido } from '../../domain/entities/evento-contenido.entity';
 import { CambioEstadoContenidoInvalidoException } from '../../domain/exeption/cambio-estado-contenido-invalido.exception';
 import { EventoContenidoDuplicadoException } from '../../domain/exeption/evento-contenido-duplicado.exception';
-import { PublicacionEventoContenidoException } from '../../domain/exeption/publicacion-evento-contenido.exception';
 import { EventoContenidoRepository } from '../../domain/repositories/evento-contenido.repository';
 import { EventoContenidoPublisher } from '../ports/evento-contenido.publisher';
 
@@ -12,11 +11,15 @@ export interface ResultadoPublicacionEventosContenido {
   readonly eventos_publicados: number;
   readonly eventos_duplicados: number;
   readonly cambios_invalidos: number;
+  readonly contenidos_sin_modulos: number;
+  readonly entregas_publicadas: number;
+  readonly entregas_fallidas: number;
 }
 
 @Injectable()
 export class PublicarEventosCambioEstadoUseCase {
   private readonly limitePorEjecucion = 100;
+  private readonly limiteEntregasPorEjecucion = 500;
 
   constructor(
     private readonly eventoRepository: EventoContenidoRepository,
@@ -37,6 +40,7 @@ export class PublicarEventosCambioEstadoUseCase {
     let publicados = 0;
     let duplicados = 0;
     let invalidos = 0;
+    let sinModulos = 0;
 
     for (const contenido of pendientes) {
       let transiciones: readonly TransicionEstadoContenido[];
@@ -55,6 +59,11 @@ export class PublicarEventosCambioEstadoUseCase {
       const modulosDestino =
         modulosPorContenido.get(contenido.id_contenido) ?? [];
 
+      if (modulosDestino.length === 0) {
+        sinModulos += 1;
+        continue;
+      }
+
       for (const transicion of transiciones) {
         const evento = EventoContenido.crear(
           contenido,
@@ -62,10 +71,8 @@ export class PublicarEventosCambioEstadoUseCase {
           modulosDestino,
           ahora,
         );
-        let registrado: EventoContenido;
-
         try {
-          registrado = await this.registrarEvento(evento);
+          await this.registrarEvento(evento);
         } catch (error: unknown) {
           if (error instanceof EventoContenidoDuplicadoException) {
             duplicados += 1;
@@ -74,22 +81,58 @@ export class PublicarEventosCambioEstadoUseCase {
 
           throw error;
         }
-
-        try {
-          await this.publisher.publicar(registrado);
-        } catch {
-          throw new PublicacionEventoContenidoException();
-        }
-
-        publicados += 1;
       }
     }
+
+    const entregas = await this.eventoRepository.buscarEntregasPendientes(
+      this.limiteEntregasPorEjecucion,
+    );
+    const eventosConEntregaExitosa = new Set<bigint>();
+    const eventosConFallo = new Set<bigint>();
+    let entregasPublicadas = 0;
+    let entregasFallidas = 0;
+
+    for (const entrega of entregas) {
+      const idEvento = entrega.evento.id_evento;
+      if (idEvento === null) {
+        continue;
+      }
+
+      const fechaIntento = new Date();
+
+      try {
+        await this.publisher.publicar(entrega.evento, entrega.modulo);
+        await this.eventoRepository.marcarEntregaPublicada(
+          idEvento,
+          entrega.modulo.id_modulo,
+          fechaIntento,
+        );
+        eventosConEntregaExitosa.add(idEvento);
+        entregasPublicadas += 1;
+      } catch (error: unknown) {
+        await this.eventoRepository.registrarFalloEntrega(
+          idEvento,
+          entrega.modulo.id_modulo,
+          fechaIntento,
+          this.describirError(error),
+        );
+        eventosConFallo.add(idEvento);
+        entregasFallidas += 1;
+      }
+    }
+
+    publicados = [...eventosConEntregaExitosa].filter(
+      (idEvento) => !eventosConFallo.has(idEvento),
+    ).length;
 
     return {
       contenidos_revisados: pendientes.length,
       eventos_publicados: publicados,
       eventos_duplicados: duplicados,
       cambios_invalidos: invalidos,
+      contenidos_sin_modulos: sinModulos,
+      entregas_publicadas: entregasPublicadas,
+      entregas_fallidas: entregasFallidas,
     };
   }
 
@@ -103,5 +146,11 @@ export class PublicarEventosCambioEstadoUseCase {
     }
 
     return registrado;
+  }
+
+  private describirError(error: unknown): string {
+    return error instanceof Error
+      ? error.message
+      : 'Fallo desconocido del bus interno.';
   }
 }
