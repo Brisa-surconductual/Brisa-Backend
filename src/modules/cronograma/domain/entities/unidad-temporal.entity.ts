@@ -34,6 +34,28 @@ export class UnidadTemporal {
       new Date
     );
   }
+
+  static actualizar(
+    unidadTemporal: UnidadTemporal,
+    nuevoNombre: String,
+    nuevaFechaInicio: Date,
+    nuevaFechaFin: Date,
+    nuevoOrdenUnidad: number
+  ): UnidadTemporal {
+    return new UnidadTemporal(
+      unidadTemporal.id_unidad_Temporal,
+      unidadTemporal.id_cronograma,
+      nuevoNombre,
+      nuevoOrdenUnidad,
+      nuevaFechaInicio,
+      nuevaFechaFin,
+      unidadTemporal.utilizada_por_usuario,
+      unidadTemporal.fecha_creacion,
+      new Date()
+    );
+  }
+
+
 }
 
 

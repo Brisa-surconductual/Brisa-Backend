@@ -11,6 +11,8 @@ import { PublicarEventosCambioEstadoUseCase } from './use-cases/publicar-eventos
 import {AsociarContenidoUnidadTemporalUseCase} from "./use-cases/asociar-contenido-unidad-temporal.use-case";
 import {ActualizarDisponibilidadContenidoUseCase} from "./use-cases/actualizar-disponibilidad-contenido.use-case";
 import {ReordenarContenidoTemporalService} from "./service/reordenar-contenido-temporal.service";
+import {ActualizarUnidadTemporalUseCase} from "./use-cases/actualizar-unidad-temporal.use-case";
+import {ReordenarUnidadTemporalService} from "./service/reordenar-unidad-temporal.service";
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -26,4 +28,6 @@ export const CronogramaApplicationProviders = [
   AsociarContenidoUnidadTemporalUseCase,
   ActualizarDisponibilidadContenidoUseCase,
   ReordenarContenidoTemporalService,
+  ActualizarUnidadTemporalUseCase,
+  ReordenarUnidadTemporalService
 ];
