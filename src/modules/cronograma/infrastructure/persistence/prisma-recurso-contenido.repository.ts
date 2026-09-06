@@ -4,6 +4,7 @@ import { PrismaService } from '../../../../../prisma/prisma.service';
 import { RecursoContenido } from '../../domain/entities/recurso-contenido.entity';
 import { ContenidoNoEncontradoException } from '../../domain/exeption/contenido-no-encontrado.exception';
 import { DatosRecursoIncoherentesException } from '../../domain/exeption/datos-recurso-incoherentes.exception';
+import { ListaRecursosReordenamientoInvalidaException } from '../../domain/exeption/lista-recursos-reordenamiento-invalida.exception';
 import { ModuloDestinoNoDisponibleException } from '../../domain/exeption/modulo-destino-no-disponible.exception';
 import { OrdenRecursoDuplicadoException } from '../../domain/exeption/orden-recurso-duplicado.exception';
 import { RecursoSinModuloDestinoException } from '../../domain/exeption/recurso-sin-modulo-destino.exception';
@@ -49,6 +50,50 @@ export class PrismaRecursoContenidoRepository implements RecursoContenidoReposit
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
     } catch (error: unknown) {
+      this.traducirErrorPersistencia(error);
+    }
+  }
+
+  async reordenar(idContenido: string, idRecursos: string[]): Promise<void> {
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          const recursos = await tx.recursos_contenido.findMany({
+            where: { id_contenido: idContenido },
+            select: { id_recurso: true },
+          });
+          const idsExistentes = new Set(
+            recursos.map((recurso) => recurso.id_recurso),
+          );
+          const listaCompleta =
+            recursos.length === idRecursos.length &&
+            new Set(idRecursos).size === idRecursos.length &&
+            idRecursos.every((idRecurso) => idsExistentes.has(idRecurso));
+
+          if (!listaCompleta) {
+            throw new ListaRecursosReordenamientoInvalidaException();
+          }
+
+          for (const [indice, idRecurso] of idRecursos.entries()) {
+            await tx.recursos_contenido.update({
+              where: { id_recurso: idRecurso },
+              data: { orden_bloque: -(indice + 1) },
+            });
+          }
+
+          for (const [indice, idRecurso] of idRecursos.entries()) {
+            await tx.recursos_contenido.update({
+              where: { id_recurso: idRecurso },
+              data: { orden_bloque: indice + 1 },
+            });
+          }
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error: unknown) {
+      if (error instanceof ListaRecursosReordenamientoInvalidaException) {
+        throw error;
+      }
       this.traducirErrorPersistencia(error);
     }
   }

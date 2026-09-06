@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Param, ParseUUIDPipe, Patch, Post, UseGuards, } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards, } from '@nestjs/common';
 import { CreacionUnidadTemporalUseCase } from '../application/use-cases/crear-unidad-temporal.use-case';
 import { UnidadTemporalDtoRequest } from '../application/dto/crear-unidad-temporal.dto-request';
 import { UnidadTemporalDtoResponse } from '../application/dto/crear-unidad-temporal.dto-response';
@@ -21,14 +21,23 @@ import { CrearRecursoContenidoDtoRequest } from '../application/dto/crear-recurs
 import { RecursoContenidoDtoResponse } from '../application/dto/recurso-contenido.dto-response';
 import { CrearRecursoContenidoUseCase } from '../application/use-cases/crear-recurso-contenido.use-case';
 import { AsociarContenidoUnidadTemporalUseCase } from '../application/use-cases/asociar-contenido-unidad-temporal.use-case';
-import {crearContenidoCronogramaDtoRequest} from "../application/dto/crear-contenido-cronograma.dto-request";
-import {crearContenidoCronogramaDtoResponse} from "../application/dto/crear-contenido-cronograma.dto-response.dto";
-import {ActualizarDisponibilidadContenidoUseCase} from "../application/use-cases/actualizar-disponibilidad-contenido.use-case";
+import { crearContenidoCronogramaDtoRequest } from '../application/dto/crear-contenido-cronograma.dto-request';
+import { crearContenidoCronogramaDtoResponse } from '../application/dto/crear-contenido-cronograma.dto-response.dto';
+import { ActualizarDisponibilidadContenidoUseCase } from '../application/use-cases/actualizar-disponibilidad-contenido.use-case';
 import { ActualizarDisponibilidadContenidoDtoRequest } from '../application/dto/actualizar-disponibilidad-contenido.dto-request';
 import { ActualizarDisponibilidadContenidoDtoResponse } from '../application/dto/actualizar-disponibilidad-contenido.dto-response';
+import { SolicitarUrlSubidaRecursoDtoRequest } from '../application/dto/solicitar-url-subida-recurso.dto-request';
+import { UrlSubidaRecursoDtoResponse } from '../application/dto/url-subida-recurso.dto-response';
+import { SolicitarUrlSubidaRecursoUseCase } from '../application/use-cases/solicitar-url-subida-recurso.use-case';
+import { ListarModulosDestinoUseCase } from '../application/use-cases/listar-modulos-destino.use-case';
+import { ModuloDestinoDtoResponse } from '../application/dto/modulo-destino.dto-response';
+import { ReordenarRecursosContenidoDtoRequest } from '../application/dto/reordenar-recursos-contenido.dto-request';
+import { ReordenarRecursosContenidoDtoResponse } from '../application/dto/reordenar-recursos-contenido.dto-response';
+import { ReordenarRecursosContenidoUseCase } from '../application/use-cases/reordenar-recursos-contenido.use-case';
 import {ActualizarUnidadTemporalUseCase} from "../application/use-cases/actualizar-unidad-temporal.use-case";
 import {ActualizarUnidadTemporalDtoRequest} from "../application/dto/actualizar-unidad-temporal.dto-request";
 import {ActualizarUnidadTemporalDtoResponse} from "../application/dto/actualizar-unidad-temporal.dto-response";
+
 @Controller('/cronograma')
 export class CronogramaController {
   constructor(
@@ -37,6 +46,9 @@ export class CronogramaController {
     private readonly actualizarContenidoUseCase: ActualizarContenidoUseCase,
     private readonly eliminarContenidoUseCase: EliminarContenidoUseCase,
     private readonly crearRecursoContenidoUseCase: CrearRecursoContenidoUseCase,
+    private readonly solicitarUrlSubidaRecursoUseCase: SolicitarUrlSubidaRecursoUseCase,
+    private readonly listarModulosDestinoUseCase: ListarModulosDestinoUseCase,
+    private readonly reordenarRecursosContenidoUseCase: ReordenarRecursosContenidoUseCase,
     private readonly asociarContenidoUnidadTemporalUseCase: AsociarContenidoUnidadTemporalUseCase,
     private readonly actualizarDisponibilidadContenido: ActualizarDisponibilidadContenidoUseCase,
     private readonly actualizarUnidadTemporalUseCase: ActualizarUnidadTemporalUseCase,
@@ -83,6 +95,24 @@ export class CronogramaController {
     return this.eliminarContenidoUseCase.execute(idContenido);
   }
 
+  @Post('/recursos/url-subida')
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async solicitarUrlSubidaRecurso(
+    @Body() dto: SolicitarUrlSubidaRecursoDtoRequest,
+  ): Promise<UrlSubidaRecursoDtoResponse> {
+    return this.solicitarUrlSubidaRecursoUseCase.execute(dto);
+  }
+
+  @Get('/modulos-destino')
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
+  async listarModulosDestino(): Promise<ModuloDestinoDtoResponse[]> {
+    return this.listarModulosDestinoUseCase.execute();
+  }
+
   @Post('/recursos')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
   @Roles(Rol.ADMINISTRATIVO)
@@ -93,10 +123,23 @@ export class CronogramaController {
     return this.crearRecursoContenidoUseCase.execute(dto);
   }
 
+  @Patch('/contenidos/:id_contenido/recursos/orden')
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async reordenarRecursosContenido(
+    @Param('id_contenido', new ParseUUIDPipe()) idContenido: string,
+    @Body() dto: ReordenarRecursosContenidoDtoRequest,
+  ): Promise<ReordenarRecursosContenidoDtoResponse> {
+    return this.reordenarRecursosContenidoUseCase.execute(idContenido, dto);
+  }
+
   @Post('/asociar-contenido-unidad-temporal')
   @Roles(Rol.ADMINISTRATIVO)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
-  async asociarContenidoUnidadTemporal( @Body() dto: crearContenidoCronogramaDtoRequest): Promise<crearContenidoCronogramaDtoResponse> {
+  async asociarContenidoUnidadTemporal(
+    @Body() dto: crearContenidoCronogramaDtoRequest,
+  ): Promise<crearContenidoCronogramaDtoResponse> {
     return this.asociarContenidoUnidadTemporalUseCase.execute(dto);
   }
 
@@ -108,14 +151,4 @@ export class CronogramaController {
   ): Promise<ActualizarDisponibilidadContenidoDtoResponse> {
     return this.actualizarDisponibilidadContenido.execute(dto);
   }
-
-  @Patch('/actualizar-unidad-temporal')
-  @Roles(Rol.ADMINISTRATIVO)
-  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
-  async actualizarUnidadTemporal(
-    @Body() dto: ActualizarUnidadTemporalDtoRequest,
-  ): Promise<ActualizarUnidadTemporalDtoResponse> {
-    return this.actualizarUnidadTemporalUseCase.execute(dto);
-  }
-
 }

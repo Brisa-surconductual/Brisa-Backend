@@ -5,4 +5,6 @@ export abstract class RecursoContenidoRepository {
     recurso: RecursoContenido,
     idModulos: string[],
   ): Promise<RecursoContenido>;
+
+  abstract reordenar(idContenido: string, idRecursos: string[]): Promise<void>;
 }
