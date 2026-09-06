@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import {contenidoCronogramadoEstadoInavilitadoParaEliminacionException} from "../exeption/contenido-cronogramado-estado-inavilitado.exeption";
 
 export class ContenidoCronograma {
     constructor(
@@ -47,5 +48,27 @@ export class ContenidoCronograma {
             contenidoCronograma.fecha_creacion,
             new Date(),
         );
+    }
+
+    obtenerEstado(fechaReferencia: Date = new Date()): 'PROGRAMADO' | 'ACTIVO' | 'FINALIZADO' {
+        if (!this.fecha_inicio_disponibilidad || !this.fecha_fin_disponibilidad) {
+            return 'PROGRAMADO';
+        }
+
+        if (fechaReferencia < this.fecha_inicio_disponibilidad) {
+            return 'PROGRAMADO';
+        } else if (fechaReferencia >= this.fecha_inicio_disponibilidad && fechaReferencia < this.fecha_fin_disponibilidad) {
+            return 'ACTIVO';
+        } else {
+            return 'FINALIZADO';
+        }
+    }
+
+    validarEliminacion(fechaReferencia: Date = new Date()): void {
+        const estado = this.obtenerEstado(fechaReferencia);
+        
+        if (estado !== 'PROGRAMADO') {
+            throw new contenidoCronogramadoEstadoInavilitadoParaEliminacionException(estado);
+        }
     }
 }

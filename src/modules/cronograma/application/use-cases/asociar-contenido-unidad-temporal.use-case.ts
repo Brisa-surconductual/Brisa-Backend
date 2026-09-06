@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { UnidadTemporalRepository } from "../../domain/repositories/unidad-temporal.repository";
 import {ConsistenciaFechasVO} from "../../domain/value-objects/cosistencia-fechas.vo";
-import {crearContenidoCronogramaDtoRequest} from "../dto/crear-contenido-cronograma.dto-request";
-import {crearContenidoCronogramaDtoResponse} from "../dto/crear-contenido-cronograma.dto-response.dto";
+import {crearContenidoCronogramaDtoRequest} from "../dto/contenidoUnidadTemporal/crear-contenido-cronograma.dto-request";
+import {crearContenidoCronogramaDtoResponse} from "../dto/contenidoUnidadTemporal/crear-contenido-cronograma.dto-response.dto";
 import {CalculoOrdenTemporalService} from "../service/calculo-orden-temporal.service";
 import {ValidarSolapamientoTemporalService} from "../service/validar-solapamiento-temporal.service";
 import {ContenidoCronogramaRepository} from "../../domain/repositories/contenido-cronograma.repository";

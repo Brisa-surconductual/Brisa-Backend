@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
-import { TipoContenido } from '../../domain/enums/tipo-contenido.enum';
+import { TipoContenido } from '../../../domain/enums/tipo-contenido.enum';
 
 function trimString({ value }: { value: unknown }): unknown {
   return typeof value === 'string' ? value.trim() : value;

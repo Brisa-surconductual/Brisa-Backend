@@ -11,6 +11,13 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
         private readonly prisma: PrismaService,
     ) {}
 
+
+    async eliminar(id_contenido_cronograma: string): Promise<void> {
+        await this.prisma.contenidos_cronograma.deleteMany({
+            where: { id_contenido_cronograma },
+        });
+    }
+    
     async crearConReordenamiento(
         contenidoCronograma: ContenidoCronograma,
         reordenamientoHermanas: AsignacionOrden[],

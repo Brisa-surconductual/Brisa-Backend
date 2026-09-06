@@ -1,4 +1,4 @@
-import { ModuloSistema } from '../../domain/entities/modulo-sistema.entity';
+import { ModuloSistema } from '../../../domain/entities/modulo-sistema.entity';
 
 export class ModuloDestinoDtoResponse {
   readonly id_modulo: string;

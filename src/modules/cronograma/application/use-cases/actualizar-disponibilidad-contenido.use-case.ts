@@ -10,8 +10,8 @@ import { DisponibilidadFueraDeRangoException } from '../../domain/exeption/dispo
 import { UnidadTemporalNoEncontradaException } from '../../domain/exeption/unidad-temporal-no-encotrada.exception';
 import { SolapamientoConLimiteException } from '../../domain/exeption/solapamineto-con-limite.exeption';
 import { calcularLimitesDisponibles, construirMensajeLimite } from '../service/calcular-limite-disponible.service';
-import { ActualizarDisponibilidadContenidoDtoRequest } from '../dto/actualizar-disponibilidad-contenido.dto-request';
-import { ActualizarDisponibilidadContenidoDtoResponse } from '../dto/actualizar-disponibilidad-contenido.dto-response';
+import { ActualizarDisponibilidadContenidoDtoRequest } from '../dto/contenido/actualizar-disponibilidad-contenido.dto-request';
+import { ActualizarDisponibilidadContenidoDtoResponse } from '../dto/contenido/actualizar-disponibilidad-contenido.dto-response';
 import {CalculoEstadoContenidoPort} from "../ports/calculo-estado-contenido.port";
 import { ContenidoNoProgramadoException } from '../../domain/exeption/contenido-no-programado.exeption';
 import { EstadoContenido } from '../../domain/enums/estado-contenido.enum';

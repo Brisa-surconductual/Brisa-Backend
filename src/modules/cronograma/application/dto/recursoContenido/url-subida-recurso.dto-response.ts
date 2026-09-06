@@ -1,4 +1,4 @@
-import { UrlSubidaRecurso } from '../ports/almacenamiento-recursos.port';
+import { UrlSubidaRecurso } from '../../ports/almacenamiento-recursos.port';
 
 export class UrlSubidaRecursoDtoResponse {
   readonly clave_almacenamiento: string;

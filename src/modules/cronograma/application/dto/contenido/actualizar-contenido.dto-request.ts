@@ -6,7 +6,7 @@ import {
   MaxLength,
   ValidateIf,
 } from 'class-validator';
-import { TipoContenido } from '../../domain/enums/tipo-contenido.enum';
+import { TipoContenido } from '../../../domain/enums/tipo-contenido.enum';
 
 function trimString({ value }: { value: unknown }): unknown {
   return typeof value === 'string' ? value.trim() : value;

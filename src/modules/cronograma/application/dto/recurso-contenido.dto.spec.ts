@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { TipoRecurso } from '../../domain/enums/tipo-recurso.enum';
-import { CrearRecursoContenidoDtoRequest } from './crear-recurso-contenido.dto-request';
+import { CrearRecursoContenidoDtoRequest } from './recursoContenido/crear-recurso-contenido.dto-request';
 
 describe('DTO de recurso con módulos destino (RF-153/RF-154)', () => {
   const idContenido = '00000000-0000-4000-8000-000000000001';

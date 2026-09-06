@@ -1,8 +1,8 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { TipoContenido } from '../../domain/enums/tipo-contenido.enum';
-import { ActualizarContenidoDtoRequest } from './actualizar-contenido.dto-request';
-import { CrearContenidoDtoRequest } from './crear-contenido.dto-request';
+import { ActualizarContenidoDtoRequest } from './contenido/actualizar-contenido.dto-request';
+import { CrearContenidoDtoRequest } from './contenido/crear-contenido.dto-request';
 
 describe('DTO de contenido psicoeducativo (RF-152)', () => {
   it('acepta y normaliza las entradas válidas', async () => {

@@ -16,6 +16,8 @@ import {ActualizarDisponibilidadContenidoUseCase} from "./use-cases/actualizar-d
 import {ReordenarContenidoTemporalService} from "./service/reordenar-contenido-temporal.service";
 import {ActualizarUnidadTemporalUseCase} from "./use-cases/actualizar-unidad-temporal.use-case";
 import {ReordenarUnidadTemporalService} from "./service/reordenar-unidad-temporal.service";
+import {EliminarAsociacionContenidoUnidadTemporalUseCase} from "./use-cases/eliminar-asosiacion-contenido-unidad-temporal.use-case";
+
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -35,5 +37,7 @@ export const CronogramaApplicationProviders = [
   ActualizarDisponibilidadContenidoUseCase,
   ReordenarContenidoTemporalService,
   ActualizarUnidadTemporalUseCase,
-  ReordenarUnidadTemporalService
+  ReordenarUnidadTemporalService,
+  EliminarAsociacionContenidoUnidadTemporalUseCase,
+
 ];

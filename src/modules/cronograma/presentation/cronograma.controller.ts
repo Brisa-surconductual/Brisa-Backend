@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { CreacionUnidadTemporalUseCase } from '../application/use-cases/crear-unidad-temporal.use-case';
-import { UnidadTemporalDtoRequest } from '../application/dto/crear-unidad-temporal.dto-request';
-import { UnidadTemporalDtoResponse } from '../application/dto/crear-unidad-temporal.dto-response';
+import { UnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-request';
+import { UnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-response';
 import { SessionAuthGuard } from '../../usuarios/presentation/guards/session-auth.guard';
 import { SessionScopeGuard } from '../../usuarios/presentation/guards/session-scope.guard';
 import { RolesGuard } from '../../../shared/presentation/guards/role-guard';
@@ -10,33 +10,36 @@ import { Roles } from '../../../shared/presentation/decorators/roles.decorator';
 import { AlcanceSesion } from '../../usuarios/domain/enums/alcance-sesion.enum';
 import { CsrfSessionGuard } from '../../usuarios/presentation/guards/csrf-session.guard';
 import { Rol } from '../../usuarios/domain/enums/rol.enum';
-import { ActualizarContenidoDtoRequest } from '../application/dto/actualizar-contenido.dto-request';
-import { ContenidoDtoResponse } from '../application/dto/contenido.dto-response';
-import { CrearContenidoDtoRequest } from '../application/dto/crear-contenido.dto-request';
-import { EliminarContenidoDtoResponse } from '../application/dto/eliminar-contenido.dto-response';
+import { ActualizarContenidoDtoRequest } from '../application/dto/contenido/actualizar-contenido.dto-request';
+import { ContenidoDtoResponse } from '../application/dto/contenido/contenido.dto-response';
+import { CrearContenidoDtoRequest } from '../application/dto/contenido/crear-contenido.dto-request';
+import { EliminarContenidoDtoResponse } from '../application/dto/contenido/eliminar-contenido.dto-response';
 import { ActualizarContenidoUseCase } from '../application/use-cases/actualizar-contenido.use-case';
 import { CrearContenidoUseCase } from '../application/use-cases/crear-contenido.use-case';
 import { EliminarContenidoUseCase } from '../application/use-cases/eliminar-contenido.use-case';
-import { CrearRecursoContenidoDtoRequest } from '../application/dto/crear-recurso-contenido.dto-request';
-import { RecursoContenidoDtoResponse } from '../application/dto/recurso-contenido.dto-response';
+import { CrearRecursoContenidoDtoRequest } from '../application/dto/recursoContenido/crear-recurso-contenido.dto-request';
+import { RecursoContenidoDtoResponse } from '../application/dto/recursoContenido/recurso-contenido.dto-response';
 import { CrearRecursoContenidoUseCase } from '../application/use-cases/crear-recurso-contenido.use-case';
 import { AsociarContenidoUnidadTemporalUseCase } from '../application/use-cases/asociar-contenido-unidad-temporal.use-case';
-import { crearContenidoCronogramaDtoRequest } from '../application/dto/crear-contenido-cronograma.dto-request';
-import { crearContenidoCronogramaDtoResponse } from '../application/dto/crear-contenido-cronograma.dto-response.dto';
+import { crearContenidoCronogramaDtoRequest } from '../application/dto/contenidoUnidadTemporal/crear-contenido-cronograma.dto-request';
+import { crearContenidoCronogramaDtoResponse } from '../application/dto/contenidoUnidadTemporal/crear-contenido-cronograma.dto-response.dto';
 import { ActualizarDisponibilidadContenidoUseCase } from '../application/use-cases/actualizar-disponibilidad-contenido.use-case';
-import { ActualizarDisponibilidadContenidoDtoRequest } from '../application/dto/actualizar-disponibilidad-contenido.dto-request';
-import { ActualizarDisponibilidadContenidoDtoResponse } from '../application/dto/actualizar-disponibilidad-contenido.dto-response';
-import { SolicitarUrlSubidaRecursoDtoRequest } from '../application/dto/solicitar-url-subida-recurso.dto-request';
-import { UrlSubidaRecursoDtoResponse } from '../application/dto/url-subida-recurso.dto-response';
+import { ActualizarDisponibilidadContenidoDtoRequest } from '../application/dto/contenido/actualizar-disponibilidad-contenido.dto-request';
+import { ActualizarDisponibilidadContenidoDtoResponse } from '../application/dto/contenido/actualizar-disponibilidad-contenido.dto-response';
+import { SolicitarUrlSubidaRecursoDtoRequest } from '../application/dto/recursoContenido/solicitar-url-subida-recurso.dto-request';
+import { UrlSubidaRecursoDtoResponse } from '../application/dto/recursoContenido/url-subida-recurso.dto-response';
 import { SolicitarUrlSubidaRecursoUseCase } from '../application/use-cases/solicitar-url-subida-recurso.use-case';
 import { ListarModulosDestinoUseCase } from '../application/use-cases/listar-modulos-destino.use-case';
-import { ModuloDestinoDtoResponse } from '../application/dto/modulo-destino.dto-response';
-import { ReordenarRecursosContenidoDtoRequest } from '../application/dto/reordenar-recursos-contenido.dto-request';
-import { ReordenarRecursosContenidoDtoResponse } from '../application/dto/reordenar-recursos-contenido.dto-response';
+import { ModuloDestinoDtoResponse } from '../application/dto/modulosDestino/modulo-destino.dto-response';
+import { ReordenarRecursosContenidoDtoRequest } from '../application/dto/recursoContenido/reordenar-recursos-contenido.dto-request';
+import { ReordenarRecursosContenidoDtoResponse } from '../application/dto/recursoContenido/reordenar-recursos-contenido.dto-response';
 import { ReordenarRecursosContenidoUseCase } from '../application/use-cases/reordenar-recursos-contenido.use-case';
 import {ActualizarUnidadTemporalUseCase} from "../application/use-cases/actualizar-unidad-temporal.use-case";
-import {ActualizarUnidadTemporalDtoRequest} from "../application/dto/actualizar-unidad-temporal.dto-request";
-import {ActualizarUnidadTemporalDtoResponse} from "../application/dto/actualizar-unidad-temporal.dto-response";
+import {ActualizarUnidadTemporalDtoRequest} from "../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-request";
+import {ActualizarUnidadTemporalDtoResponse} from "../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-response";
+import { EliminarAsociacionContenidoUnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-response';
+import { EliminarAsociacionContenidoUnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-request';
+import { EliminarAsociacionContenidoUnidadTemporalUseCase } from '../application/use-cases/eliminar-asosiacion-contenido-unidad-temporal.use-case';
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -52,6 +55,7 @@ export class CronogramaController {
     private readonly asociarContenidoUnidadTemporalUseCase: AsociarContenidoUnidadTemporalUseCase,
     private readonly actualizarDisponibilidadContenido: ActualizarDisponibilidadContenidoUseCase,
     private readonly actualizarUnidadTemporalUseCase: ActualizarUnidadTemporalUseCase,
+    private readonly eliminarAsociacionContenidoUnidadTemporalUseCase: EliminarAsociacionContenidoUnidadTemporalUseCase
   ) {}
 
   @Post('/crear/unidad-temporal')
@@ -161,4 +165,12 @@ export class CronogramaController {
     return this.actualizarUnidadTemporalUseCase.execute(dto);
   }
 
+  @Delete('/eliminar-asociacion-contenido-unidad-temporal')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async eliminarAsociacionContenidoUnidadTemporal(
+    @Body() dto: EliminarAsociacionContenidoUnidadTemporalDtoRequest,
+  ): Promise<EliminarAsociacionContenidoUnidadTemporalDtoResponse> {
+    return this.eliminarAsociacionContenidoUnidadTemporalUseCase.execute(dto);
+  }
 }
