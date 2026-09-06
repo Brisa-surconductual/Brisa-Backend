@@ -108,4 +108,50 @@ describe('EventoContenido y transiciones de estado (RF-15)', () => {
     ).toThrow(DatosEventoContenidoInvalidosException);
     expect(new DatosEventoContenidoInvalidosException().getStatus()).toBe(422);
   });
+
+  it('no permite generar un evento sin módulos destino', () => {
+    expect(() =>
+      EventoContenido.crear(
+        contenido,
+        {
+          estado_anterior: EstadoContenido.PROGRAMADO,
+          estado_nuevo: EstadoContenido.ACTIVO,
+        },
+        [],
+        new Date('2026-08-26T14:00:00.000Z'),
+      ),
+    ).toThrow(DatosEventoContenidoInvalidosException);
+  });
+
+  it('rehidrata sin alterar el payload inmutable guardado para reintentos', () => {
+    const original = EventoContenido.crear(
+      contenido,
+      {
+        estado_anterior: EstadoContenido.PROGRAMADO,
+        estado_nuevo: EstadoContenido.ACTIVO,
+      },
+      [
+        {
+          id_modulo: '00000000-0000-4000-8000-000000000010',
+          codigo_modulo: 'CHAT',
+          nombre_modulo: 'Chat',
+        },
+      ],
+      new Date('2026-08-26T14:00:00.000Z'),
+    ).marcarPersistido(25n);
+
+    const rehidratado = EventoContenido.rehidratar({
+      id_evento: 25n,
+      id_contenido_cronograma: original.id_contenido_cronograma,
+      id_cronograma: original.id_cronograma,
+      estado_anterior: original.estado_anterior,
+      estado_nuevo: original.estado_nuevo,
+      fecha_cambio: original.fecha_cambio,
+      version_evento: original.version_evento,
+      payload: original.payload,
+    });
+
+    expect(rehidratado.payload).toEqual(original.payload);
+    expect(Object.isFrozen(rehidratado.payload)).toBe(true);
+  });
 });
