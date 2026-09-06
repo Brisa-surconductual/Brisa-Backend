@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { UnidadTemporalRepository } from "../../domain/repositories/unidad-temporal.repository";
 import { UnidadTemporal } from "../../domain/entities/unidad-temporal.entity";
-import { UnidadTemporalDtoRequest } from "../dto/crear-unidad-temporal.dto-request";
-import { UnidadTemporalDtoResponse } from "../dto/crear-unidad-temporal.dto-response";
+import { UnidadTemporalDtoRequest } from "../dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-request";
+import { UnidadTemporalDtoResponse } from "../dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-response";
 import { ConsistenciaFechasVO } from "../../domain/value-objects/cosistencia-fechas.vo";
 import { CronogramaRepository } from "../../domain/repositories/cronograma.repository";
 import { ValidarSolapamientoTemporalService } from "../service/validar-solapamiento-temporal.service";

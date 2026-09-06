@@ -1,5 +1,5 @@
 import { HttpException, Injectable, Logger } from '@nestjs/common';
-import { InicializarCronogramaUsuarioDtoResponse } from '../dto/inicializar-cronograma-usuario.dto-response';
+import { InicializarCronogramaUsuarioDtoResponse } from '../dto/cronograma/inicializar-cronograma-usuario.dto-response';
 import { CronogramaUsuario } from '../../domain/entities/cronograma-usuario.entity';
 import { CondicionesInicializacionUsuarioRepository } from '../../domain/repositories/condiciones-inicializacion-usuario.repository';
 import { CronogramaRepository } from '../../domain/repositories/cronograma.repository';

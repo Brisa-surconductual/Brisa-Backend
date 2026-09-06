@@ -18,4 +18,6 @@ export abstract class ContenidoCronogramaRepository{
         contenidoCronograma: ContenidoCronograma,
         reordenamientoHermanas: AsignacionOrden[],
     ): Promise<ContenidoCronograma>;
+
+    abstract eliminar(id_contenido_cronograma: string): Promise<void>;
 }

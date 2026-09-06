@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { TipoRecurso } from '../../domain/enums/tipo-recurso.enum';
-import { SolicitarUrlSubidaRecursoDtoRequest } from './solicitar-url-subida-recurso.dto-request';
+import { SolicitarUrlSubidaRecursoDtoRequest } from './recursoContenido/solicitar-url-subida-recurso.dto-request';
 
 describe('SolicitarUrlSubidaRecursoDtoRequest', () => {
   const idContenido = '00000000-0000-4000-8000-000000000001';

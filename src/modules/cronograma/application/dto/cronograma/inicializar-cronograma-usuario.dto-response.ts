@@ -1,5 +1,5 @@
-import { Cronograma } from '../../domain/entities/cronograma.entity';
-import { CronogramaUsuario } from '../../domain/entities/cronograma-usuario.entity';
+import { Cronograma } from '../../../domain/entities/cronograma.entity';
+import { CronogramaUsuario } from '../../../domain/entities/cronograma-usuario.entity';
 
 export class InicializarCronogramaUsuarioDtoResponse {
   id_cronograma_usuario!: string;

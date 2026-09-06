@@ -1,4 +1,4 @@
-import { RecursoContenido } from '../../domain/entities/recurso-contenido.entity';
+import { RecursoContenido } from '../../../domain/entities/recurso-contenido.entity';
 
 export class RecursoContenidoDtoResponse {
   id_recurso!: string;

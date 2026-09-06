@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { ReordenarRecursosContenidoDtoRequest } from './reordenar-recursos-contenido.dto-request';
+import { ReordenarRecursosContenidoDtoRequest } from './recursoContenido/reordenar-recursos-contenido.dto-request';
 
 describe('ReordenarRecursosContenidoDtoRequest (RF-153)', () => {
   const idRecurso = '00000000-0000-4000-8000-000000000001';

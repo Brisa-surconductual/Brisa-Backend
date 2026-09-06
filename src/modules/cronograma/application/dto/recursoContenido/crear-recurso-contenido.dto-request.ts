@@ -13,7 +13,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { TipoRecurso } from '../../domain/enums/tipo-recurso.enum';
+import { TipoRecurso } from '../../../domain/enums/tipo-recurso.enum';
 
 function trimString({ value }: { value: unknown }): unknown {
   return typeof value === 'string' ? value.trim() : value;

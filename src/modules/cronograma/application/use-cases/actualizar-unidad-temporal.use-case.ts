@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { UnidadTemporalRepository } from "../../domain/repositories/unidad-temporal.repository";
-import { ActualizarUnidadTemporalDtoRequest } from "../dto/actualizar-unidad-temporal.dto-request";
-import { ActualizarUnidadTemporalDtoResponse } from "../dto/actualizar-unidad-temporal.dto-response";
+import { ActualizarUnidadTemporalDtoRequest } from "../dto/unidadTemporal/actualizar-unidad-temporal.dto-request";
+import { ActualizarUnidadTemporalDtoResponse } from "../dto/unidadTemporal/actualizar-unidad-temporal.dto-response";
 import { UnidadTemporalNoEncontradaException } from '../../domain/exeption/unidad-temporal-no-encotrada.exception';
 import { unidadTemporalEnEjecucionException } from '../../domain/exeption/unidad-temporal-en-ejecucion.expetion';
 import { unidadTemporalFinalizadaException } from '../../domain/exeption/unidad-temporal-finalizada.expetion';

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ContenidoNoEncontradoException } from '../../domain/exeption/contenido-no-encontrado.exception';
 import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
-import { EliminarContenidoDtoResponse } from '../dto/eliminar-contenido.dto-response';
+import { EliminarContenidoDtoResponse } from '../dto/contenido/eliminar-contenido.dto-response';
 
 @Injectable()
 export class EliminarContenidoUseCase {

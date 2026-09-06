@@ -9,8 +9,8 @@ import { ContenidoRepository } from '../../domain/repositories/contenido.reposit
 import { RecursoContenidoRepository } from '../../domain/repositories/recurso-contenido.repository';
 import { CoherenciaDatosRecursoVO } from '../../domain/value-objects/coherencia-datos-recurso.vo';
 import { CoherenciaMimeTypeRecursoVO } from '../../domain/value-objects/coherencia-mime-type-recurso.vo';
-import { CrearRecursoContenidoDtoRequest } from '../dto/crear-recurso-contenido.dto-request';
-import { RecursoContenidoDtoResponse } from '../dto/recurso-contenido.dto-response';
+import { CrearRecursoContenidoDtoRequest } from '../dto/recursoContenido/crear-recurso-contenido.dto-request';
+import { RecursoContenidoDtoResponse } from '../dto/recursoContenido/recurso-contenido.dto-response';
 import { AlmacenamientoRecursosPort } from '../ports/almacenamiento-recursos.port';
 
 @Injectable()

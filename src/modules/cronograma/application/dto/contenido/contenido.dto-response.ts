@@ -1,5 +1,4 @@
-import { Contenido } from '../../domain/entities/contenido.entity';
-
+import { Contenido } from '../../../domain/entities/contenido.entity'
 export class ContenidoDtoResponse {
   id_contenido!: string;
   mensaje!: string;
