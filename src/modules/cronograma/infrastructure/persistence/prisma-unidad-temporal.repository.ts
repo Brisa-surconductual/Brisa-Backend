@@ -3,6 +3,7 @@ import {UnidadTemporalRepository} from "../../domain/repositories/unidad-tempora
 import {UnidadTemporal} from "../../domain/entities/unidad-temporal.entity";
 import { PrismaService } from "prisma/prisma.service";
 import {UnidadesTemporalesMapper} from "../mappers/unidades-temporales.mapper";
+import { AsignacionOrdenUnidad } from "../../application/service/reordenar-unidad-temporal.service";
 
 @Injectable()
 export class PrismaUnidadTemporalRepository implements UnidadTemporalRepository {
@@ -10,7 +11,22 @@ export class PrismaUnidadTemporalRepository implements UnidadTemporalRepository 
         private readonly prisma: PrismaService,
     ) {}
 
-    obtenerPorIdUnidadTemporal(id_unidad_temporal: string): Promise<UnidadTemporal> {
+    async actualizarUnidadTemporal(unidadTemporal: UnidadTemporal): Promise<UnidadTemporal> {
+    await this.prisma.unidades_temporales.update({
+        where: { id_unidad_temporal: unidadTemporal.id_unidad_Temporal },
+        data: {
+            nombre_unidad: String(unidadTemporal.nombre),
+            orden_unidad: unidadTemporal.orden_unidad,
+            fecha_inicio: unidadTemporal.fecha_inicio,
+            fecha_fin: unidadTemporal.fecha_fin,
+            fecha_actualizacion: unidadTemporal.fecha_actualizacion,
+        },
+    });
+
+    return unidadTemporal;
+}
+
+    obtenerPorIdUnidadTemporal(id_unidad_temporal: string): Promise<UnidadTemporal | null> {
         return this.prisma.unidades_temporales.findUnique({
             where: { id_unidad_temporal },
         }).then(unidad => {
@@ -56,5 +72,43 @@ export class PrismaUnidadTemporalRepository implements UnidadTemporalRepository 
         })));
     
     }
+
+    async actualizarConReordenamiento(  unidadActualizada: UnidadTemporal, reordenamientoHermanas: AsignacionOrdenUnidad[], ): Promise<UnidadTemporal> {
+    await this.prisma.$transaction(async (tx) => {
+        // Fase 1: mover TODAS (hermanas + la editada) a órdenes negativos
+        await tx.unidades_temporales.update({
+            where: { id_unidad_temporal: unidadActualizada.id_unidad_Temporal },
+            data: { orden_unidad: -unidadActualizada.orden_unidad },
+        });
+
+        for (const asignacion of reordenamientoHermanas) {
+            await tx.unidades_temporales.update({
+                where: { id_unidad_temporal: asignacion.id_unidad_temporal },
+                data: { orden_unidad: -asignacion.orden_unidad },
+            });
+        }
+
+        // Fase 2: asignar valores finales positivos, incluyendo nombre/fechas de la editada
+        await tx.unidades_temporales.update({
+            where: { id_unidad_temporal: unidadActualizada.id_unidad_Temporal },
+            data: {
+                nombre_unidad: String(unidadActualizada.nombre),
+                orden_unidad: unidadActualizada.orden_unidad,
+                fecha_inicio: unidadActualizada.fecha_inicio,
+                fecha_fin: unidadActualizada.fecha_fin,
+                fecha_actualizacion: unidadActualizada.fecha_actualizacion,
+            },
+        });
+
+        for (const asignacion of reordenamientoHermanas) {
+            await tx.unidades_temporales.update({
+                where: { id_unidad_temporal: asignacion.id_unidad_temporal },
+                data: { orden_unidad: asignacion.orden_unidad },
+            });
+        }
+    });
+
+    return unidadActualizada;
+}
     
 }

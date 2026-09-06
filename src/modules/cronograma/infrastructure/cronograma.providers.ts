@@ -21,8 +21,11 @@ import { ContenidoCronogramaRepository } from '../domain/repositories/contenido-
 import { AlmacenamientoRecursosPort } from '../application/ports/almacenamiento-recursos.port';
 import { S3AlmacenamientoRecursosAdapter } from './storage/s3-almacenamiento-recursos.adapter';
 import { crearS3Client, S3_CLIENT } from './storage/s3-client.provider';
+import { CalculoEstadoContenidoPort } from '../application/ports/calculo-estado-contenido.port';
+import { PrismaCalculoEstadoContenidoAdapter } from './persistence/prisma-calculo-estado-contenido.repository';
 import { ModuloSistemaRepository } from '../domain/repositories/modulo-sistema.repository';
 import { PrismaModuloSistemaRepository } from './persistence/prisma-modulo-sistema.repository';
+
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -72,6 +75,11 @@ export const CronogramaInfrastructureProviders = [
   {
     provide: ContenidoCronogramaRepository,
     useClass: PrismaContenidoCronogramaRepository,
+  },
+
+  {
+    provide: CalculoEstadoContenidoPort,
+    useClass: PrismaCalculoEstadoContenidoAdapter,
   },
 
   InicializarCronogramasPendientesCron,

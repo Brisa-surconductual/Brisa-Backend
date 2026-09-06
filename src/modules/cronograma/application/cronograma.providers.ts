@@ -14,6 +14,11 @@ import { ReordenarContenidoTemporalService } from './service/reordenar-contenido
 import { SolicitarUrlSubidaRecursoUseCase } from './use-cases/solicitar-url-subida-recurso.use-case';
 import { ListarModulosDestinoUseCase } from './use-cases/listar-modulos-destino.use-case';
 import { ReordenarRecursosContenidoUseCase } from './use-cases/reordenar-recursos-contenido.use-case';
+import {AsociarContenidoUnidadTemporalUseCase} from "./use-cases/asociar-contenido-unidad-temporal.use-case";
+import {ActualizarDisponibilidadContenidoUseCase} from "./use-cases/actualizar-disponibilidad-contenido.use-case";
+import {ReordenarContenidoTemporalService} from "./service/reordenar-contenido-temporal.service";
+import {ActualizarUnidadTemporalUseCase} from "./use-cases/actualizar-unidad-temporal.use-case";
+import {ReordenarUnidadTemporalService} from "./service/reordenar-unidad-temporal.service";
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -32,4 +37,6 @@ export const CronogramaApplicationProviders = [
   AsociarContenidoUnidadTemporalUseCase,
   ActualizarDisponibilidadContenidoUseCase,
   ReordenarContenidoTemporalService,
+  ActualizarUnidadTemporalUseCase,
+  ReordenarUnidadTemporalService
 ];

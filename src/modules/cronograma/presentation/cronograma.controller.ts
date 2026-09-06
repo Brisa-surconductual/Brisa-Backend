@@ -1,14 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards, } from '@nestjs/common';
 import { CreacionUnidadTemporalUseCase } from '../application/use-cases/crear-unidad-temporal.use-case';
 import { UnidadTemporalDtoRequest } from '../application/dto/crear-unidad-temporal.dto-request';
 import { UnidadTemporalDtoResponse } from '../application/dto/crear-unidad-temporal.dto-response';
@@ -44,6 +34,9 @@ import { ModuloDestinoDtoResponse } from '../application/dto/modulo-destino.dto-
 import { ReordenarRecursosContenidoDtoRequest } from '../application/dto/reordenar-recursos-contenido.dto-request';
 import { ReordenarRecursosContenidoDtoResponse } from '../application/dto/reordenar-recursos-contenido.dto-response';
 import { ReordenarRecursosContenidoUseCase } from '../application/use-cases/reordenar-recursos-contenido.use-case';
+import {ActualizarUnidadTemporalUseCase} from "../application/use-cases/actualizar-unidad-temporal.use-case";
+import {ActualizarUnidadTemporalDtoRequest} from "../application/dto/actualizar-unidad-temporal.dto-request";
+import {ActualizarUnidadTemporalDtoResponse} from "../application/dto/actualizar-unidad-temporal.dto-response";
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -58,6 +51,7 @@ export class CronogramaController {
     private readonly reordenarRecursosContenidoUseCase: ReordenarRecursosContenidoUseCase,
     private readonly asociarContenidoUnidadTemporalUseCase: AsociarContenidoUnidadTemporalUseCase,
     private readonly actualizarDisponibilidadContenido: ActualizarDisponibilidadContenidoUseCase,
+    private readonly actualizarUnidadTemporalUseCase: ActualizarUnidadTemporalUseCase,
   ) {}
 
   @Post('/crear/unidad-temporal')
