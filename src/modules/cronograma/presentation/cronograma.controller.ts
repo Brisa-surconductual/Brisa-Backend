@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards, } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { CreacionUnidadTemporalUseCase } from '../application/use-cases/crear-unidad-temporal.use-case';
 import { UnidadTemporalDtoRequest } from '../application/dto/crear-unidad-temporal.dto-request';
 import { UnidadTemporalDtoResponse } from '../application/dto/crear-unidad-temporal.dto-response';
@@ -151,4 +151,14 @@ export class CronogramaController {
   ): Promise<ActualizarDisponibilidadContenidoDtoResponse> {
     return this.actualizarDisponibilidadContenido.execute(dto);
   }
+
+  @Patch('/actualizar-unidad-temporal')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async actualizarUnidadTemporal(
+    @Body() dto: ActualizarUnidadTemporalDtoRequest,
+  ): Promise<ActualizarUnidadTemporalDtoResponse> {
+    return this.actualizarUnidadTemporalUseCase.execute(dto);
+  }
+
 }
