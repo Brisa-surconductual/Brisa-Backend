@@ -20,12 +20,15 @@ import { SolicitarUrlSubidaRecursoUseCase } from '../../src/modules/cronograma/a
 import { ActualizarUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/actualizar-unidad-temporal.use-case';
 import { EliminarAsociacionContenidoUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/eliminar-asosiacion-contenido-unidad-temporal.use-case';
 import { RegistrarPausaAdministrativaUseCase } from '../../src/modules/cronograma/application/use-cases/registrar-pausa-administrativa.use-case';
+import { ConsultarPausasAdministrativasUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/consultar-pausas-administrativas-usuario.use-case';
+import { AnularPausaAdministrativaUseCase } from '../../src/modules/cronograma/application/use-cases/anular-pausa-administrativa.use-case';
 import { TipoContenido } from '../../src/modules/cronograma/domain/enums/tipo-contenido.enum';
 import { ContenidoCronogramaActivoException } from '../../src/modules/cronograma/domain/exeption/contenido-cronograma-activo.exception';
 import { CronogramaUsuarioActivoNoEncontradoException } from '../../src/modules/cronograma/domain/exeption/cronograma-usuario-activo-no-encontrado.exception';
 import { FechaInicioPausaFueraRangoException } from '../../src/modules/cronograma/domain/exeption/fecha-inicio-pausa-fuera-rango.exception';
 import { FechasPausaInvalidasException } from '../../src/modules/cronograma/domain/exeption/fechas-pausa-invalidas.exception';
 import { PausaAdministrativaSolapadaException } from '../../src/modules/cronograma/domain/exeption/pausa-administrativa-solapada.exception';
+import { PausaAdministrativaNoEncontradaException } from '../../src/modules/cronograma/domain/exeption/pausa-administrativa-no-encontrada.exception';
 import { CronogramaController } from '../../src/modules/cronograma/presentation/cronograma.controller';
 import { CsrfSessionGuard } from '../../src/modules/usuarios/presentation/guards/csrf-session.guard';
 import { SessionAuthGuard } from '../../src/modules/usuarios/presentation/guards/session-auth.guard';
@@ -35,6 +38,7 @@ describe('Cronograma - endpoints propios (e2e)', () => {
   const idContenido = '00000000-0000-4000-8000-000000000001';
   const idUsuario = '00000000-0000-4000-8000-000000000002';
   const idAdministrador = '00000000-0000-4000-8000-000000000003';
+  const idPausa = '00000000-0000-4000-8000-000000000004';
   const crearUnidadTemporal = { execute: jest.fn() };
   const crearContenido = { execute: jest.fn() };
   const actualizarContenido = { execute: jest.fn() };
@@ -48,6 +52,8 @@ describe('Cronograma - endpoints propios (e2e)', () => {
   const actualizarUnidadTemporal = { execute: jest.fn() };
   const eliminarAsociacionContenido = { execute: jest.fn() };
   const registrarPausa = { execute: jest.fn() };
+  const consultarPausas = { execute: jest.fn() };
+  const anularPausa = { execute: jest.fn() };
   const autenticar = (context: ExecutionContext): boolean => {
     const requestHttp = context.switchToHttp().getRequest<{
       autenticacion?: { usuario: { id_usuario: string } };
@@ -101,6 +107,14 @@ describe('Cronograma - endpoints propios (e2e)', () => {
         {
           provide: RegistrarPausaAdministrativaUseCase,
           useValue: registrarPausa,
+        },
+        {
+          provide: ConsultarPausasAdministrativasUsuarioUseCase,
+          useValue: consultarPausas,
+        },
+        {
+          provide: AnularPausaAdministrativaUseCase,
+          useValue: anularPausa,
         },
       ],
     })
@@ -273,6 +287,88 @@ describe('Cronograma - endpoints propios (e2e)', () => {
     },
   );
 
+  it('lista el historial incluyendo pausas activas, finalizadas y anuladas', async () => {
+    consultarPausas.execute.mockResolvedValue([
+      crearPausaResponse('ACTIVA'),
+      crearPausaResponse('FINALIZADA'),
+      crearPausaResponse('ANULADA'),
+    ]);
+
+    await request(app.getHttpServer())
+      .get(`/cronograma/usuarios/${idUsuario}/pausas-administrativas`)
+      .expect(200)
+      .expect((respuesta) => {
+        expect(respuesta.body).toEqual([
+          expect.objectContaining({ estado_pausa: 'ACTIVA' }),
+          expect.objectContaining({ estado_pausa: 'FINALIZADA' }),
+          expect.objectContaining({ estado_pausa: 'ANULADA' }),
+        ]);
+      });
+
+    expect(consultarPausas.execute).toHaveBeenCalledWith(idUsuario);
+  });
+
+  it('retorna 200 con lista vacía cuando el usuario no tiene pausas', async () => {
+    consultarPausas.execute.mockResolvedValue([]);
+
+    await request(app.getHttpServer())
+      .get(`/cronograma/usuarios/${idUsuario}/pausas-administrativas`)
+      .expect(200)
+      .expect([]);
+  });
+
+  it('anula una pausa pasada sin exigir reglas temporales adicionales', async () => {
+    anularPausa.execute.mockResolvedValue({
+      ...crearPausaResponse('ANULADA'),
+      mensaje: 'Pausa administrativa anulada correctamente.',
+    });
+
+    await request(app.getHttpServer())
+      .patch(
+        `/cronograma/usuarios/${idUsuario}/pausas-administrativas/${idPausa}/anular`,
+      )
+      .expect(200)
+      .expect((respuesta) => {
+        expect(respuesta.body).toMatchObject({
+          id_pausa: idPausa,
+          id_usuario: idUsuario,
+          estado_pausa: 'ANULADA',
+          mensaje: 'Pausa administrativa anulada correctamente.',
+        });
+      });
+
+    expect(anularPausa.execute).toHaveBeenCalledWith(idUsuario, idPausa);
+  });
+
+  it('retorna 404 al anular una pausa inexistente o ajena al usuario', async () => {
+    anularPausa.execute.mockRejectedValueOnce(
+      new PausaAdministrativaNoEncontradaException(),
+    );
+
+    await request(app.getHttpServer())
+      .patch(
+        `/cronograma/usuarios/${idUsuario}/pausas-administrativas/${idPausa}/anular`,
+      )
+      .expect(404);
+  });
+
+  it.each([
+    ['get', consultarPausas],
+    ['patch', anularPausa],
+  ] as const)(
+    'retorna 403 al %s pausas sin permiso administrativo',
+    async (metodo, useCase) => {
+      autorizarRol.canActivate.mockReturnValue(false);
+      const url =
+        metodo === 'get'
+          ? `/cronograma/usuarios/${idUsuario}/pausas-administrativas`
+          : `/cronograma/usuarios/${idUsuario}/pausas-administrativas/${idPausa}/anular`;
+
+      await request(app.getHttpServer())[metodo](url).expect(403);
+      expect(useCase.execute).not.toHaveBeenCalled();
+    },
+  );
+
   it.each(['id_usuario_administrativo', 'id_cronograma_usuario'])(
     'rechaza el campo manipulable %s en el cuerpo',
     async (campo) => {
@@ -322,4 +418,18 @@ describe('Cronograma - endpoints propios (e2e)', () => {
 
     expect(registrarPausa.execute).not.toHaveBeenCalled();
   });
+
+  function crearPausaResponse(estadoPausa: string) {
+    return {
+      id_pausa: idPausa,
+      id_usuario: idUsuario,
+      id_cronograma_usuario: '00000000-0000-4000-8000-000000000005',
+      fecha_inicio_pausa: new Date('2026-08-01T12:00:00.000Z'),
+      fecha_fin_pausa: new Date('2026-08-02T12:00:00.000Z'),
+      motivo_pausa: 'Corrección administrativa',
+      id_usuario_administrativo: idAdministrador,
+      fecha_registro: new Date('2026-08-01T10:00:00.000Z'),
+      estado_pausa: estadoPausa,
+    };
+  }
 });

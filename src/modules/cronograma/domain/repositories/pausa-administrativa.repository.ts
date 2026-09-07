@@ -18,4 +18,14 @@ export abstract class PausaAdministrativaRepository {
   ): Promise<boolean>;
 
   abstract crear(pausa: PausaAdministrativa): Promise<PausaAdministrativa>;
+
+  abstract listarPorUsuario(
+    idUsuario: string,
+    fechaConsulta: Date,
+  ): Promise<PausaAdministrativa[]>;
+
+  abstract anular(
+    idUsuario: string,
+    idPausa: string,
+  ): Promise<PausaAdministrativa | null>;
 }

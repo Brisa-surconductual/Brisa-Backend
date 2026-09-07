@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { estado_pausa_enum, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { PausaAdministrativa } from '../../domain/entities/pausa-administrativa.entity';
 import { CronogramaUsuarioActivoNoEncontradoException } from '../../domain/exeption/cronograma-usuario-activo-no-encontrado.exception';
@@ -10,6 +11,18 @@ import {
   PausaAdministrativaRepository,
 } from '../../domain/repositories/pausa-administrativa.repository';
 import { PausaAdministrativaMapper } from '../mappers/pausa-administrativa.mapper';
+
+interface PausaAdministrativaRow {
+  id_pausa: string;
+  id_usuario: string;
+  id_cronograma_usuario: string;
+  fecha_inicio_pausa: Date;
+  fecha_fin_pausa: Date;
+  motivo_pausa: string;
+  id_usuario_administrativo: string;
+  fecha_registro: Date;
+  estado_pausa: estado_pausa_enum;
+}
 
 @Injectable()
 export class PrismaPausaAdministrativaRepository implements PausaAdministrativaRepository {
@@ -91,6 +104,46 @@ export class PrismaPausaAdministrativaRepository implements PausaAdministrativaR
     } catch (error: unknown) {
       this.traducirErrorPersistencia(error);
     }
+  }
+
+  async listarPorUsuario(
+    idUsuario: string,
+    fechaConsulta: Date,
+  ): Promise<PausaAdministrativa[]> {
+    const filas = await this.prisma.$queryRaw<PausaAdministrativaRow[]>(
+      Prisma.sql`
+        SELECT *
+        FROM cronograma.fn_historial_pausas_administrativas_usuario(
+          ${idUsuario}::uuid,
+          ${fechaConsulta}::timestamptz
+        )
+      `,
+    );
+
+    return filas.map((fila) => PausaAdministrativaMapper.toDomain(fila));
+  }
+
+  async anular(
+    idUsuario: string,
+    idPausa: string,
+  ): Promise<PausaAdministrativa | null> {
+    await this.prisma.pausas_administrativas.updateMany({
+      where: {
+        id_pausa: idPausa,
+        id_usuario: idUsuario,
+        estado_pausa: { not: 'ANULADA' },
+      },
+      data: { estado_pausa: 'ANULADA' },
+    });
+
+    const pausa = await this.prisma.pausas_administrativas.findFirst({
+      where: {
+        id_pausa: idPausa,
+        id_usuario: idUsuario,
+      },
+    });
+
+    return pausa ? PausaAdministrativaMapper.toDomain(pausa) : null;
   }
 
   private traducirErrorPersistencia(error: unknown): never {

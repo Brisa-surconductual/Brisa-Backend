@@ -15,6 +15,8 @@ describe('RegistrarPausaAdministrativaUseCase (RF-22B)', () => {
     buscarContextoCronogramaActivo: jest.fn(),
     existeSolapamiento: jest.fn(),
     crear: jest.fn(),
+    listarPorUsuario: jest.fn(),
+    anular: jest.fn(),
   };
   const useCase = new RegistrarPausaAdministrativaUseCase(repository);
 

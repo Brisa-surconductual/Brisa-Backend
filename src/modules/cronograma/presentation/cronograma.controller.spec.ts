@@ -26,9 +26,14 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
     execute: jest.fn(),
   };
   const registrarPausaAdministrativaUseCase = { execute: jest.fn() };
+  const consultarPausasAdministrativasUsuarioUseCase = {
+    execute: jest.fn(),
+  };
+  const anularPausaAdministrativaUseCase = { execute: jest.fn() };
   const idContenido = '00000000-0000-4000-8000-000000000001';
   const idUsuario = '00000000-0000-4000-8000-000000000002';
   const idAdministrador = '00000000-0000-4000-8000-000000000003';
+  const idPausa = '00000000-0000-4000-8000-000000000004';
   let controller: CronogramaController;
 
   beforeEach(() => {
@@ -47,6 +52,8 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
       actualizarUnidadTemporalUseCase as never,
       eliminarAsociacionContenidoUnidadTemporalUseCase as never,
       registrarPausaAdministrativaUseCase as never,
+      consultarPausasAdministrativasUsuarioUseCase as never,
+      anularPausaAdministrativaUseCase as never,
     );
   });
 
@@ -216,6 +223,65 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
   it('protege el registro de pausas con sesión completa, rol y CSRF', () => {
     const handler =
       CronogramaController.prototype['registrarPausaAdministrativa'];
+    const guards = Reflect.getMetadata(GUARDS_METADATA, handler) as unknown[];
+    const roles = Reflect.getMetadata(ROLES_KEY, handler) as string[];
+    const alcances = Reflect.getMetadata(
+      ALCANCES_SESION_KEY,
+      handler,
+    ) as string[];
+
+    expect(guards).toEqual([
+      SessionAuthGuard,
+      SessionScopeGuard,
+      RolesGuard,
+      CsrfSessionGuard,
+    ]);
+    expect(roles).toEqual([Rol.ADMINISTRATIVO]);
+    expect(alcances).toEqual(['COMPLETA']);
+  });
+
+  it('delega la consulta del historial por usuario', async () => {
+    consultarPausasAdministrativasUsuarioUseCase.execute.mockResolvedValue([]);
+
+    await expect(
+      controller.consultarPausasAdministrativas(idUsuario),
+    ).resolves.toEqual([]);
+    expect(
+      consultarPausasAdministrativasUsuarioUseCase.execute,
+    ).toHaveBeenCalledWith(idUsuario);
+  });
+
+  it('protege la consulta con sesión completa y rol, sin exigir CSRF', () => {
+    const handler =
+      CronogramaController.prototype['consultarPausasAdministrativas'];
+    const guards = Reflect.getMetadata(GUARDS_METADATA, handler) as unknown[];
+    const roles = Reflect.getMetadata(ROLES_KEY, handler) as string[];
+    const alcances = Reflect.getMetadata(
+      ALCANCES_SESION_KEY,
+      handler,
+    ) as string[];
+
+    expect(guards).toEqual([SessionAuthGuard, SessionScopeGuard, RolesGuard]);
+    expect(roles).toEqual([Rol.ADMINISTRATIVO]);
+    expect(alcances).toEqual(['COMPLETA']);
+  });
+
+  it('delega la anulación usando usuario y pausa de la ruta', async () => {
+    anularPausaAdministrativaUseCase.execute.mockResolvedValue({
+      id_pausa: idPausa,
+      estado_pausa: 'ANULADA',
+    });
+
+    await controller.anularPausaAdministrativa(idUsuario, idPausa);
+
+    expect(anularPausaAdministrativaUseCase.execute).toHaveBeenCalledWith(
+      idUsuario,
+      idPausa,
+    );
+  });
+
+  it('protege la anulación con sesión completa, rol y CSRF', () => {
+    const handler = CronogramaController.prototype['anularPausaAdministrativa'];
     const guards = Reflect.getMetadata(GUARDS_METADATA, handler) as unknown[];
     const roles = Reflect.getMetadata(ROLES_KEY, handler) as string[];
     const alcances = Reflect.getMetadata(

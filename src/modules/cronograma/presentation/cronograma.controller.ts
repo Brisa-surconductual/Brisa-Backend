@@ -55,6 +55,10 @@ import { RegistrarPausaAdministrativaDtoRequest } from '../application/dto/pausa
 import { RegistrarPausaAdministrativaDtoResponse } from '../application/dto/pausaAdministrativa/registrar-pausa-administrativa.dto-response';
 import { RegistrarPausaAdministrativaUseCase } from '../application/use-cases/registrar-pausa-administrativa.use-case';
 import type { AuthenticatedSessionRequest } from '../../usuarios/presentation/http/authenticated-session-request';
+import { ConsultarPausasAdministrativasUsuarioUseCase } from '../application/use-cases/consultar-pausas-administrativas-usuario.use-case';
+import { PausaAdministrativaDtoResponse } from '../application/dto/pausaAdministrativa/pausa-administrativa.dto-response';
+import { AnularPausaAdministrativaUseCase } from '../application/use-cases/anular-pausa-administrativa.use-case';
+import { AnularPausaAdministrativaDtoResponse } from '../application/dto/pausaAdministrativa/anular-pausa-administrativa.dto-response';
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -72,6 +76,8 @@ export class CronogramaController {
     private readonly actualizarUnidadTemporalUseCase: ActualizarUnidadTemporalUseCase,
     private readonly eliminarAsociacionContenidoUnidadTemporalUseCase: EliminarAsociacionContenidoUnidadTemporalUseCase,
     private readonly registrarPausaAdministrativaUseCase: RegistrarPausaAdministrativaUseCase,
+    private readonly consultarPausasAdministrativasUsuarioUseCase: ConsultarPausasAdministrativasUsuarioUseCase,
+    private readonly anularPausaAdministrativaUseCase: AnularPausaAdministrativaUseCase,
   ) {}
 
   @Post('/crear/unidad-temporal')
@@ -204,5 +210,26 @@ export class CronogramaController {
       request.autenticacion.usuario.id_usuario,
       dto,
     );
+  }
+
+  @Get('/usuarios/:id_usuario/pausas-administrativas')
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
+  async consultarPausasAdministrativas(
+    @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,
+  ): Promise<PausaAdministrativaDtoResponse[]> {
+    return this.consultarPausasAdministrativasUsuarioUseCase.execute(idUsuario);
+  }
+
+  @Patch('/usuarios/:id_usuario/pausas-administrativas/:id_pausa/anular')
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async anularPausaAdministrativa(
+    @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,
+    @Param('id_pausa', new ParseUUIDPipe()) idPausa: string,
+  ): Promise<AnularPausaAdministrativaDtoResponse> {
+    return this.anularPausaAdministrativaUseCase.execute(idUsuario, idPausa);
   }
 }
