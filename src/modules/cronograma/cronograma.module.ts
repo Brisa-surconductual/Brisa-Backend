@@ -7,6 +7,7 @@ import { CronogramaPresentationProviders } from './presentation/cronograma.provi
 import { UsersModule } from '../usuarios/users.module';
 import { RolesGuard } from '../../shared/presentation/guards/role-guard';
 import { AutorizarConsumoEventoContenidoService } from './application/service/autorizar-consumo-evento-contenido.service';
+import { CalcularUbicacionTemporalUsuarioUseCase } from './application/use-cases/calcular-ubicacion-temporal-usuario.use-case';
 
 @Module({
   imports: [PrismaModule, UsersModule],
@@ -21,6 +22,7 @@ import { AutorizarConsumoEventoContenidoService } from './application/service/au
   exports: [
     InicializarCronogramaUsuarioUseCase,
     AutorizarConsumoEventoContenidoService,
+    CalcularUbicacionTemporalUsuarioUseCase,
   ],
 })
 export class CronogramaModule {}

@@ -27,6 +27,8 @@ import { ModuloSistemaRepository } from '../domain/repositories/modulo-sistema.r
 import { PrismaModuloSistemaRepository } from './persistence/prisma-modulo-sistema.repository';
 import { PausaAdministrativaRepository } from '../domain/repositories/pausa-administrativa.repository';
 import { PrismaPausaAdministrativaRepository } from './persistence/prisma-pausa-administrativa.repository';
+import { UbicacionTemporalUsuarioRepository } from '../domain/repositories/ubicacion-temporal-usuario.repository';
+import { PrismaUbicacionTemporalUsuarioRepository } from './persistence/prisma-ubicacion-temporal-usuario.repository';
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -85,6 +87,10 @@ export const CronogramaInfrastructureProviders = [
   {
     provide: PausaAdministrativaRepository,
     useClass: PrismaPausaAdministrativaRepository,
+  },
+  {
+    provide: UbicacionTemporalUsuarioRepository,
+    useClass: PrismaUbicacionTemporalUsuarioRepository,
   },
 
   InicializarCronogramasPendientesCron,
