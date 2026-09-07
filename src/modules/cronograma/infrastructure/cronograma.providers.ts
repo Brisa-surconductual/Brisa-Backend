@@ -35,6 +35,8 @@ import { ModuloApiKeyHasherPort } from '../application/ports/modulo-api-key-hash
 import { Sha256ModuloApiKeyHasher } from './security/sha256-modulo-api-key-hasher';
 import { ModuloInternoCredentialsConfigPort } from '../application/ports/modulo-interno-credentials-config.port';
 import { EnvironmentModuloInternoCredentialsConfig } from './config/environment-modulo-interno-credentials.config';
+import { InformacionTemporalUsuarioRepository } from '../domain/repositories/informacion-temporal-usuario.repository';
+import { PrismaInformacionTemporalUsuarioRepository } from './persistence/prisma-informacion-temporal-usuario.repository';
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -101,6 +103,10 @@ export const CronogramaInfrastructureProviders = [
   {
     provide: ContenidoVigenteUsuarioRepository,
     useClass: PrismaContenidoVigenteUsuarioRepository,
+  },
+  {
+    provide: InformacionTemporalUsuarioRepository,
+    useClass: PrismaInformacionTemporalUsuarioRepository,
   },
   EnvironmentModuloInternoCredentialsConfig,
   {

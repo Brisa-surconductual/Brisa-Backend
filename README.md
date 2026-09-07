@@ -231,14 +231,42 @@ cuando el entorno ya proporciona credenciales mediante dicho rol.
 
 ## Autenticación de módulos internos
 
-RF-21 expone únicamente el endpoint servidor-a-servidor
-`GET /cronograma/interno/usuarios/:id_usuario/contenidos-vigentes`. Los módulos
-`CHAT`, `SEGUIM`, `GAMIF` y `NOTIF` deben enviar:
+RF-21 y RF-23 exponen únicamente endpoints servidor-a-servidor:
+
+- `GET /cronograma/interno/usuarios/:id_usuario/contenidos-vigentes`
+- `GET /cronograma/interno/usuarios/:id_usuario/informacion-temporal`
+
+Los módulos `CHAT`, `SEGUIM`, `GAMIF` y `NOTIF` deben enviar:
 
 ```http
 Authorization: Bearer <api-key-del-modulo>
 X-Module-Code: CHAT
 ```
+
+RF-23 acepta opcionalmente `fecha_consulta` en formato ISO 8601 y responde con
+los contratos de RF-22 y RF-21 agrupados bajo campos estables:
+
+```json
+{
+  "ubicacion_temporal": {
+    "id_usuario": "uuid",
+    "id_cronograma_usuario": "uuid",
+    "id_cronograma": "uuid",
+    "id_unidad_temporal": "uuid",
+    "nombre_unidad": "Semana 2",
+    "orden_unidad": 2,
+    "fecha_calculo": "2026-09-15T12:00:00.000Z",
+    "tiempo_efectivo_transcurrido_segundos": 604800,
+    "cronograma_finalizado": false,
+    "mensaje": null
+  },
+  "contenidos_vigentes": []
+}
+```
+
+Aunque no exista contenido vigente, RF-23 retorna HTTP 200 con la ubicación y
+`contenidos_vigentes: []`. El endpoint es de solo lectura y responde con
+`Cache-Control: no-store`.
 
 Cada módulo debe usar una API key aleatoria diferente, de al menos 32
 caracteres. El backend no almacena el valor en texto plano: en `config/.env` se

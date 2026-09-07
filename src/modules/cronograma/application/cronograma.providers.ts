@@ -22,6 +22,7 @@ import { CalcularUbicacionTemporalUsuarioUseCase } from './use-cases/calcular-ub
 import { ConsultarContenidoVigenteUsuarioUseCase } from './use-cases/consultar-contenido-vigente-usuario.use-case';
 import { ConsultarPausasAdministrativasUsuarioUseCase } from './use-cases/consultar-pausas-administrativas-usuario.use-case';
 import { AnularPausaAdministrativaUseCase } from './use-cases/anular-pausa-administrativa.use-case';
+import { ConsultarInformacionTemporalUsuarioUseCase } from './use-cases/consultar-informacion-temporal-usuario.use-case';
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -48,4 +49,5 @@ export const CronogramaApplicationProviders = [
   ConsultarContenidoVigenteUsuarioUseCase,
   ConsultarPausasAdministrativasUsuarioUseCase,
   AnularPausaAdministrativaUseCase,
+  ConsultarInformacionTemporalUsuarioUseCase,
 ];
