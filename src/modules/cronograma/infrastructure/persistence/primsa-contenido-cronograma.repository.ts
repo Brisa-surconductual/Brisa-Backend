@@ -23,7 +23,6 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
         reordenamientoHermanas: AsignacionOrden[],
         ): Promise<ContenidoCronograma> {
         await this.prisma.$transaction(async (tx) => {
-            // 1. Mover hermanas a órdenes negativos (espacio libre de colisiones)
             for (const asignacion of reordenamientoHermanas) {
                 await tx.contenidos_cronograma.update({
                     where: { id_contenido_cronograma: asignacion.id_contenido_cronograma },
@@ -31,12 +30,10 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
                 });
             }
 
-            // 2. Insertar la nueva asociación con su orden final
             await tx.contenidos_cronograma.create({
                 data: ContenidoCronogramaMapper.toPrisma(contenidoCronograma) as any,
             });
 
-            // 3. Devolver las hermanas a sus órdenes finales positivos
             for (const asignacion of reordenamientoHermanas) {
                 await tx.contenidos_cronograma.update({
                     where: { id_contenido_cronograma: asignacion.id_contenido_cronograma },
@@ -101,7 +98,6 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
     }
 
     await this.prisma.$transaction(async (tx) => {
-        // Fase 1: mover todas a órdenes negativos (espacio sin colisiones)
         for (const asignacion of asignaciones) {
             await tx.contenidos_cronograma.update({
                 where: { id_contenido_cronograma: asignacion.id_contenido_cronograma },
@@ -109,7 +105,6 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
             });
         }
 
-        // Fase 2: asignar los órdenes finales positivos
         for (const asignacion of asignaciones) {
             await tx.contenidos_cronograma.update({
                 where: { id_contenido_cronograma: asignacion.id_contenido_cronograma },
