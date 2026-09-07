@@ -25,7 +25,8 @@ import { CalculoEstadoContenidoPort } from '../application/ports/calculo-estado-
 import { PrismaCalculoEstadoContenidoAdapter } from './persistence/prisma-calculo-estado-contenido.repository';
 import { ModuloSistemaRepository } from '../domain/repositories/modulo-sistema.repository';
 import { PrismaModuloSistemaRepository } from './persistence/prisma-modulo-sistema.repository';
-
+import { PausaAdministrativaRepository } from '../domain/repositories/pausa-administrativa.repository';
+import { PrismaPausaAdministrativaRepository } from './persistence/prisma-pausa-administrativa.repository';
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -80,6 +81,10 @@ export const CronogramaInfrastructureProviders = [
   {
     provide: CalculoEstadoContenidoPort,
     useClass: PrismaCalculoEstadoContenidoAdapter,
+  },
+  {
+    provide: PausaAdministrativaRepository,
+    useClass: PrismaPausaAdministrativaRepository,
   },
 
   InicializarCronogramasPendientesCron,

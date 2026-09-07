@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { CreacionUnidadTemporalUseCase } from '../application/use-cases/crear-unidad-temporal.use-case';
 import { UnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-request';
 import { UnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-response';
@@ -34,12 +45,16 @@ import { ModuloDestinoDtoResponse } from '../application/dto/modulosDestino/modu
 import { ReordenarRecursosContenidoDtoRequest } from '../application/dto/recursoContenido/reordenar-recursos-contenido.dto-request';
 import { ReordenarRecursosContenidoDtoResponse } from '../application/dto/recursoContenido/reordenar-recursos-contenido.dto-response';
 import { ReordenarRecursosContenidoUseCase } from '../application/use-cases/reordenar-recursos-contenido.use-case';
-import {ActualizarUnidadTemporalUseCase} from "../application/use-cases/actualizar-unidad-temporal.use-case";
-import {ActualizarUnidadTemporalDtoRequest} from "../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-request";
-import {ActualizarUnidadTemporalDtoResponse} from "../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-response";
+import { ActualizarUnidadTemporalUseCase } from '../application/use-cases/actualizar-unidad-temporal.use-case';
+import { ActualizarUnidadTemporalDtoRequest } from '../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-request';
+import { ActualizarUnidadTemporalDtoResponse } from '../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-response';
 import { EliminarAsociacionContenidoUnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-response';
 import { EliminarAsociacionContenidoUnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-request';
 import { EliminarAsociacionContenidoUnidadTemporalUseCase } from '../application/use-cases/eliminar-asosiacion-contenido-unidad-temporal.use-case';
+import { RegistrarPausaAdministrativaDtoRequest } from '../application/dto/pausaAdministrativa/registrar-pausa-administrativa.dto-request';
+import { RegistrarPausaAdministrativaDtoResponse } from '../application/dto/pausaAdministrativa/registrar-pausa-administrativa.dto-response';
+import { RegistrarPausaAdministrativaUseCase } from '../application/use-cases/registrar-pausa-administrativa.use-case';
+import type { AuthenticatedSessionRequest } from '../../usuarios/presentation/http/authenticated-session-request';
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -55,7 +70,8 @@ export class CronogramaController {
     private readonly asociarContenidoUnidadTemporalUseCase: AsociarContenidoUnidadTemporalUseCase,
     private readonly actualizarDisponibilidadContenido: ActualizarDisponibilidadContenidoUseCase,
     private readonly actualizarUnidadTemporalUseCase: ActualizarUnidadTemporalUseCase,
-    private readonly eliminarAsociacionContenidoUnidadTemporalUseCase: EliminarAsociacionContenidoUnidadTemporalUseCase
+    private readonly eliminarAsociacionContenidoUnidadTemporalUseCase: EliminarAsociacionContenidoUnidadTemporalUseCase,
+    private readonly registrarPausaAdministrativaUseCase: RegistrarPausaAdministrativaUseCase,
   ) {}
 
   @Post('/crear/unidad-temporal')
@@ -172,5 +188,21 @@ export class CronogramaController {
     @Body() dto: EliminarAsociacionContenidoUnidadTemporalDtoRequest,
   ): Promise<EliminarAsociacionContenidoUnidadTemporalDtoResponse> {
     return this.eliminarAsociacionContenidoUnidadTemporalUseCase.execute(dto);
+  }
+
+  @Post('/usuarios/:id_usuario/pausas-administrativas')
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async registrarPausaAdministrativa(
+    @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,
+    @Body() dto: RegistrarPausaAdministrativaDtoRequest,
+    @Req() request: AuthenticatedSessionRequest,
+  ): Promise<RegistrarPausaAdministrativaDtoResponse> {
+    return this.registrarPausaAdministrativaUseCase.execute(
+      idUsuario,
+      request.autenticacion.usuario.id_usuario,
+      dto,
+    );
   }
 }

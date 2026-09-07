@@ -11,13 +11,13 @@ import { PublicarEventosCambioEstadoUseCase } from './use-cases/publicar-eventos
 import { SolicitarUrlSubidaRecursoUseCase } from './use-cases/solicitar-url-subida-recurso.use-case';
 import { ListarModulosDestinoUseCase } from './use-cases/listar-modulos-destino.use-case';
 import { ReordenarRecursosContenidoUseCase } from './use-cases/reordenar-recursos-contenido.use-case';
-import {AsociarContenidoUnidadTemporalUseCase} from "./use-cases/asociar-contenido-unidad-temporal.use-case";
-import {ActualizarDisponibilidadContenidoUseCase} from "./use-cases/actualizar-disponibilidad-contenido.use-case";
-import {ReordenarContenidoTemporalService} from "./service/reordenar-contenido-temporal.service";
-import {ActualizarUnidadTemporalUseCase} from "./use-cases/actualizar-unidad-temporal.use-case";
-import {ReordenarUnidadTemporalService} from "./service/reordenar-unidad-temporal.service";
-import {EliminarAsociacionContenidoUnidadTemporalUseCase} from "./use-cases/eliminar-asosiacion-contenido-unidad-temporal.use-case";
-
+import { AsociarContenidoUnidadTemporalUseCase } from './use-cases/asociar-contenido-unidad-temporal.use-case';
+import { ActualizarDisponibilidadContenidoUseCase } from './use-cases/actualizar-disponibilidad-contenido.use-case';
+import { ReordenarContenidoTemporalService } from './service/reordenar-contenido-temporal.service';
+import { ActualizarUnidadTemporalUseCase } from './use-cases/actualizar-unidad-temporal.use-case';
+import { ReordenarUnidadTemporalService } from './service/reordenar-unidad-temporal.service';
+import { EliminarAsociacionContenidoUnidadTemporalUseCase } from './use-cases/eliminar-asosiacion-contenido-unidad-temporal.use-case';
+import { RegistrarPausaAdministrativaUseCase } from './use-cases/registrar-pausa-administrativa.use-case';
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -39,5 +39,5 @@ export const CronogramaApplicationProviders = [
   ActualizarUnidadTemporalUseCase,
   ReordenarUnidadTemporalService,
   EliminarAsociacionContenidoUnidadTemporalUseCase,
-
+  RegistrarPausaAdministrativaUseCase,
 ];

@@ -21,7 +21,14 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
   const reordenarRecursosContenidoUseCase = { execute: jest.fn() };
   const asociarContenidoUnidadTemporalUseCase = { execute: jest.fn() };
   const actualizarDisponibilidadContenidoUseCase = { execute: jest.fn() };
+  const actualizarUnidadTemporalUseCase = { execute: jest.fn() };
+  const eliminarAsociacionContenidoUnidadTemporalUseCase = {
+    execute: jest.fn(),
+  };
+  const registrarPausaAdministrativaUseCase = { execute: jest.fn() };
   const idContenido = '00000000-0000-4000-8000-000000000001';
+  const idUsuario = '00000000-0000-4000-8000-000000000002';
+  const idAdministrador = '00000000-0000-4000-8000-000000000003';
   let controller: CronogramaController;
 
   beforeEach(() => {
@@ -37,6 +44,9 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
       reordenarRecursosContenidoUseCase as never,
       asociarContenidoUnidadTemporalUseCase as never,
       actualizarDisponibilidadContenidoUseCase as never,
+      actualizarUnidadTemporalUseCase as never,
+      eliminarAsociacionContenidoUnidadTemporalUseCase as never,
+      registrarPausaAdministrativaUseCase as never,
     );
   });
 
@@ -167,7 +177,7 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
   );
 
   it('protege el catálogo con sesión completa y rol administrativo', () => {
-    const handler = CronogramaController.prototype.listarModulosDestino;
+    const handler = CronogramaController.prototype['listarModulosDestino'];
     const guards = Reflect.getMetadata(GUARDS_METADATA, handler) as unknown[];
     const roles = Reflect.getMetadata(ROLES_KEY, handler) as string[];
     const alcances = Reflect.getMetadata(
@@ -176,6 +186,49 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
     ) as string[];
 
     expect(guards).toEqual([SessionAuthGuard, SessionScopeGuard, RolesGuard]);
+    expect(roles).toEqual([Rol.ADMINISTRATIVO]);
+    expect(alcances).toEqual(['COMPLETA']);
+  });
+
+  it('registra la pausa con el administrador obtenido de la sesión', async () => {
+    const dto = {
+      fecha_inicio_pausa: new Date('2026-09-10T12:00:00.000Z'),
+      fecha_fin_pausa: new Date('2026-09-12T12:00:00.000Z'),
+      motivo_pausa: 'Incapacidad médica',
+    };
+    const request = {
+      autenticacion: { usuario: { id_usuario: idAdministrador } },
+    };
+
+    await controller.registrarPausaAdministrativa(
+      idUsuario,
+      dto,
+      request as never,
+    );
+
+    expect(registrarPausaAdministrativaUseCase.execute).toHaveBeenCalledWith(
+      idUsuario,
+      idAdministrador,
+      dto,
+    );
+  });
+
+  it('protege el registro de pausas con sesión completa, rol y CSRF', () => {
+    const handler =
+      CronogramaController.prototype['registrarPausaAdministrativa'];
+    const guards = Reflect.getMetadata(GUARDS_METADATA, handler) as unknown[];
+    const roles = Reflect.getMetadata(ROLES_KEY, handler) as string[];
+    const alcances = Reflect.getMetadata(
+      ALCANCES_SESION_KEY,
+      handler,
+    ) as string[];
+
+    expect(guards).toEqual([
+      SessionAuthGuard,
+      SessionScopeGuard,
+      RolesGuard,
+      CsrfSessionGuard,
+    ]);
     expect(roles).toEqual([Rol.ADMINISTRATIVO]);
     expect(alcances).toEqual(['COMPLETA']);
   });
