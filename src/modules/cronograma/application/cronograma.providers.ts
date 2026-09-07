@@ -19,6 +19,7 @@ import { ReordenarUnidadTemporalService } from './service/reordenar-unidad-tempo
 import { EliminarAsociacionContenidoUnidadTemporalUseCase } from './use-cases/eliminar-asosiacion-contenido-unidad-temporal.use-case';
 import { RegistrarPausaAdministrativaUseCase } from './use-cases/registrar-pausa-administrativa.use-case';
 import { CalcularUbicacionTemporalUsuarioUseCase } from './use-cases/calcular-ubicacion-temporal-usuario.use-case';
+import { ConsultarContenidoVigenteUsuarioUseCase } from './use-cases/consultar-contenido-vigente-usuario.use-case';
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -42,4 +43,5 @@ export const CronogramaApplicationProviders = [
   EliminarAsociacionContenidoUnidadTemporalUseCase,
   RegistrarPausaAdministrativaUseCase,
   CalcularUbicacionTemporalUsuarioUseCase,
+  ConsultarContenidoVigenteUsuarioUseCase,
 ];

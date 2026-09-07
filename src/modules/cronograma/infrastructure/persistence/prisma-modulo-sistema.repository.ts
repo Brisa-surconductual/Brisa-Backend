@@ -27,4 +27,28 @@ export class PrismaModuloSistemaRepository implements ModuloSistemaRepository {
         ),
     );
   }
+
+  async buscarActivoPorCodigo(
+    codigoModulo: string,
+  ): Promise<ModuloSistema | null> {
+    const modulo = await this.prisma.modulos_sistema.findFirst({
+      where: {
+        codigo_modulo: codigoModulo,
+        activo: true,
+      },
+      select: {
+        id_modulo: true,
+        codigo_modulo: true,
+        nombre_modulo: true,
+      },
+    });
+
+    return modulo
+      ? new ModuloSistema(
+          modulo.id_modulo,
+          modulo.codigo_modulo,
+          modulo.nombre_modulo,
+        )
+      : null;
+  }
 }

@@ -29,6 +29,12 @@ import { PausaAdministrativaRepository } from '../domain/repositories/pausa-admi
 import { PrismaPausaAdministrativaRepository } from './persistence/prisma-pausa-administrativa.repository';
 import { UbicacionTemporalUsuarioRepository } from '../domain/repositories/ubicacion-temporal-usuario.repository';
 import { PrismaUbicacionTemporalUsuarioRepository } from './persistence/prisma-ubicacion-temporal-usuario.repository';
+import { ContenidoVigenteUsuarioRepository } from '../domain/repositories/contenido-vigente-usuario.repository';
+import { PrismaContenidoVigenteUsuarioRepository } from './persistence/prisma-contenido-vigente-usuario.repository';
+import { ModuloApiKeyHasherPort } from '../application/ports/modulo-api-key-hasher.port';
+import { Sha256ModuloApiKeyHasher } from './security/sha256-modulo-api-key-hasher';
+import { ModuloInternoCredentialsConfigPort } from '../application/ports/modulo-interno-credentials-config.port';
+import { EnvironmentModuloInternoCredentialsConfig } from './config/environment-modulo-interno-credentials.config';
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -91,6 +97,19 @@ export const CronogramaInfrastructureProviders = [
   {
     provide: UbicacionTemporalUsuarioRepository,
     useClass: PrismaUbicacionTemporalUsuarioRepository,
+  },
+  {
+    provide: ContenidoVigenteUsuarioRepository,
+    useClass: PrismaContenidoVigenteUsuarioRepository,
+  },
+  EnvironmentModuloInternoCredentialsConfig,
+  {
+    provide: ModuloInternoCredentialsConfigPort,
+    useExisting: EnvironmentModuloInternoCredentialsConfig,
+  },
+  {
+    provide: ModuloApiKeyHasherPort,
+    useClass: Sha256ModuloApiKeyHasher,
   },
 
   InicializarCronogramasPendientesCron,

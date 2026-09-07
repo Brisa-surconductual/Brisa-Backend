@@ -8,6 +8,7 @@ import { UsersModule } from '../usuarios/users.module';
 import { RolesGuard } from '../../shared/presentation/guards/role-guard';
 import { AutorizarConsumoEventoContenidoService } from './application/service/autorizar-consumo-evento-contenido.service';
 import { CalcularUbicacionTemporalUsuarioUseCase } from './application/use-cases/calcular-ubicacion-temporal-usuario.use-case';
+import { ModuloInternoAuthGuard } from './presentation/guards/modulo-interno-auth.guard';
 
 @Module({
   imports: [PrismaModule, UsersModule],
@@ -17,6 +18,7 @@ import { CalcularUbicacionTemporalUsuarioUseCase } from './application/use-cases
     ...CronogramaApplicationProviders,
     ...CronogramaInfrastructureProviders,
     RolesGuard,
+    ModuloInternoAuthGuard,
   ],
 
   exports: [
