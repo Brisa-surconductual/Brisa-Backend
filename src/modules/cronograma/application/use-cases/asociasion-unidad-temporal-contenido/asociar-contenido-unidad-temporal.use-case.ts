@@ -1,18 +1,17 @@
 import { Injectable } from "@nestjs/common";
-import { UnidadTemporalRepository } from "../../domain/repositories/unidad-temporal.repository";
-import {ConsistenciaFechasVO} from "../../domain/value-objects/cosistencia-fechas.vo";
-import {crearContenidoCronogramaDtoRequest} from "../dto/contenidoUnidadTemporal/crear-contenido-cronograma.dto-request";
-import {crearContenidoCronogramaDtoResponse} from "../dto/contenidoUnidadTemporal/crear-contenido-cronograma.dto-response.dto";
-import {CalculoOrdenTemporalService} from "../service/calculo-orden-temporal.service";
-import {ValidarSolapamientoTemporalService} from "../service/validar-solapamiento-temporal.service";
-import {ContenidoCronogramaRepository} from "../../domain/repositories/contenido-cronograma.repository";
-import {ContenidoCronograma} from "../../domain/entities/contenido-cronograma.entity";
-import {ContenidoRepository} from "../../domain/repositories/contenido.repository"
-import {ContenidoCronogramaContenidoNoEncontradoException} from "../../domain/exeption/contenido-cronograma-contenido-no-encontrado.exeption";
-import {UnidadTemporalNoEncontradaException} from "../../domain/exeption/unidad-temporal-no-encotrada.exception";
-import {ContenidoUnicaUnidadTemporalException} from "../../domain/exeption/contenido-unica-unidad-temporal.exeption";
-import {ReordenarContenidoTemporalService} from "../service/reordenar-contenido-temporal.service";
-import { DisponibilidadFueraDeRangoException } from "../../domain/exeption/disponibilidad-fuera-de-rango.exeption";
+import { UnidadTemporalRepository } from "../../../domain/repositories/unidad-temporal.repository";
+import {ConsistenciaFechasVO} from "../../../domain/value-objects/cosistencia-fechas.vo";
+import {crearContenidoCronogramaDtoRequest} from "../../dto/contenidoUnidadTemporal/crear-contenido-cronograma.dto-request";
+import {crearContenidoCronogramaDtoResponse} from "../../dto/contenidoUnidadTemporal/crear-contenido-cronograma.dto-response.dto";
+import {ValidarSolapamientoTemporalService} from "../../service/validar-solapamiento-temporal.service";
+import {ContenidoCronogramaRepository} from "../../../domain/repositories/contenido-cronograma.repository";
+import {ContenidoCronograma} from "../../../domain/entities/contenido-cronograma.entity";
+import {ContenidoRepository} from "../../../domain/repositories/contenido.repository"
+import {ContenidoCronogramaContenidoNoEncontradoException} from "../../../domain/exeption/contenido-cronograma/contenido-cronograma-contenido-no-encontrado.exeption";
+import {UnidadTemporalNoEncontradaException} from "../../../domain/exeption/unidades-temporales/unidad-temporal-no-encotrada.exception";
+import {ContenidoUnicaUnidadTemporalException} from "../../../domain/exeption/contenido/contenido-unica-unidad-temporal.exeption";
+import {ReordenarContenidoTemporalService} from "../../service/reordenar-contenido-temporal.service";
+import { DisponibilidadFueraDeRangoException } from "../../../domain/exeption/utils/disponibilidad-fuera-de-rango.exeption";
 
 @Injectable()
 export class AsociarContenidoUnidadTemporalUseCase {

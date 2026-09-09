@@ -1,4 +1,4 @@
-import { PublicarEventosCambioEstadoUseCase } from '../../application/use-cases/publicar-eventos-cambio-estado.use-case';
+import { PublicarEventosCambioEstadoUseCase } from '../../application/use-cases/contenido/publicar-eventos-cambio-estado.use-case';
 import { PublicarEventosContenidoCron } from './publicar-eventos-contenido.cron';
 
 describe('PublicarEventosContenidoCron (RF-15)', () => {

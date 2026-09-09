@@ -1,15 +1,15 @@
 import { Injectable } from "@nestjs/common";
-import { UnidadTemporalRepository } from "../../domain/repositories/unidad-temporal.repository";
-import { ActualizarUnidadTemporalDtoRequest } from "../dto/unidadTemporal/actualizar-unidad-temporal.dto-request";
-import { ActualizarUnidadTemporalDtoResponse } from "../dto/unidadTemporal/actualizar-unidad-temporal.dto-response";
-import { UnidadTemporalNoEncontradaException } from '../../domain/exeption/unidad-temporal-no-encotrada.exception';
-import { unidadTemporalEnEjecucionException } from '../../domain/exeption/unidad-temporal-en-ejecucion.expetion';
-import { unidadTemporalFinalizadaException } from '../../domain/exeption/unidad-temporal-finalizada.expetion';
-import { unidadTemporalUsadaPorUsuariosException } from '../../domain/exeption/unidad-temporal-usada-por-usuarios.expetion';
-import { UnidadTemporal } from "../../domain/entities/unidad-temporal.entity";
-import { ConsistenciaFechasVO } from "../../domain/value-objects/cosistencia-fechas.vo";
-import { ValidarSolapamientoTemporalService } from "../service/validar-solapamiento-temporal.service";
-import { ReordenarUnidadTemporalService } from "../service/reordenar-unidad-temporal.service";
+import { UnidadTemporalRepository } from "../../../domain/repositories/unidad-temporal.repository";
+import { ActualizarUnidadTemporalDtoRequest } from "../../dto/unidadTemporal/actualizar-unidad-temporal.dto-request";
+import { ActualizarUnidadTemporalDtoResponse } from "../../dto/unidadTemporal/actualizar-unidad-temporal.dto-response";
+import { UnidadTemporalNoEncontradaException } from '../../../domain/exeption/unidades-temporales/unidad-temporal-no-encotrada.exception';
+import { unidadTemporalEnEjecucionException } from '../../../domain/exeption/unidades-temporales/unidad-temporal-en-ejecucion.expetion';
+import { unidadTemporalFinalizadaException } from '../../../domain/exeption/unidades-temporales/unidad-temporal-finalizada.expetion';
+import { unidadTemporalUsadaPorUsuariosException } from '../../../domain/exeption/unidades-temporales/unidad-temporal-usada-por-usuarios.expetion';
+import { UnidadTemporal } from "../../../domain/entities/unidad-temporal.entity";
+import { ConsistenciaFechasVO } from "../../../domain/value-objects/cosistencia-fechas.vo";
+import { ValidarSolapamientoTemporalService } from "../../service/validar-solapamiento-temporal.service";
+import { ReordenarUnidadTemporalService } from "../../service/reordenar-unidad-temporal.service";
 
 @Injectable()
 export class ActualizarUnidadTemporalUseCase {

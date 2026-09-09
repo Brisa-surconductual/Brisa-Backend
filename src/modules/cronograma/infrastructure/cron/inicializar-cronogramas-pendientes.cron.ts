@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { InicializarCronogramaUsuarioUseCase } from '../../application/use-cases/inicializar-cronograma-usuario.use-case';
+import { InicializarCronogramaUsuarioUseCase } from '../../application/use-cases/cronograma/inicializar-cronograma-usuario.use-case';
 import { CondicionesInicializacionUsuarioRepository } from '../../domain/repositories/condiciones-inicializacion-usuario.repository';
-import { CronogramaUsuarioYaInicializadoException } from '../../domain/exeption/cronograma-usuario-ya-inicializado.exception';
+import { CronogramaUsuarioYaInicializadoException } from '../../domain/exeption/cronograma/cronograma-usuario-ya-inicializado.exception';
 
 @Injectable()
 export class InicializarCronogramasPendientesCron {

@@ -1,4 +1,4 @@
-import { FechasInconsistentesException } from '../exeption/fechas-incosistentes.exeption';
+import { FechasInconsistentesException } from '../exeption/utils/fechas-incosistentes.exeption';
 
 export class ConsistenciaFechasVO {
     constructor(

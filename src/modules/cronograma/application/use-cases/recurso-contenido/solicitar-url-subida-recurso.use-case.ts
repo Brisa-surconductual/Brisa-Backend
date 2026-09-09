@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ContenidoNoEncontradoException } from '../../domain/exeption/contenido-no-encontrado.exception';
-import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
-import { CoherenciaMimeTypeRecursoVO } from '../../domain/value-objects/coherencia-mime-type-recurso.vo';
-import { SolicitarUrlSubidaRecursoDtoRequest } from '../dto/recursoContenido/solicitar-url-subida-recurso.dto-request';
-import { UrlSubidaRecursoDtoResponse } from '../dto/recursoContenido/url-subida-recurso.dto-response';
-import { AlmacenamientoRecursosPort } from '../ports/almacenamiento-recursos.port';
+import { ContenidoNoEncontradoException } from '../../../domain/exeption/contenido/contenido-no-encontrado.exception';
+import { ContenidoRepository } from '../../../domain/repositories/contenido.repository';
+import { CoherenciaMimeTypeRecursoVO } from '../../../domain/value-objects/coherencia-mime-type-recurso.vo';
+import { SolicitarUrlSubidaRecursoDtoRequest } from '../../dto/recursoContenido/solicitar-url-subida-recurso.dto-request';
+import { UrlSubidaRecursoDtoResponse } from '../../dto/recursoContenido/url-subida-recurso.dto-response';
+import { AlmacenamientoRecursosPort } from '../../ports/almacenamiento-recursos.port';
 
 @Injectable()
 export class SolicitarUrlSubidaRecursoUseCase {

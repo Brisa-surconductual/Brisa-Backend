@@ -10,6 +10,33 @@ export class PrismaUnidadTemporalRepository implements UnidadTemporalRepository 
     constructor(
         private readonly prisma: PrismaService,
     ) {}
+    
+    async eliminarConReordenamiento(
+        idUnidadTemporal: string,
+        reordenamientoHermanas: AsignacionOrdenUnidad[],
+    ): Promise<void> {
+        await this.prisma.$transaction(async (tx) => {
+            // Fase 1: mover hermanas a órdenes negativos (espacio libre de colisiones)
+            for (const asignacion of reordenamientoHermanas) {
+                await tx.unidades_temporales.update({
+                    where: { id_unidad_temporal: asignacion.id_unidad_temporal },
+                    data: { orden_unidad: -asignacion.orden_unidad },
+                });
+            }
+            
+            await tx.unidades_temporales.delete({
+                where: { id_unidad_temporal: idUnidadTemporal },
+            });
+
+            for (const asignacion of reordenamientoHermanas) {
+                await tx.unidades_temporales.update({
+                    where: { id_unidad_temporal: asignacion.id_unidad_temporal },
+                    data: { orden_unidad: asignacion.orden_unidad },
+                });
+            }
+        });
+    }
+
 
     async actualizarUnidadTemporal(unidadTemporal: UnidadTemporal): Promise<UnidadTemporal> {
     await this.prisma.unidades_temporales.update({

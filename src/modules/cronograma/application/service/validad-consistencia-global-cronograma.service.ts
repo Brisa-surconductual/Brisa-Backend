@@ -4,11 +4,12 @@ import { ContenidoCronogramaRepository } from '../../domain/repositories/conteni
 import { CronogramaRepository } from '../../domain/repositories/cronograma.repository';
 import { CalculoEstadoContenidoPort } from '../ports/calculo-estado-contenido.port';
 import { EstadoContenido } from '../../domain/enums/estado-contenido.enum';
-import { CronogramaNoEncontradoException } from '../../domain/exeption/cronograma-no-encontrado.exeption';
-import { CronogramaNoInactivoException } from '../../domain/exeption/cronograma-no-inactivo.exeption';
-import { CronogramaSinUnidadesTemporalesException } from '../../domain/exeption/cronograma-sin-unidades-temporales.exeption';
-import { CronogramaSinContenidoProgramadoException } from '../../domain/exeption/cronograma-sin-contenido-programado.exeption';
-import { ValidacionConsistenciaCronogramaException } from '../../domain/exeption/validar-consistencia-cronograma.exeption';
+import { CronogramaNoEncontradoException } from '../../domain/exeption/cronograma/cronograma-no-encontrado.exeption';
+import { CronogramaNoInactivoException } from '../../domain/exeption/cronograma/cronograma-no-inactivo.exeption';
+import { CronogramaSinUnidadesTemporalesException } from '../../domain/exeption/cronograma/cronograma-sin-unidades-temporales.exeption';
+import { CronogramaSinContenidoProgramadoException } from '../../domain/exeption/cronograma/cronograma-sin-contenido-programado.exeption';
+import { ValidacionConsistenciaCronogramaException } from '../../domain/exeption/cronograma/validar-consistencia-cronograma.exeption';
+
 
 @Injectable()
 export class ValidarConsistenciaCronogramaService {

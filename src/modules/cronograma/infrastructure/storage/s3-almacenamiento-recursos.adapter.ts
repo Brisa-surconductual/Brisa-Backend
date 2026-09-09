@@ -13,7 +13,7 @@ import {
   SolicitudUrlSubidaRecurso,
   UrlSubidaRecurso,
 } from '../../application/ports/almacenamiento-recursos.port';
-import { AlmacenamientoRecursoNoDisponibleException } from '../../domain/exeption/almacenamiento-recurso-no-disponible.exception';
+import { AlmacenamientoRecursoNoDisponibleException } from '../../domain/exeption/recurso-contenido/almacenamiento-recurso-no-disponible.exception';
 import { S3_CLIENT } from './s3-client.provider';
 
 interface ConfiguracionS3Recursos {

@@ -1,20 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { ContenidoCronogramaRepository } from '../../domain/repositories/contenido-cronograma.repository';
-import { UnidadTemporalRepository } from '../../domain/repositories/unidad-temporal.repository';
-import { ConsistenciaFechasVO } from '../../domain/value-objects/cosistencia-fechas.vo';
-import { ValidarSolapamientoTemporalService } from '../service/validar-solapamiento-temporal.service';
-import { ReordenarContenidoTemporalService } from '../service/reordenar-contenido-temporal.service';
-import { ContenidoCronograma } from '../../domain/entities/contenido-cronograma.entity';
-import { ContenidoNoAsociadoException } from '../../domain/exeption/contenido-no-asociado.exeption';
-import { DisponibilidadFueraDeRangoException } from '../../domain/exeption/disponibilidad-fuera-de-rango.exeption';
-import { UnidadTemporalNoEncontradaException } from '../../domain/exeption/unidad-temporal-no-encotrada.exception';
-import { SolapamientoConLimiteException } from '../../domain/exeption/solapamineto-con-limite.exeption';
-import { calcularLimitesDisponibles, construirMensajeLimite } from '../service/calcular-limite-disponible.service';
-import { ActualizarDisponibilidadContenidoDtoRequest } from '../dto/contenido/actualizar-disponibilidad-contenido.dto-request';
-import { ActualizarDisponibilidadContenidoDtoResponse } from '../dto/contenido/actualizar-disponibilidad-contenido.dto-response';
-import {CalculoEstadoContenidoPort} from "../ports/calculo-estado-contenido.port";
-import { ContenidoNoProgramadoException } from '../../domain/exeption/contenido-no-programado.exeption';
-import { EstadoContenido } from '../../domain/enums/estado-contenido.enum';
+import { ContenidoCronogramaRepository } from '../../../domain/repositories/contenido-cronograma.repository';
+import { UnidadTemporalRepository } from '../../../domain/repositories/unidad-temporal.repository';
+import { ConsistenciaFechasVO } from '../../../domain/value-objects/cosistencia-fechas.vo';
+import { ValidarSolapamientoTemporalService } from '../../service/validar-solapamiento-temporal.service';
+import { ReordenarContenidoTemporalService } from '../../service/reordenar-contenido-temporal.service';
+import { ContenidoCronograma } from '../../../domain/entities/contenido-cronograma.entity';
+import { ContenidoNoAsociadoException } from '../../../domain/exeption/contenido/contenido-no-asociado.exeption';
+import { DisponibilidadFueraDeRangoException } from '../../../domain/exeption/utils/disponibilidad-fuera-de-rango.exeption';
+import { UnidadTemporalNoEncontradaException } from '../../../domain/exeption/unidades-temporales/unidad-temporal-no-encotrada.exception';
+import { SolapamientoConLimiteException } from '../../../domain/exeption/utils/solapamineto-con-limite.exeption';
+import { calcularLimitesDisponibles, construirMensajeLimite } from '../../service/calcular-limite-disponible.service';
+import { ActualizarDisponibilidadContenidoDtoRequest } from '../../dto/contenido/actualizar-disponibilidad-contenido.dto-request';
+import { ActualizarDisponibilidadContenidoDtoResponse } from '../../dto/contenido/actualizar-disponibilidad-contenido.dto-response';
+import {CalculoEstadoContenidoPort} from "../../ports/calculo-estado-contenido.port";
+import { ContenidoNoProgramadoException } from '../../../domain/exeption/contenido/contenido-no-programado.exeption';
+import { EstadoContenido } from '../../../domain/enums/estado-contenido.enum';
 
 @Injectable()
 export class ActualizarDisponibilidadContenidoUseCase {

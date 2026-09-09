@@ -1,11 +1,11 @@
 import { Contenido } from '../../domain/entities/contenido.entity';
 import { TipoContenido } from '../../domain/enums/tipo-contenido.enum';
 import { TipoRecurso } from '../../domain/enums/tipo-recurso.enum';
-import { ModuloDestinoNoDisponibleException } from '../../domain/exeption/modulo-destino-no-disponible.exception';
+import { ModuloDestinoNoDisponibleException } from '../../domain/exeption/modulo/modulo-destino-no-disponible.exception';
 import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
 import { RecursoContenidoRepository } from '../../domain/repositories/recurso-contenido.repository';
 import { AlmacenamientoRecursosPort } from '../ports/almacenamiento-recursos.port';
-import { CrearRecursoContenidoUseCase } from './crear-recurso-contenido.use-case';
+import { CrearRecursoContenidoUseCase } from './recurso-contenido/crear-recurso-contenido.use-case';
 
 describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
   const idContenido = '00000000-0000-4000-8000-000000000001';

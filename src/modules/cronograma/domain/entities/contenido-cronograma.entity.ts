@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import {contenidoCronogramadoEstadoInavilitadoParaEliminacionException} from "../exeption/contenido-cronogramado-estado-inavilitado.exeption";
+import {contenidoCronogramadoEstadoInavilitadoParaEliminacionException} from "../exeption/contenido-cronograma/contenido-cronogramado-estado-inavilitado.exeption";
 
 export class ContenidoCronograma {
     constructor(

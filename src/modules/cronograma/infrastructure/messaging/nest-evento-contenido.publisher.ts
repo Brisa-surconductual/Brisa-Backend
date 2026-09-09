@@ -9,7 +9,7 @@ import {
   EventoContenido,
   ModuloDestinoEvento,
 } from '../../domain/entities/evento-contenido.entity';
-import { PublicacionEventoContenidoException } from '../../domain/exeption/publicacion-evento-contenido.exception';
+import { PublicacionEventoContenidoException } from '../../domain/exeption/contenido/publicacion-evento-contenido.exception';
 
 @Injectable()
 export class NestEventoContenidoPublisher implements EventoContenidoPublisher {

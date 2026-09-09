@@ -1,16 +1,16 @@
 import { HttpException, Injectable, Logger } from '@nestjs/common';
-import { InicializarCronogramaUsuarioDtoResponse } from '../dto/cronograma/inicializar-cronograma-usuario.dto-response';
-import { CronogramaUsuario } from '../../domain/entities/cronograma-usuario.entity';
-import { CondicionesInicializacionUsuarioRepository } from '../../domain/repositories/condiciones-inicializacion-usuario.repository';
-import { CronogramaRepository } from '../../domain/repositories/cronograma.repository';
-import { CronogramaUsuarioRepository } from '../../domain/repositories/cronograma-usuario.repository';
-import { CondicionesInicioIncompletasException } from '../../domain/exeption/condiciones-inicio-incompletas.exception';
-import { CronogramaBaseInactivoException } from '../../domain/exeption/cronograma-base-inactivo.exception';
-import { CronogramaBaseNoDisponibleException } from '../../domain/exeption/cronograma-base-no-disponible.exception';
-import { CronogramaUsuarioYaInicializadoException } from '../../domain/exeption/cronograma-usuario-ya-inicializado.exception';
-import { DatosUsuarioInconsistentesException } from '../../domain/exeption/datos-usuario-inconsistentes.exception';
-import { InicializacionCronogramaPersistenciaException } from '../../domain/exeption/inicializacion-cronograma-persistencia.exception';
-import { ValidarConsistenciaCronogramaService } from '../service/validad-consistencia-global-cronograma.service';
+import { InicializarCronogramaUsuarioDtoResponse } from '../../dto/cronograma/inicializar-cronograma-usuario.dto-response';
+import { CronogramaUsuario } from '../../../domain/entities/cronograma-usuario.entity';
+import { CondicionesInicializacionUsuarioRepository } from '../../../domain/repositories/condiciones-inicializacion-usuario.repository';
+import { CronogramaRepository } from '../../../domain/repositories/cronograma.repository';
+import { CronogramaUsuarioRepository } from '../../../domain/repositories/cronograma-usuario.repository';
+import { CondicionesInicioIncompletasException } from '../../../domain/exeption/cronograma/condiciones-inicio-incompletas.exception';
+import { CronogramaBaseInactivoException } from '../../../domain/exeption/cronograma/cronograma-base-inactivo.exception';
+import { CronogramaBaseNoDisponibleException } from '../../../domain/exeption/cronograma/cronograma-base-no-disponible.exception';
+import { CronogramaUsuarioYaInicializadoException } from '../../../domain/exeption/cronograma/cronograma-usuario-ya-inicializado.exception';
+import { DatosUsuarioInconsistentesException } from '../../../domain/exeption/utils/datos-usuario-inconsistentes.exception';
+import { InicializacionCronogramaPersistenciaException } from '../../../domain/exeption/cronograma/inicializacion-cronograma-persistencia.exception';
+import { ValidarConsistenciaCronogramaService } from '../../service/validad-consistencia-global-cronograma.service';
 
 @Injectable()
 export class InicializarCronogramaUsuarioUseCase {

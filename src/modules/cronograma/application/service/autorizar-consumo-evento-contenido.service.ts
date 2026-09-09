@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EventoContenido } from '../../domain/entities/evento-contenido.entity';
-import { ModuloEventoNoAutorizadoException } from '../../domain/exeption/modulo-evento-no-autorizado.exception';
+import { ModuloEventoNoAutorizadoException } from '../../domain/exeption/modulo/modulo-evento-no-autorizado.exception';
 
 @Injectable()
 export class AutorizarConsumoEventoContenidoService {

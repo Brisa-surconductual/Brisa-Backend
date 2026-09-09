@@ -11,6 +11,12 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
         private readonly prisma: PrismaService,
     ) {}
 
+    async existeContenidoParaUnidadTemporal( id_unidad_temporal: string, ): Promise<boolean> {
+        return this.prisma.contenidos_cronograma.count({
+            where: { id_unidad_temporal },
+        }).then(count => count > 0);
+    }
+
 
     async eliminar(id_contenido_cronograma: string): Promise<void> {
         await this.prisma.contenidos_cronograma.deleteMany({

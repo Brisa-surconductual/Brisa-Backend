@@ -7,7 +7,7 @@ import {
   ModuloDestinoEvento,
 } from '../../domain/entities/evento-contenido.entity';
 import { EstadoContenido } from '../../domain/enums/estado-contenido.enum';
-import { DatosEventoContenidoInvalidosException } from '../../domain/exeption/datos-evento-contenido-invalidos.exception';
+import { DatosEventoContenidoInvalidosException } from '../../domain/exeption/contenido/datos-evento-contenido-invalidos.exception';
 import {
   EntregaEventoContenidoPendiente,
   EventoContenidoRepository,

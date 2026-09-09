@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { ModuloSistemaRepository } from '../../domain/repositories/modulo-sistema.repository';
-import { ModuloDestinoDtoResponse } from '../dto/modulosDestino/modulo-destino.dto-response';
+import { ModuloSistemaRepository } from '../../../domain/repositories/modulo-sistema.repository';
+import { ModuloDestinoDtoResponse } from '../../dto/modulosDestino/modulo-destino.dto-response';
 
 @Injectable()
 export class ListarModulosDestinoUseCase {
