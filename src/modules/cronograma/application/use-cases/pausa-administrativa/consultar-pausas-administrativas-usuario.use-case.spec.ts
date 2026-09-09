@@ -30,10 +30,9 @@ describe('ConsultarPausasAdministrativasUsuarioUseCase (RF-22B)', () => {
       expect.objectContaining({ estado_pausa: EstadoPausa.FINALIZADA }),
       expect.objectContaining({ estado_pausa: EstadoPausa.ANULADA }),
     ]);
-    expect(repository.listarPorUsuario).toHaveBeenCalledWith(
-      idUsuario,
-      fechaConsulta,
-    );
+    expect(repository.listarPorUsuario.mock.calls).toEqual([
+      [idUsuario, fechaConsulta],
+    ]);
   });
 
   it('retorna una lista vacía cuando el usuario no tiene pausas', async () => {

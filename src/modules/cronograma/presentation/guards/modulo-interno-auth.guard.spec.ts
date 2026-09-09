@@ -58,7 +58,8 @@ describe('ModuloInternoAuthGuard (RF-21)', () => {
       { authorization: 'Basic credencial', 'x-module-code': 'CHAT' },
       'con esquema distinto de Bearer',
     ],
-  ])('retorna 403 %s', async (headers, _caso) => {
+  ])('retorna 403 %s: %s', async (headers, caso) => {
+    expect(caso).toEqual(expect.any(String));
     const { context } = crearContexto(headers);
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
