@@ -10,6 +10,7 @@ import { CronogramaBaseNoDisponibleException } from '../../domain/exeption/crono
 import { CronogramaUsuarioYaInicializadoException } from '../../domain/exeption/cronograma-usuario-ya-inicializado.exception';
 import { DatosUsuarioInconsistentesException } from '../../domain/exeption/datos-usuario-inconsistentes.exception';
 import { InicializacionCronogramaPersistenciaException } from '../../domain/exeption/inicializacion-cronograma-persistencia.exception';
+import { ValidarConsistenciaCronogramaService } from '../service/validad-consistencia-global-cronograma.service';
 
 @Injectable()
 export class InicializarCronogramaUsuarioUseCase {
@@ -21,6 +22,7 @@ export class InicializarCronogramaUsuarioUseCase {
     private readonly condicionesRepository: CondicionesInicializacionUsuarioRepository,
     private readonly cronogramaRepository: CronogramaRepository,
     private readonly cronogramaUsuarioRepository: CronogramaUsuarioRepository,
+    private readonly validarConsistenciaCronogramaService: ValidarConsistenciaCronogramaService,
   ) {}
 
   async execute(
@@ -62,6 +64,10 @@ export class InicializarCronogramaUsuarioUseCase {
 
         throw new CronogramaBaseNoDisponibleException();
       }
+
+      // RF-16: valida que el cronograma base sea estructuralmente consistente
+      // (unidades temporales + contenido programado) antes de asignarlo.
+      await this.validarConsistenciaCronogramaService.validar(cronogramaBase.id_cronograma);
 
       const asignacion = CronogramaUsuario.inicializar(
         idUsuario,
