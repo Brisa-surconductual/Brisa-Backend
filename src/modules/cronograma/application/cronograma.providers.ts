@@ -19,6 +19,7 @@ import {ReordenarUnidadTemporalService} from "./service/reordenar-unidad-tempora
 import {EliminarAsociacionContenidoUnidadTemporalUseCase} from "./use-cases/asociasion-unidad-temporal-contenido/eliminar-asosiacion-contenido-unidad-temporal.use-case";
 import {ValidarConsistenciaCronogramaService} from "./service/validad-consistencia-global-cronograma.service";
 import {EliminarUnidadTemporalUseCase} from "./use-cases/unidad-temporal/eliminar-unidad-temporal.use-case";
+import {CronogramaCalendarioUseCase} from "./use-cases/cronograma/cronograma-calendario.use-case";
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -42,4 +43,5 @@ export const CronogramaApplicationProviders = [
   EliminarAsociacionContenidoUnidadTemporalUseCase,
   ValidarConsistenciaCronogramaService,
   EliminarUnidadTemporalUseCase,
+  CronogramaCalendarioUseCase,
 ];

@@ -21,4 +21,6 @@ export abstract class ContenidoCronogramaRepository{
 
     abstract eliminar(id_contenido_cronograma: string): Promise<void>; 
     abstract existeContenidoParaUnidadTemporal(id_unidad_temporal: string): Promise<boolean>;
+    abstract obtenerContenidosConRecursosPorUnidadTemporal(id_unidad_temporal: string): Promise<any[]>;
+
 }
