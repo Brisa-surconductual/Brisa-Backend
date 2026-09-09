@@ -54,6 +54,22 @@ export class UnidadTemporal {
       new Date()
     );
   }
+  
+
+  obtenerEstado(fechaReferencia: Date = new Date()): 'PROGRAMADO' | 'ACTIVO' | 'FINALIZADO' {
+          if (!this.fecha_inicio || !this.fecha_fin) {
+              return 'PROGRAMADO';
+          }
+  
+          if (fechaReferencia < this.fecha_inicio) {
+              return 'PROGRAMADO';
+          } else if (fechaReferencia >= this.fecha_inicio && fechaReferencia < this.fecha_fin) {
+              return 'ACTIVO';
+          } else {
+              return 'FINALIZADO';
+          }
+      }
+  
 
 
 }

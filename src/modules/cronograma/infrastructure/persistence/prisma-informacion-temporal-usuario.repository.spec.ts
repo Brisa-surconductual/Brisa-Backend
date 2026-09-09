@@ -1,6 +1,6 @@
 import { EstadoContenido } from '../../domain/enums/estado-contenido.enum';
 import { TipoContenido } from '../../domain/enums/tipo-contenido.enum';
-import { CronogramaActivoUsuarioNoEncontradoException } from '../../domain/exeption/cronograma-activo-usuario-no-encontrado.exception';
+import { CronogramaActivoUsuarioNoEncontradoException } from '../../domain/exeption/cronograma/cronograma-activo-usuario-no-encontrado.exception';
 import { PrismaInformacionTemporalUsuarioRepository } from './prisma-informacion-temporal-usuario.repository';
 
 describe('PrismaInformacionTemporalUsuarioRepository (RF-23)', () => {

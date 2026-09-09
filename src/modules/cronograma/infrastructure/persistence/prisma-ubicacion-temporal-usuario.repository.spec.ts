@@ -1,5 +1,5 @@
-import { CronogramaSinUnidadesTemporalesException } from '../../domain/exeption/cronograma-sin-unidades-temporales.exception';
-import { FechaInicioUsuarioNoRegistradaException } from '../../domain/exeption/fecha-inicio-usuario-no-registrada.exception';
+import { CronogramaSinUnidadesTemporalesException } from '../../domain/exeption/cronograma/cronograma-sin-unidades-temporales.exeption';
+import { FechaInicioUsuarioNoRegistradaException } from '../../domain/exeption/cronograma/fecha-inicio-usuario-no-registrada.exception';
 import { PrismaUbicacionTemporalUsuarioRepository } from './prisma-ubicacion-temporal-usuario.repository';
 
 describe('PrismaUbicacionTemporalUsuarioRepository (RF-22)', () => {

@@ -30,6 +30,8 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
     execute: jest.fn(),
   };
   const anularPausaAdministrativaUseCase = { execute: jest.fn() };
+  const eliminarUnidadTemporalUseCase = { execute: jest.fn() };
+  const cronogramaCalendarioUseCase = { execute: jest.fn() };
   const idContenido = '00000000-0000-4000-8000-000000000001';
   const idUsuario = '00000000-0000-4000-8000-000000000002';
   const idAdministrador = '00000000-0000-4000-8000-000000000003';
@@ -54,6 +56,8 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
       registrarPausaAdministrativaUseCase as never,
       consultarPausasAdministrativasUsuarioUseCase as never,
       anularPausaAdministrativaUseCase as never,
+      eliminarUnidadTemporalUseCase as never,
+      cronogramaCalendarioUseCase as never,
     );
   });
 

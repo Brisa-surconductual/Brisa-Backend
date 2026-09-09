@@ -2,7 +2,7 @@ import { ExecutionContext } from '@nestjs/common';
 import { ModuloApiKeyHasherPort } from '../../application/ports/modulo-api-key-hasher.port';
 import { ModuloInternoCredentialsConfigPort } from '../../application/ports/modulo-interno-credentials-config.port';
 import { ModuloSistema } from '../../domain/entities/modulo-sistema.entity';
-import { ModuloConsultaContenidoNoAutorizadoException } from '../../domain/exeption/modulo-consulta-contenido-no-autorizado.exception';
+import { ModuloConsultaContenidoNoAutorizadoException } from '../../domain/exeption/modulo/modulo-consulta-contenido-no-autorizado.exception';
 import { ModuloSistemaRepository } from '../../domain/repositories/modulo-sistema.repository';
 import { ModuloInternoAuthGuard } from './modulo-interno-auth.guard';
 
@@ -58,7 +58,7 @@ describe('ModuloInternoAuthGuard (RF-21)', () => {
       { authorization: 'Basic credencial', 'x-module-code': 'CHAT' },
       'con esquema distinto de Bearer',
     ],
-  ])('retorna 403 %s', async (headers) => {
+  ])('retorna 403 %s', async (headers, _caso) => {
     const { context } = crearContexto(headers);
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(

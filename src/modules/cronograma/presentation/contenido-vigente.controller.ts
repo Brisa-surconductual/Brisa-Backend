@@ -12,7 +12,7 @@ import {
 import type { Response } from 'express';
 import { ConsultarContenidoVigenteDtoRequest } from '../application/dto/contenidoVigente/consultar-contenido-vigente.dto-request';
 import { ContenidoVigenteDtoResponse } from '../application/dto/contenidoVigente/contenido-vigente.dto-response';
-import { ConsultarContenidoVigenteUsuarioUseCase } from '../application/use-cases/consultar-contenido-vigente-usuario.use-case';
+import { ConsultarContenidoVigenteUsuarioUseCase } from '../application/use-cases/contenido/consultar-contenido-vigente-usuario.use-case';
 import { ModuloInternoAuthGuard } from './guards/modulo-interno-auth.guard';
 
 @Controller('/cronograma/interno')

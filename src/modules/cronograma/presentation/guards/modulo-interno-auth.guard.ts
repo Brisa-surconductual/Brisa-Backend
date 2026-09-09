@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { ModuloApiKeyHasherPort } from '../../application/ports/modulo-api-key-hasher.port';
 import { ModuloInternoCredentialsConfigPort } from '../../application/ports/modulo-interno-credentials-config.port';
-import { ModuloConsultaContenidoNoAutorizadoException } from '../../domain/exeption/modulo-consulta-contenido-no-autorizado.exception';
+import { ModuloConsultaContenidoNoAutorizadoException } from '../../domain/exeption/modulo/modulo-consulta-contenido-no-autorizado.exception';
 import { ModuloSistemaRepository } from '../../domain/repositories/modulo-sistema.repository';
 import { AuthenticatedInternalModuleRequest } from '../http/authenticated-internal-module-request';
 

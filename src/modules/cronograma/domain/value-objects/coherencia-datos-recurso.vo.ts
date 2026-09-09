@@ -1,5 +1,5 @@
 import { TipoRecurso } from '../enums/tipo-recurso.enum';
-import { DatosRecursoIncoherentesException } from '../exeption/datos-recurso-incoherentes.exception';
+import { DatosRecursoIncoherentesException } from '../exeption/recurso-contenido/datos-recurso-incoherentes.exception';
 
 export class CoherenciaDatosRecursoVO {
   constructor(

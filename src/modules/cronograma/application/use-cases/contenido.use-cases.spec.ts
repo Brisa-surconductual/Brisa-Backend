@@ -1,10 +1,10 @@
 import { Contenido } from '../../domain/entities/contenido.entity';
 import { TipoContenido } from '../../domain/enums/tipo-contenido.enum';
-import { ContenidoCronogramaActivoException } from '../../domain/exeption/contenido-cronograma-activo.exception';
+import { ContenidoCronogramaActivoException } from '../../domain/exeption/contenido-cronograma/contenido-cronograma-activo.exception';
 import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
-import { ActualizarContenidoUseCase } from './actualizar-contenido.use-case';
-import { CrearContenidoUseCase } from './crear-contenido.use-case';
-import { EliminarContenidoUseCase } from './eliminar-contenido.use-case';
+import { ActualizarContenidoUseCase } from './contenido/actualizar-contenido.use-case';
+import { CrearContenidoUseCase } from './contenido/crear-contenido.use-case';
+import { EliminarContenidoUseCase } from './contenido/eliminar-contenido.use-case';
 
 describe('Casos de uso de contenido psicoeducativo (RF-152)', () => {
   const idContenido = '00000000-0000-4000-8000-000000000001';
@@ -37,7 +37,7 @@ describe('Casos de uso de contenido psicoeducativo (RF-152)', () => {
       }),
     );
     expect(resultado).toMatchObject({
-      id_contenido: expect.any(String),
+      id_contenido: expect.any(String) as string,
       mensaje: 'Contenido psicoeducativo creado correctamente.',
     });
     expect(resultado).not.toHaveProperty('nombre_contenido');

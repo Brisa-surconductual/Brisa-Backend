@@ -7,28 +7,30 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { RolesGuard } from '../../src/shared/presentation/guards/role-guard';
-import { ActualizarDisponibilidadContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/actualizar-disponibilidad-contenido.use-case';
-import { AsociarContenidoUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/asociar-contenido-unidad-temporal.use-case';
-import { ActualizarContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/actualizar-contenido.use-case';
-import { CrearContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/crear-contenido.use-case';
-import { CrearRecursoContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/crear-recurso-contenido.use-case';
-import { CreacionUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/crear-unidad-temporal.use-case';
-import { EliminarContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/eliminar-contenido.use-case';
-import { ListarModulosDestinoUseCase } from '../../src/modules/cronograma/application/use-cases/listar-modulos-destino.use-case';
-import { ReordenarRecursosContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/reordenar-recursos-contenido.use-case';
-import { SolicitarUrlSubidaRecursoUseCase } from '../../src/modules/cronograma/application/use-cases/solicitar-url-subida-recurso.use-case';
-import { ActualizarUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/actualizar-unidad-temporal.use-case';
-import { EliminarAsociacionContenidoUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/eliminar-asosiacion-contenido-unidad-temporal.use-case';
-import { RegistrarPausaAdministrativaUseCase } from '../../src/modules/cronograma/application/use-cases/registrar-pausa-administrativa.use-case';
-import { ConsultarPausasAdministrativasUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/consultar-pausas-administrativas-usuario.use-case';
-import { AnularPausaAdministrativaUseCase } from '../../src/modules/cronograma/application/use-cases/anular-pausa-administrativa.use-case';
+import { ActualizarDisponibilidadContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/contenido/actualizar-disponibilidad-contenido.use-case';
+import { AsociarContenidoUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/asociasion-unidad-temporal-contenido/asociar-contenido-unidad-temporal.use-case';
+import { ActualizarContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/contenido/actualizar-contenido.use-case';
+import { CrearContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/contenido/crear-contenido.use-case';
+import { CrearRecursoContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/recurso-contenido/crear-recurso-contenido.use-case';
+import { CreacionUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/unidad-temporal/crear-unidad-temporal.use-case';
+import { EliminarContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/contenido/eliminar-contenido.use-case';
+import { ListarModulosDestinoUseCase } from '../../src/modules/cronograma/application/use-cases/modulos/listar-modulos-destino.use-case';
+import { ReordenarRecursosContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/recurso-contenido/reordenar-recursos-contenido.use-case';
+import { SolicitarUrlSubidaRecursoUseCase } from '../../src/modules/cronograma/application/use-cases/recurso-contenido/solicitar-url-subida-recurso.use-case';
+import { ActualizarUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/unidad-temporal/actualizar-unidad-temporal.use-case';
+import { EliminarAsociacionContenidoUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/asociasion-unidad-temporal-contenido/eliminar-asosiacion-contenido-unidad-temporal.use-case';
+import { RegistrarPausaAdministrativaUseCase } from '../../src/modules/cronograma/application/use-cases/pausa-administrativa/registrar-pausa-administrativa.use-case';
+import { ConsultarPausasAdministrativasUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/pausa-administrativa/consultar-pausas-administrativas-usuario.use-case';
+import { AnularPausaAdministrativaUseCase } from '../../src/modules/cronograma/application/use-cases/pausa-administrativa/anular-pausa-administrativa.use-case';
+import { EliminarUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/unidad-temporal/eliminar-unidad-temporal.use-case';
+import { CronogramaCalendarioUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/cronograma-calendario.use-case';
 import { TipoContenido } from '../../src/modules/cronograma/domain/enums/tipo-contenido.enum';
-import { ContenidoCronogramaActivoException } from '../../src/modules/cronograma/domain/exeption/contenido-cronograma-activo.exception';
-import { CronogramaUsuarioActivoNoEncontradoException } from '../../src/modules/cronograma/domain/exeption/cronograma-usuario-activo-no-encontrado.exception';
-import { FechaInicioPausaFueraRangoException } from '../../src/modules/cronograma/domain/exeption/fecha-inicio-pausa-fuera-rango.exception';
-import { FechasPausaInvalidasException } from '../../src/modules/cronograma/domain/exeption/fechas-pausa-invalidas.exception';
-import { PausaAdministrativaSolapadaException } from '../../src/modules/cronograma/domain/exeption/pausa-administrativa-solapada.exception';
-import { PausaAdministrativaNoEncontradaException } from '../../src/modules/cronograma/domain/exeption/pausa-administrativa-no-encontrada.exception';
+import { ContenidoCronogramaActivoException } from '../../src/modules/cronograma/domain/exeption/contenido-cronograma/contenido-cronograma-activo.exception';
+import { CronogramaUsuarioActivoNoEncontradoException } from '../../src/modules/cronograma/domain/exeption/cronograma/cronograma-usuario-activo-no-encontrado.exception';
+import { FechaInicioPausaFueraRangoException } from '../../src/modules/cronograma/domain/exeption/pausa-administrativa/fecha-inicio-pausa-fuera-rango.exception';
+import { FechasPausaInvalidasException } from '../../src/modules/cronograma/domain/exeption/pausa-administrativa/fechas-pausa-invalidas.exception';
+import { PausaAdministrativaSolapadaException } from '../../src/modules/cronograma/domain/exeption/pausa-administrativa/pausa-administrativa-solapada.exception';
+import { PausaAdministrativaNoEncontradaException } from '../../src/modules/cronograma/domain/exeption/pausa-administrativa/pausa-administrativa-no-encontrada.exception';
 import { CronogramaController } from '../../src/modules/cronograma/presentation/cronograma.controller';
 import { CsrfSessionGuard } from '../../src/modules/usuarios/presentation/guards/csrf-session.guard';
 import { SessionAuthGuard } from '../../src/modules/usuarios/presentation/guards/session-auth.guard';
@@ -54,6 +56,8 @@ describe('Cronograma - endpoints propios (e2e)', () => {
   const registrarPausa = { execute: jest.fn() };
   const consultarPausas = { execute: jest.fn() };
   const anularPausa = { execute: jest.fn() };
+  const eliminarUnidadTemporal = { execute: jest.fn() };
+  const cronogramaCalendario = { execute: jest.fn() };
   const autenticar = (context: ExecutionContext): boolean => {
     const requestHttp = context.switchToHttp().getRequest<{
       autenticacion?: { usuario: { id_usuario: string } };
@@ -115,6 +119,14 @@ describe('Cronograma - endpoints propios (e2e)', () => {
         {
           provide: AnularPausaAdministrativaUseCase,
           useValue: anularPausa,
+        },
+        {
+          provide: EliminarUnidadTemporalUseCase,
+          useValue: eliminarUnidadTemporal,
+        },
+        {
+          provide: CronogramaCalendarioUseCase,
+          useValue: cronogramaCalendario,
         },
       ],
     })

@@ -5,15 +5,15 @@ import {
   EventoContenidoPublisher,
 } from '../../src/modules/cronograma/application/ports/evento-contenido.publisher';
 import { AutorizarConsumoEventoContenidoService } from '../../src/modules/cronograma/application/service/autorizar-consumo-evento-contenido.service';
-import { InicializarCronogramaUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/inicializar-cronograma-usuario.use-case';
-import { PublicarEventosCambioEstadoUseCase } from '../../src/modules/cronograma/application/use-cases/publicar-eventos-cambio-estado.use-case';
-import { CalcularUbicacionTemporalUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/calcular-ubicacion-temporal-usuario.use-case';
+import { InicializarCronogramaUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/inicializar-cronograma-usuario.use-case';
+import { PublicarEventosCambioEstadoUseCase } from '../../src/modules/cronograma/application/use-cases/contenido/publicar-eventos-cambio-estado.use-case';
+import { CalcularUbicacionTemporalUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/calcular-ubicacion-temporal-usuario.use-case';
 import { CondicionesInicializacionUsuario } from '../../src/modules/cronograma/domain/entities/condiciones-inicializacion-usuario.entity';
 import { ContenidoEstadoPendiente } from '../../src/modules/cronograma/domain/entities/contenido-estado-pendiente.entity';
 import { Cronograma } from '../../src/modules/cronograma/domain/entities/cronograma.entity';
 import { EventoContenido } from '../../src/modules/cronograma/domain/entities/evento-contenido.entity';
 import { UbicacionTemporalUsuario } from '../../src/modules/cronograma/domain/entities/ubicacion-temporal-usuario.entity';
-import { FechaInicioUsuarioNoRegistradaException } from '../../src/modules/cronograma/domain/exeption/fecha-inicio-usuario-no-registrada.exception';
+import { FechaInicioUsuarioNoRegistradaException } from '../../src/modules/cronograma/domain/exeption/cronograma/fecha-inicio-usuario-no-registrada.exception';
 import { EstadoContenido } from '../../src/modules/cronograma/domain/enums/estado-contenido.enum';
 import { EstadoCronograma } from '../../src/modules/cronograma/domain/enums/estado-cronograma.enum';
 import { CondicionesInicializacionUsuarioRepository } from '../../src/modules/cronograma/domain/repositories/condiciones-inicializacion-usuario.repository';

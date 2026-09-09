@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { estado_pausa_enum, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { PausaAdministrativa } from '../../domain/entities/pausa-administrativa.entity';
-import { CronogramaUsuarioActivoNoEncontradoException } from '../../domain/exeption/cronograma-usuario-activo-no-encontrado.exception';
-import { FechaInicioPausaFueraRangoException } from '../../domain/exeption/fecha-inicio-pausa-fuera-rango.exception';
-import { FechasPausaInvalidasException } from '../../domain/exeption/fechas-pausa-invalidas.exception';
-import { PausaAdministrativaSolapadaException } from '../../domain/exeption/pausa-administrativa-solapada.exception';
+import { CronogramaUsuarioActivoNoEncontradoException } from '../../domain/exeption/cronograma/cronograma-usuario-activo-no-encontrado.exception';
+import { FechaInicioPausaFueraRangoException } from '../../domain/exeption/pausa-administrativa/fecha-inicio-pausa-fuera-rango.exception';
+import { FechasPausaInvalidasException } from '../../domain/exeption/pausa-administrativa/fechas-pausa-invalidas.exception';
+import { PausaAdministrativaSolapadaException } from '../../domain/exeption/pausa-administrativa/pausa-administrativa-solapada.exception';
 import {
   ContextoCronogramaActivoUsuario,
   PausaAdministrativaRepository,

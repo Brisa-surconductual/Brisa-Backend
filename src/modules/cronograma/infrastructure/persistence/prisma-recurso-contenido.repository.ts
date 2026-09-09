@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { RecursoContenido } from '../../domain/entities/recurso-contenido.entity';
-import { ContenidoNoEncontradoException } from '../../domain/exeption/contenido-no-encontrado.exception';
-import { DatosRecursoIncoherentesException } from '../../domain/exeption/datos-recurso-incoherentes.exception';
-import { ListaRecursosReordenamientoInvalidaException } from '../../domain/exeption/lista-recursos-reordenamiento-invalida.exception';
-import { ModuloDestinoNoDisponibleException } from '../../domain/exeption/modulo-destino-no-disponible.exception';
-import { OrdenRecursoDuplicadoException } from '../../domain/exeption/orden-recurso-duplicado.exception';
-import { RecursoSinModuloDestinoException } from '../../domain/exeption/recurso-sin-modulo-destino.exception';
+import { ContenidoNoEncontradoException } from '../../domain/exeption/contenido/contenido-no-encontrado.exception';
+import { DatosRecursoIncoherentesException } from '../../domain/exeption/recurso-contenido/datos-recurso-incoherentes.exception';
+import { ListaRecursosReordenamientoInvalidaException } from '../../domain/exeption/recurso-contenido/lista-recursos-reordenamiento-invalida.exception';
+import { ModuloDestinoNoDisponibleException } from '../../domain/exeption/modulo/modulo-destino-no-disponible.exception';
+import { OrdenRecursoDuplicadoException } from '../../domain/exeption/recurso-contenido/orden-recurso-duplicado.exception';
+import { RecursoSinModuloDestinoException } from '../../domain/exeption/recurso-contenido/recurso-sin-modulo-destino.exception';
 import { RecursoContenidoRepository } from '../../domain/repositories/recurso-contenido.repository';
 import { RecursoContenidoMapper } from '../mappers/recurso-contenido.mapper';
 

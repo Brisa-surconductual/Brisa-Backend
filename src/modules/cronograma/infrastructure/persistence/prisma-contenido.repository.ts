@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { Contenido } from '../../domain/entities/contenido.entity';
-import { ContenidoCronogramaActivoException } from '../../domain/exeption/contenido-cronograma-activo.exception';
-import { ContenidoNoEncontradoException } from '../../domain/exeption/contenido-no-encontrado.exception';
+import { ContenidoCronogramaActivoException } from '../../domain/exeption/contenido-cronograma/contenido-cronograma-activo.exception';
+import { ContenidoNoEncontradoException } from '../../domain/exeption/contenido/contenido-no-encontrado.exception';
 import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
 import { ContenidoMapper } from '../mappers/contenido.mapper';
 

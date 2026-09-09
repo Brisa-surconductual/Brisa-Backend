@@ -1,6 +1,6 @@
 import { ModuloSistema } from '../../domain/entities/modulo-sistema.entity';
 import { ModuloSistemaRepository } from '../../domain/repositories/modulo-sistema.repository';
-import { ListarModulosDestinoUseCase } from './listar-modulos-destino.use-case';
+import { ListarModulosDestinoUseCase } from './modulos/listar-modulos-destino.use-case';
 
 describe('ListarModulosDestinoUseCase (RF-154)', () => {
   it('expone únicamente los datos necesarios para seleccionar el módulo', async () => {

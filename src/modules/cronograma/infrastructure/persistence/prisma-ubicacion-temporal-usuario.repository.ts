@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { UbicacionTemporalUsuario } from '../../domain/entities/ubicacion-temporal-usuario.entity';
-import { CronogramaSinUnidadesTemporalesException } from '../../domain/exeption/cronograma-sin-unidades-temporales.exception';
-import { FechaInicioUsuarioNoRegistradaException } from '../../domain/exeption/fecha-inicio-usuario-no-registrada.exception';
+import { CronogramaSinUnidadesTemporalesException } from '../../domain/exeption/cronograma/cronograma-sin-unidades-temporales.exeption';
+import { FechaInicioUsuarioNoRegistradaException } from '../../domain/exeption/cronograma/fecha-inicio-usuario-no-registrada.exception';
 import { UbicacionTemporalUsuarioRepository } from '../../domain/repositories/ubicacion-temporal-usuario.repository';
 
 interface UbicacionTemporalRow {

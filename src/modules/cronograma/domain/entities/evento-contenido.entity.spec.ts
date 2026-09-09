@@ -4,8 +4,8 @@ import {
   VERSION_EVENTO_CONTENIDO,
 } from './evento-contenido.entity';
 import { EstadoContenido } from '../enums/estado-contenido.enum';
-import { CambioEstadoContenidoInvalidoException } from '../exeption/cambio-estado-contenido-invalido.exception';
-import { DatosEventoContenidoInvalidosException } from '../exeption/datos-evento-contenido-invalidos.exception';
+import { CambioEstadoContenidoInvalidoException } from '../exeption/contenido/cambio-estado-contenido-invalido.exception';
+import { DatosEventoContenidoInvalidosException } from '../exeption/contenido/datos-evento-contenido-invalidos.exception';
 
 describe('EventoContenido y transiciones de estado (RF-15)', () => {
   const contenido = {

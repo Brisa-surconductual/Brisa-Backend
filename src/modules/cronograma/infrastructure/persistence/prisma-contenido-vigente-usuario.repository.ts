@@ -4,9 +4,9 @@ import { PrismaService } from '../../../../../prisma/prisma.service';
 import { ContenidoVigenteUsuario } from '../../domain/entities/contenido-vigente-usuario.entity';
 import { EstadoContenido } from '../../domain/enums/estado-contenido.enum';
 import { TipoContenido } from '../../domain/enums/tipo-contenido.enum';
-import { CronogramaSinUnidadesTemporalesException } from '../../domain/exeption/cronograma-sin-unidades-temporales.exception';
-import { CronogramaUsuarioNoAsignadoException } from '../../domain/exeption/cronograma-usuario-no-asignado.exception';
-import { FechaInicioUsuarioNoRegistradaException } from '../../domain/exeption/fecha-inicio-usuario-no-registrada.exception';
+import { CronogramaSinUnidadesTemporalesException } from '../../domain/exeption/cronograma/cronograma-sin-unidades-temporales.exeption';
+import { CronogramaUsuarioNoAsignadoException } from '../../domain/exeption/cronograma/cronograma-usuario-no-asignado.exception';
+import { FechaInicioUsuarioNoRegistradaException } from '../../domain/exeption/cronograma/fecha-inicio-usuario-no-registrada.exception';
 import { ContenidoVigenteUsuarioRepository } from '../../domain/repositories/contenido-vigente-usuario.repository';
 
 interface ContenidoVigenteRow {

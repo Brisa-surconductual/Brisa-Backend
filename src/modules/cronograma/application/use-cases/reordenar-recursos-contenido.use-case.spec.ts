@@ -2,7 +2,7 @@ import { Contenido } from '../../domain/entities/contenido.entity';
 import { TipoContenido } from '../../domain/enums/tipo-contenido.enum';
 import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
 import { RecursoContenidoRepository } from '../../domain/repositories/recurso-contenido.repository';
-import { ReordenarRecursosContenidoUseCase } from './reordenar-recursos-contenido.use-case';
+import { ReordenarRecursosContenidoUseCase } from './recurso-contenido/reordenar-recursos-contenido.use-case';
 
 describe('ReordenarRecursosContenidoUseCase (RF-153)', () => {
   const idContenido = '00000000-0000-4000-8000-000000000001';
@@ -23,7 +23,7 @@ describe('ReordenarRecursosContenidoUseCase (RF-153)', () => {
           new Contenido(
             idContenido,
             'Contenido',
-            TipoContenido.MIXTO,
+            TipoContenido.MULTIMEDIA,
             new Date(),
             new Date(),
           ),

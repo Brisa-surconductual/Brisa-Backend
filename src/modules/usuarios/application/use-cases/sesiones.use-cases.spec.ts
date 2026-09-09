@@ -32,6 +32,7 @@ describe('Casos de uso de sesiones PWA', () => {
       buscarPorCorreo: jest.fn(),
       buscarPorId: jest.fn(),
       actualizar: jest.fn(),
+      crearAdministrador: jest.fn(),
     };
     sesionRepository = {
       crear: jest.fn(),

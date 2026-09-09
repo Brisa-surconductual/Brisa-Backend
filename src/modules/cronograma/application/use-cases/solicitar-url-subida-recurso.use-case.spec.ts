@@ -3,7 +3,7 @@ import { TipoContenido } from '../../domain/enums/tipo-contenido.enum';
 import { TipoRecurso } from '../../domain/enums/tipo-recurso.enum';
 import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
 import { AlmacenamientoRecursosPort } from '../ports/almacenamiento-recursos.port';
-import { SolicitarUrlSubidaRecursoUseCase } from './solicitar-url-subida-recurso.use-case';
+import { SolicitarUrlSubidaRecursoUseCase } from './recurso-contenido/solicitar-url-subida-recurso.use-case';
 
 describe('SolicitarUrlSubidaRecursoUseCase', () => {
   const idContenido = '00000000-0000-4000-8000-000000000001';

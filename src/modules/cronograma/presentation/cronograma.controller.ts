@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { CreacionUnidadTemporalUseCase } from '../application/use-cases/crear-unidad-temporal.use-case';
+import { CreacionUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/crear-unidad-temporal.use-case';
 import { UnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-request';
 import { UnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-response';
 import { SessionAuthGuard } from '../../usuarios/presentation/guards/session-auth.guard';
@@ -25,40 +25,44 @@ import { ActualizarContenidoDtoRequest } from '../application/dto/contenido/actu
 import { ContenidoDtoResponse } from '../application/dto/contenido/contenido.dto-response';
 import { CrearContenidoDtoRequest } from '../application/dto/contenido/crear-contenido.dto-request';
 import { EliminarContenidoDtoResponse } from '../application/dto/contenido/eliminar-contenido.dto-response';
-import { ActualizarContenidoUseCase } from '../application/use-cases/actualizar-contenido.use-case';
-import { CrearContenidoUseCase } from '../application/use-cases/crear-contenido.use-case';
-import { EliminarContenidoUseCase } from '../application/use-cases/eliminar-contenido.use-case';
+import { ActualizarContenidoUseCase } from '../application/use-cases/contenido/actualizar-contenido.use-case';
+import { CrearContenidoUseCase } from '../application/use-cases/contenido/crear-contenido.use-case';
+import { EliminarContenidoUseCase } from '../application/use-cases/contenido/eliminar-contenido.use-case';
 import { CrearRecursoContenidoDtoRequest } from '../application/dto/recursoContenido/crear-recurso-contenido.dto-request';
 import { RecursoContenidoDtoResponse } from '../application/dto/recursoContenido/recurso-contenido.dto-response';
-import { CrearRecursoContenidoUseCase } from '../application/use-cases/crear-recurso-contenido.use-case';
-import { AsociarContenidoUnidadTemporalUseCase } from '../application/use-cases/asociar-contenido-unidad-temporal.use-case';
+import { CrearRecursoContenidoUseCase } from '../application/use-cases/recurso-contenido/crear-recurso-contenido.use-case';
+import { AsociarContenidoUnidadTemporalUseCase } from '../application/use-cases/asociasion-unidad-temporal-contenido/asociar-contenido-unidad-temporal.use-case';
 import { crearContenidoCronogramaDtoRequest } from '../application/dto/contenidoUnidadTemporal/crear-contenido-cronograma.dto-request';
 import { crearContenidoCronogramaDtoResponse } from '../application/dto/contenidoUnidadTemporal/crear-contenido-cronograma.dto-response.dto';
-import { ActualizarDisponibilidadContenidoUseCase } from '../application/use-cases/actualizar-disponibilidad-contenido.use-case';
+import { ActualizarDisponibilidadContenidoUseCase } from '../application/use-cases/contenido/actualizar-disponibilidad-contenido.use-case';
 import { ActualizarDisponibilidadContenidoDtoRequest } from '../application/dto/contenido/actualizar-disponibilidad-contenido.dto-request';
 import { ActualizarDisponibilidadContenidoDtoResponse } from '../application/dto/contenido/actualizar-disponibilidad-contenido.dto-response';
 import { SolicitarUrlSubidaRecursoDtoRequest } from '../application/dto/recursoContenido/solicitar-url-subida-recurso.dto-request';
 import { UrlSubidaRecursoDtoResponse } from '../application/dto/recursoContenido/url-subida-recurso.dto-response';
-import { SolicitarUrlSubidaRecursoUseCase } from '../application/use-cases/solicitar-url-subida-recurso.use-case';
-import { ListarModulosDestinoUseCase } from '../application/use-cases/listar-modulos-destino.use-case';
+import { SolicitarUrlSubidaRecursoUseCase } from '../application/use-cases/recurso-contenido/solicitar-url-subida-recurso.use-case';
+import { ListarModulosDestinoUseCase } from '../application/use-cases/modulos/listar-modulos-destino.use-case';
 import { ModuloDestinoDtoResponse } from '../application/dto/modulosDestino/modulo-destino.dto-response';
 import { ReordenarRecursosContenidoDtoRequest } from '../application/dto/recursoContenido/reordenar-recursos-contenido.dto-request';
 import { ReordenarRecursosContenidoDtoResponse } from '../application/dto/recursoContenido/reordenar-recursos-contenido.dto-response';
-import { ReordenarRecursosContenidoUseCase } from '../application/use-cases/reordenar-recursos-contenido.use-case';
-import { ActualizarUnidadTemporalUseCase } from '../application/use-cases/actualizar-unidad-temporal.use-case';
+import { ReordenarRecursosContenidoUseCase } from '../application/use-cases/recurso-contenido/reordenar-recursos-contenido.use-case';
+import { ActualizarUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/actualizar-unidad-temporal.use-case';
 import { ActualizarUnidadTemporalDtoRequest } from '../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-request';
 import { ActualizarUnidadTemporalDtoResponse } from '../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-response';
 import { EliminarAsociacionContenidoUnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-response';
 import { EliminarAsociacionContenidoUnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-request';
-import { EliminarAsociacionContenidoUnidadTemporalUseCase } from '../application/use-cases/eliminar-asosiacion-contenido-unidad-temporal.use-case';
+import { EliminarAsociacionContenidoUnidadTemporalUseCase } from '../application/use-cases/asociasion-unidad-temporal-contenido/eliminar-asosiacion-contenido-unidad-temporal.use-case';
 import { RegistrarPausaAdministrativaDtoRequest } from '../application/dto/pausaAdministrativa/registrar-pausa-administrativa.dto-request';
 import { RegistrarPausaAdministrativaDtoResponse } from '../application/dto/pausaAdministrativa/registrar-pausa-administrativa.dto-response';
-import { RegistrarPausaAdministrativaUseCase } from '../application/use-cases/registrar-pausa-administrativa.use-case';
+import { RegistrarPausaAdministrativaUseCase } from '../application/use-cases/pausa-administrativa/registrar-pausa-administrativa.use-case';
 import type { AuthenticatedSessionRequest } from '../../usuarios/presentation/http/authenticated-session-request';
-import { ConsultarPausasAdministrativasUsuarioUseCase } from '../application/use-cases/consultar-pausas-administrativas-usuario.use-case';
+import { ConsultarPausasAdministrativasUsuarioUseCase } from '../application/use-cases/pausa-administrativa/consultar-pausas-administrativas-usuario.use-case';
 import { PausaAdministrativaDtoResponse } from '../application/dto/pausaAdministrativa/pausa-administrativa.dto-response';
-import { AnularPausaAdministrativaUseCase } from '../application/use-cases/anular-pausa-administrativa.use-case';
+import { AnularPausaAdministrativaUseCase } from '../application/use-cases/pausa-administrativa/anular-pausa-administrativa.use-case';
 import { AnularPausaAdministrativaDtoResponse } from '../application/dto/pausaAdministrativa/anular-pausa-administrativa.dto-response';
+import { EliminarUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/eliminar-unidad-temporal.use-case';
+import { EliminarUnidadTemporalDtoRequest } from '../application/dto/unidadTemporal/eliminar-unidad-temporal.dto.request';
+import { EliminarUnidadTemporalDtoResponse } from '../application/dto/unidadTemporal/eliminar-unidad-temporal.dto.response';
+import { CronogramaCalendarioUseCase } from '../application/use-cases/cronograma/cronograma-calendario.use-case';
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -78,6 +82,8 @@ export class CronogramaController {
     private readonly registrarPausaAdministrativaUseCase: RegistrarPausaAdministrativaUseCase,
     private readonly consultarPausasAdministrativasUsuarioUseCase: ConsultarPausasAdministrativasUsuarioUseCase,
     private readonly anularPausaAdministrativaUseCase: AnularPausaAdministrativaUseCase,
+    private readonly eliminarUnidadTemporalUseCase: EliminarUnidadTemporalUseCase,
+    private readonly cronogramaCalendarioUseCase: CronogramaCalendarioUseCase,
   ) {}
 
   @Post('/crear/unidad-temporal')
@@ -231,5 +237,27 @@ export class CronogramaController {
     @Param('id_pausa', new ParseUUIDPipe()) idPausa: string,
   ): Promise<AnularPausaAdministrativaDtoResponse> {
     return this.anularPausaAdministrativaUseCase.execute(idUsuario, idPausa);
+  }
+
+  @Delete('/eliminar-unidad-temporal')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async eliminarUnidadTemporal(
+    @Body() dto: EliminarUnidadTemporalDtoRequest,
+  ): Promise<EliminarUnidadTemporalDtoResponse> {
+    return this.eliminarUnidadTemporalUseCase.execute(dto);
+  }
+
+  @Get('/:idCronograma/unidades-temporales/:idUnidadTemporal/contenidos')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async obtenerContenidos(
+    @Param('idCronograma') idCronograma: string,
+    @Param('idUnidadTemporal') idUnidadTemporal: string,
+  ) {
+    return this.cronogramaCalendarioUseCase.execute({
+      idCronograma,
+      idUnidadTemporal,
+    });
   }
 }

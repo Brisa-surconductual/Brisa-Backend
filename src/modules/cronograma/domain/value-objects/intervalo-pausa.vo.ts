@@ -1,4 +1,4 @@
-import { FechasPausaInvalidasException } from '../exeption/fechas-pausa-invalidas.exception';
+import { FechasPausaInvalidasException } from '../exeption/pausa-administrativa/fechas-pausa-invalidas.exception';
 
 export class IntervaloPausaVO {
   constructor(

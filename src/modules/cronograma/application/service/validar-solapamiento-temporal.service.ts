@@ -1,4 +1,4 @@
-import { SolapamientoUnidadTemporalException } from "../../domain/exeption/solapamiento-unidad-temporal.exeption";
+import { SolapamientoUnidadTemporalException } from "../../domain/exeption/unidades-temporales/solapamiento-unidad-temporal.exeption";
 
 type FechaRango = {
   fecha_inicio?: Date;
