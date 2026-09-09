@@ -10,6 +10,23 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
     constructor(
         private readonly prisma: PrismaService,
     ) {}
+    async obtenerContenidosConRecursosPorUnidadTemporal(id_unidad_temporal: string): Promise<any[]> {
+        const relaciones = await this.prisma.contenidos_cronograma.findMany({
+            where: { id_unidad_temporal },
+            orderBy: { orden_contenido: 'asc' }, // Ordenamos por el campo de la tabla intermedia
+            include: {
+                // Unimos con la tabla contenido
+                contenidos: {
+                    include: {
+                        // Unimos con la tabla recursos_contenido
+                        recursos_contenido: true,   
+                    }
+                }
+            }
+        });
+
+        return relaciones;
+    }
 
     async existeContenidoParaUnidadTemporal( id_unidad_temporal: string, ): Promise<boolean> {
         return this.prisma.contenidos_cronograma.count({

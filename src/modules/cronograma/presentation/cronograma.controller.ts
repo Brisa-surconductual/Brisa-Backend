@@ -43,6 +43,8 @@ import { EliminarAsociacionContenidoUnidadTemporalUseCase } from '../application
 import { EliminarUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/eliminar-unidad-temporal.use-case';
 import { EliminarUnidadTemporalDtoRequest } from '../application/dto/unidadTemporal/eliminar-unidad-temporal.dto.request';
 import { EliminarUnidadTemporalDtoResponse } from '../application/dto/unidadTemporal/eliminar-unidad-temporal.dto.response';
+import {CronogramaCalendarioUseCase} from '../application/use-cases/cronograma/cronograma-calendario.use-case';
+
 @Controller('/cronograma')
 export class CronogramaController {
   constructor(
@@ -58,7 +60,8 @@ export class CronogramaController {
     private readonly actualizarDisponibilidadContenido: ActualizarDisponibilidadContenidoUseCase,
     private readonly actualizarUnidadTemporalUseCase: ActualizarUnidadTemporalUseCase,
     private readonly eliminarAsociacionContenidoUnidadTemporalUseCase: EliminarAsociacionContenidoUnidadTemporalUseCase,
-    private readonly eliminarUnidadTemporalUseCase: EliminarUnidadTemporalUseCase
+    private readonly eliminarUnidadTemporalUseCase: EliminarUnidadTemporalUseCase, 
+    private readonly cronogramaCalendarioUseCase: CronogramaCalendarioUseCase
   ) {}
 
   @Post('/crear/unidad-temporal')
@@ -183,6 +186,16 @@ export class CronogramaController {
   async eliminarUnidadTemporal( @Body() dto: EliminarUnidadTemporalDtoRequest): Promise<EliminarUnidadTemporalDtoResponse> {
     return this.eliminarUnidadTemporalUseCase.execute(dto);
   }
+
+  @Get('/:idCronograma/unidades-temporales/:idUnidadTemporal/contenidos')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+    async obtenerContenidos( @Param('idCronograma') idCronograma: string, @Param('idUnidadTemporal') idUnidadTemporal: string ) {
+        return this.cronogramaCalendarioUseCase.execute({
+            idCronograma,
+            idUnidadTemporal
+        });
+    }
 
 
 }
