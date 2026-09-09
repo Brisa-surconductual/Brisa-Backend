@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import {EliminarAsociacionContenidoUnidadTemporalDtoRequest} from "../dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-request";
-import {EliminarAsociacionContenidoUnidadTemporalDtoResponse} from "../dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-response";
-import {ContenidoCronogramaRepository} from "../../domain/repositories/contenido-cronograma.repository";
-import {ContenidoCronogramaContenidoNoEncontradoException} from "../../domain/exeption/contenido-cronograma-contenido-no-encontrado.exeption";
-import {ReordenarContenidoTemporalService}  from "../service/reordenar-contenido-temporal.service";
+import {EliminarAsociacionContenidoUnidadTemporalDtoRequest} from "../../dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-request";
+import {EliminarAsociacionContenidoUnidadTemporalDtoResponse} from "../../dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-response";
+import {ContenidoCronogramaRepository} from "../../../domain/repositories/contenido-cronograma.repository";
+import {ContenidoCronogramaContenidoNoEncontradoException} from "../../../domain/exeption/contenido-cronograma/contenido-cronograma-contenido-no-encontrado.exeption";
+import {ReordenarContenidoTemporalService}  from "../../service/reordenar-contenido-temporal.service";
 @Injectable()
 export class EliminarAsociacionContenidoUnidadTemporalUseCase {
     constructor(

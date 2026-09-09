@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { PublicarEventosCambioEstadoUseCase } from '../../application/use-cases/publicar-eventos-cambio-estado.use-case';
+import { PublicarEventosCambioEstadoUseCase } from '../../application/use-cases/contenido/publicar-eventos-cambio-estado.use-case';
 
 @Injectable()
 export class PublicarEventosContenidoCron {

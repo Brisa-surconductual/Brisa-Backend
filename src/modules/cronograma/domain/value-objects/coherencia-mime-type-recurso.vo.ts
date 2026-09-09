@@ -1,6 +1,6 @@
 import { TipoRecurso } from '../enums/tipo-recurso.enum';
-import { MimeTypeRecursoIncompatibleException } from '../exeption/mime-type-recurso-incompatible.exception';
-import { TipoRecursoNoMultimediaException } from '../exeption/tipo-recurso-no-multimedia.exception';
+import { MimeTypeRecursoIncompatibleException } from '../exeption/recurso-contenido/mime-type-recurso-incompatible.exception';
+import { TipoRecursoNoMultimediaException } from '../exeption/recurso-contenido/tipo-recurso-no-multimedia.exception';
 
 export class CoherenciaMimeTypeRecursoVO {
   readonly valor: string;

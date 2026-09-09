@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { Contenido } from '../../domain/entities/contenido.entity';
-import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
-import { ContenidoDtoResponse } from '../dto/contenido/contenido.dto-response';
-import { CrearContenidoDtoRequest } from '../dto/contenido/crear-contenido.dto-request';
+import { Contenido } from '../../../domain/entities/contenido.entity';
+import { ContenidoRepository } from '../../../domain/repositories/contenido.repository';
+import { ContenidoDtoResponse } from '../../dto/contenido/contenido.dto-response';
+import { CrearContenidoDtoRequest } from '../../dto/contenido/crear-contenido.dto-request';
 
 @Injectable()
 export class CrearContenidoUseCase {

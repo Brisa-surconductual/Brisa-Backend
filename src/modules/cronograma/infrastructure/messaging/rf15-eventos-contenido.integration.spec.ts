@@ -5,12 +5,12 @@ import {
   EventoContenidoPublisher,
 } from '../../application/ports/evento-contenido.publisher';
 import { AutorizarConsumoEventoContenidoService } from '../../application/service/autorizar-consumo-evento-contenido.service';
-import { PublicarEventosCambioEstadoUseCase } from '../../application/use-cases/publicar-eventos-cambio-estado.use-case';
+import { PublicarEventosCambioEstadoUseCase } from '../../application/use-cases/contenido/publicar-eventos-cambio-estado.use-case';
 import { ContenidoEstadoPendiente } from '../../domain/entities/contenido-estado-pendiente.entity';
 import { EventoContenido } from '../../domain/entities/evento-contenido.entity';
 import { EstadoContenido } from '../../domain/enums/estado-contenido.enum';
-import { ModuloEventoNoAutorizadoException } from '../../domain/exeption/modulo-evento-no-autorizado.exception';
-import { PublicacionEventoContenidoException } from '../../domain/exeption/publicacion-evento-contenido.exception';
+import { ModuloEventoNoAutorizadoException } from '../../domain/exeption/modulo/modulo-evento-no-autorizado.exception';
+import { PublicacionEventoContenidoException } from '../../domain/exeption/contenido/publicacion-evento-contenido.exception';
 import { EventoContenidoRepository } from '../../domain/repositories/evento-contenido.repository';
 import { NestEventoContenidoPublisher } from './nest-evento-contenido.publisher';
 

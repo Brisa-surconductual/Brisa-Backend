@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { ContenidoNoEncontradoException } from '../../domain/exeption/contenido-no-encontrado.exception';
-import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
-import { RecursoContenidoRepository } from '../../domain/repositories/recurso-contenido.repository';
-import { ReordenarRecursosContenidoDtoRequest } from '../dto/recursoContenido/reordenar-recursos-contenido.dto-request';
-import { ReordenarRecursosContenidoDtoResponse } from '../dto/recursoContenido/reordenar-recursos-contenido.dto-response';
+import { ContenidoNoEncontradoException } from '../../../domain/exeption/contenido/contenido-no-encontrado.exception';
+import { ContenidoRepository } from '../../../domain/repositories/contenido.repository';
+import { RecursoContenidoRepository } from '../../../domain/repositories/recurso-contenido.repository';
+import { ReordenarRecursosContenidoDtoRequest } from '../../dto/recursoContenido/reordenar-recursos-contenido.dto-request';
+import { ReordenarRecursosContenidoDtoResponse } from '../../dto/recursoContenido/reordenar-recursos-contenido.dto-response';
 
 @Injectable()
 export class ReordenarRecursosContenidoUseCase {

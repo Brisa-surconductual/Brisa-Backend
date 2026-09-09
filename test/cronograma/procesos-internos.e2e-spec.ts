@@ -5,8 +5,8 @@ import {
   EventoContenidoPublisher,
 } from '../../src/modules/cronograma/application/ports/evento-contenido.publisher';
 import { AutorizarConsumoEventoContenidoService } from '../../src/modules/cronograma/application/service/autorizar-consumo-evento-contenido.service';
-import { InicializarCronogramaUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/inicializar-cronograma-usuario.use-case';
-import { PublicarEventosCambioEstadoUseCase } from '../../src/modules/cronograma/application/use-cases/publicar-eventos-cambio-estado.use-case';
+import { InicializarCronogramaUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/inicializar-cronograma-usuario.use-case';
+import { PublicarEventosCambioEstadoUseCase } from '../../src/modules/cronograma/application/use-cases/contenido/publicar-eventos-cambio-estado.use-case';
 import { CondicionesInicializacionUsuario } from '../../src/modules/cronograma/domain/entities/condiciones-inicializacion-usuario.entity';
 import { ContenidoEstadoPendiente } from '../../src/modules/cronograma/domain/entities/contenido-estado-pendiente.entity';
 import { Cronograma } from '../../src/modules/cronograma/domain/entities/cronograma.entity';

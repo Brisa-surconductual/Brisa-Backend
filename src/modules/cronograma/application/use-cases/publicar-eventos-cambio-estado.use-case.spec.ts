@@ -1,8 +1,8 @@
 import { ContenidoEstadoPendiente } from '../../domain/entities/contenido-estado-pendiente.entity';
 import { EventoContenido } from '../../domain/entities/evento-contenido.entity';
 import { EstadoContenido } from '../../domain/enums/estado-contenido.enum';
-import { EventoContenidoDuplicadoException } from '../../domain/exeption/evento-contenido-duplicado.exception';
-import { PublicarEventosCambioEstadoUseCase } from './publicar-eventos-cambio-estado.use-case';
+import { EventoContenidoDuplicadoException } from '../../domain/exeption/contenido/evento-contenido-duplicado.exception';
+import { PublicarEventosCambioEstadoUseCase } from './contenido/publicar-eventos-cambio-estado.use-case';
 
 describe('PublicarEventosCambioEstadoUseCase (RF-15)', () => {
   const idContenidoCronograma = '00000000-0000-4000-8000-000000000001';

@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { TransicionEstadoContenido } from '../../domain/entities/contenido-estado-pendiente.entity';
-import { EventoContenido } from '../../domain/entities/evento-contenido.entity';
-import { CambioEstadoContenidoInvalidoException } from '../../domain/exeption/cambio-estado-contenido-invalido.exception';
-import { EventoContenidoDuplicadoException } from '../../domain/exeption/evento-contenido-duplicado.exception';
-import { EventoContenidoRepository } from '../../domain/repositories/evento-contenido.repository';
-import { EventoContenidoPublisher } from '../ports/evento-contenido.publisher';
+import { TransicionEstadoContenido } from '../../../domain/entities/contenido-estado-pendiente.entity';
+import { EventoContenido } from '../../../domain/entities/evento-contenido.entity';
+import { CambioEstadoContenidoInvalidoException } from '../../../domain/exeption/contenido/cambio-estado-contenido-invalido.exception';
+import { EventoContenidoDuplicadoException } from '../../../domain/exeption/contenido/evento-contenido-duplicado.exception';
+import { EventoContenidoRepository } from '../../../domain/repositories/evento-contenido.repository';
+import { EventoContenidoPublisher } from '../../ports/evento-contenido.publisher';
 
 export interface ResultadoPublicacionEventosContenido {
   readonly contenidos_revisados: number;

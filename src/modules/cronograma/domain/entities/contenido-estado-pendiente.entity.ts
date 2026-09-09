@@ -1,5 +1,5 @@
 import { EstadoContenido } from '../enums/estado-contenido.enum';
-import { CambioEstadoContenidoInvalidoException } from '../exeption/cambio-estado-contenido-invalido.exception';
+import { CambioEstadoContenidoInvalidoException } from '../exeption/contenido/cambio-estado-contenido-invalido.exception';
 
 export interface TransicionEstadoContenido {
   readonly estado_anterior: EstadoContenido | null;

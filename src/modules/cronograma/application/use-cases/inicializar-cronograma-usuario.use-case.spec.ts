@@ -2,13 +2,13 @@ import { CondicionesInicializacionUsuario } from '../../domain/entities/condicio
 import { Cronograma } from '../../domain/entities/cronograma.entity';
 import { CronogramaUsuario } from '../../domain/entities/cronograma-usuario.entity';
 import { EstadoCronograma } from '../../domain/enums/estado-cronograma.enum';
-import { CronogramaUsuarioYaInicializadoException } from '../../domain/exeption/cronograma-usuario-ya-inicializado.exception';
+import { CronogramaUsuarioYaInicializadoException } from '../../domain/exeption/cronograma/cronograma-usuario-ya-inicializado.exception';
 import { CondicionesInicializacionUsuarioRepository } from '../../domain/repositories/condiciones-inicializacion-usuario.repository';
 import { CronogramaRepository } from '../../domain/repositories/cronograma.repository';
 import { CronogramaUsuarioRepository } from '../../domain/repositories/cronograma-usuario.repository';
 import { EstadoRegistro } from '../../../usuarios/domain/enums/estado-registro.enum';
 import { Rol } from '../../../usuarios/domain/enums/rol.enum';
-import { InicializarCronogramaUsuarioUseCase } from './inicializar-cronograma-usuario.use-case';
+import { InicializarCronogramaUsuarioUseCase } from './cronograma/inicializar-cronograma-usuario.use-case';
 
 describe('InicializarCronogramaUsuarioUseCase (RF-17)', () => {
   const idUsuario = '00000000-0000-4000-8000-000000000001';

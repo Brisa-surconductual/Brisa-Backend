@@ -1,23 +1,24 @@
-import { InicializarCronogramaUsuarioUseCase } from './use-cases/inicializar-cronograma-usuario.use-case';
-import { CreacionUnidadTemporalUseCase } from './use-cases/crear-unidad-temporal.use-case';
+import { InicializarCronogramaUsuarioUseCase } from './use-cases/cronograma/inicializar-cronograma-usuario.use-case';
+import { CreacionUnidadTemporalUseCase } from './use-cases/unidad-temporal/crear-unidad-temporal.use-case';
 import { ValidarSolapamientoTemporalService } from './service/validar-solapamiento-temporal.service';
 import { CalculoOrdenTemporalService } from './service/calculo-orden-temporal.service';
-import { ActualizarContenidoUseCase } from './use-cases/actualizar-contenido.use-case';
-import { CrearContenidoUseCase } from './use-cases/crear-contenido.use-case';
-import { EliminarContenidoUseCase } from './use-cases/eliminar-contenido.use-case';
-import { CrearRecursoContenidoUseCase } from './use-cases/crear-recurso-contenido.use-case';
+import { ActualizarContenidoUseCase } from './use-cases/contenido/actualizar-contenido.use-case';
+import { CrearContenidoUseCase } from './use-cases/contenido/crear-contenido.use-case';
+import { EliminarContenidoUseCase } from './use-cases/contenido/eliminar-contenido.use-case';
+import { CrearRecursoContenidoUseCase } from './use-cases/recurso-contenido/crear-recurso-contenido.use-case';
 import { AutorizarConsumoEventoContenidoService } from './service/autorizar-consumo-evento-contenido.service';
-import { PublicarEventosCambioEstadoUseCase } from './use-cases/publicar-eventos-cambio-estado.use-case';
-import { SolicitarUrlSubidaRecursoUseCase } from './use-cases/solicitar-url-subida-recurso.use-case';
-import { ListarModulosDestinoUseCase } from './use-cases/listar-modulos-destino.use-case';
-import { ReordenarRecursosContenidoUseCase } from './use-cases/reordenar-recursos-contenido.use-case';
-import {AsociarContenidoUnidadTemporalUseCase} from "./use-cases/asociar-contenido-unidad-temporal.use-case";
-import {ActualizarDisponibilidadContenidoUseCase} from "./use-cases/actualizar-disponibilidad-contenido.use-case";
+import { PublicarEventosCambioEstadoUseCase } from './use-cases/contenido/publicar-eventos-cambio-estado.use-case';
+import { SolicitarUrlSubidaRecursoUseCase } from './use-cases/recurso-contenido/solicitar-url-subida-recurso.use-case';
+import { ListarModulosDestinoUseCase } from './use-cases/modulos/listar-modulos-destino.use-case';
+import { ReordenarRecursosContenidoUseCase } from './use-cases/recurso-contenido/reordenar-recursos-contenido.use-case';
+import {AsociarContenidoUnidadTemporalUseCase} from "./use-cases/asociasion-unidad-temporal-contenido/asociar-contenido-unidad-temporal.use-case";
+import {ActualizarDisponibilidadContenidoUseCase} from "./use-cases/contenido/actualizar-disponibilidad-contenido.use-case";
 import {ReordenarContenidoTemporalService} from "./service/reordenar-contenido-temporal.service";
-import {ActualizarUnidadTemporalUseCase} from "./use-cases/actualizar-unidad-temporal.use-case";
+import {ActualizarUnidadTemporalUseCase} from "./use-cases/unidad-temporal/actualizar-unidad-temporal.use-case";
 import {ReordenarUnidadTemporalService} from "./service/reordenar-unidad-temporal.service";
-import {EliminarAsociacionContenidoUnidadTemporalUseCase} from "./use-cases/eliminar-asosiacion-contenido-unidad-temporal.use-case";
+import {EliminarAsociacionContenidoUnidadTemporalUseCase} from "./use-cases/asociasion-unidad-temporal-contenido/eliminar-asosiacion-contenido-unidad-temporal.use-case";
 import {ValidarConsistenciaCronogramaService} from "./service/validad-consistencia-global-cronograma.service";
+import {EliminarUnidadTemporalUseCase} from "./use-cases/unidad-temporal/eliminar-unidad-temporal.use-case";
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -40,4 +41,5 @@ export const CronogramaApplicationProviders = [
   ReordenarUnidadTemporalService,
   EliminarAsociacionContenidoUnidadTemporalUseCase,
   ValidarConsistenciaCronogramaService,
+  EliminarUnidadTemporalUseCase,
 ];

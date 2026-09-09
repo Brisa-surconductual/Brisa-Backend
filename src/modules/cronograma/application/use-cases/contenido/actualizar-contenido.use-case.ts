@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { ContenidoNoEncontradoException } from '../../domain/exeption/contenido-no-encontrado.exception';
-import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
-import { ActualizarContenidoDtoRequest } from '../dto/contenido/actualizar-contenido.dto-request';
-import { ContenidoDtoResponse } from '../dto/contenido/contenido.dto-response';
+import { ContenidoNoEncontradoException } from '../../../domain/exeption/contenido/contenido-no-encontrado.exception';
+import { ContenidoRepository } from '../../../domain/repositories/contenido.repository';
+import { ActualizarContenidoDtoRequest } from '../../dto/contenido/actualizar-contenido.dto-request';
+import { ContenidoDtoResponse } from '../../dto/contenido/contenido.dto-response';
 
 @Injectable()
 export class ActualizarContenidoUseCase {

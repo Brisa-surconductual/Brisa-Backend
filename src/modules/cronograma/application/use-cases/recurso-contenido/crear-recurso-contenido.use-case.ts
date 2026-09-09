@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { RecursoContenido } from '../../domain/entities/recurso-contenido.entity';
-import { ContenidoNoEncontradoException } from '../../domain/exeption/contenido-no-encontrado.exception';
-import { MetadatosRecursoNoCoincidenException } from '../../domain/exeption/metadatos-recurso-no-coinciden.exception';
-import { RecursoMultimediaNoAlmacenadoException } from '../../domain/exeption/recurso-multimedia-no-almacenado.exception';
-import { RecursoSinModuloDestinoException } from '../../domain/exeption/recurso-sin-modulo-destino.exception';
-import { TipoRecurso } from '../../domain/enums/tipo-recurso.enum';
-import { ContenidoRepository } from '../../domain/repositories/contenido.repository';
-import { RecursoContenidoRepository } from '../../domain/repositories/recurso-contenido.repository';
-import { CoherenciaDatosRecursoVO } from '../../domain/value-objects/coherencia-datos-recurso.vo';
-import { CoherenciaMimeTypeRecursoVO } from '../../domain/value-objects/coherencia-mime-type-recurso.vo';
-import { CrearRecursoContenidoDtoRequest } from '../dto/recursoContenido/crear-recurso-contenido.dto-request';
-import { RecursoContenidoDtoResponse } from '../dto/recursoContenido/recurso-contenido.dto-response';
-import { AlmacenamientoRecursosPort } from '../ports/almacenamiento-recursos.port';
+import { RecursoContenido } from '../../../domain/entities/recurso-contenido.entity';
+import { ContenidoNoEncontradoException } from '../../../domain/exeption/contenido/contenido-no-encontrado.exception';
+import { MetadatosRecursoNoCoincidenException } from '../../../domain/exeption/recurso-contenido/metadatos-recurso-no-coinciden.exception';
+import { RecursoMultimediaNoAlmacenadoException } from '../../../domain/exeption/recurso-contenido/recurso-multimedia-no-almacenado.exception';
+import { RecursoSinModuloDestinoException } from '../../../domain/exeption/recurso-contenido/recurso-sin-modulo-destino.exception';
+import { TipoRecurso } from '../../../domain/enums/tipo-recurso.enum';
+import { ContenidoRepository } from '../../../domain/repositories/contenido.repository';
+import { RecursoContenidoRepository } from '../../../domain/repositories/recurso-contenido.repository';
+import { CoherenciaDatosRecursoVO } from '../../../domain/value-objects/coherencia-datos-recurso.vo';
+import { CoherenciaMimeTypeRecursoVO } from '../../../domain/value-objects/coherencia-mime-type-recurso.vo';
+import { CrearRecursoContenidoDtoRequest } from '../../dto/recursoContenido/crear-recurso-contenido.dto-request';
+import { RecursoContenidoDtoResponse } from '../../dto/recursoContenido/recurso-contenido.dto-response';
+import { AlmacenamientoRecursosPort } from '../../ports/almacenamiento-recursos.port';
 
 @Injectable()
 export class CrearRecursoContenidoUseCase {

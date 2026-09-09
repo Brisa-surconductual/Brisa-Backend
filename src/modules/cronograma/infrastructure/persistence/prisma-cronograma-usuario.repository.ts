@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { CronogramaUsuario } from '../../domain/entities/cronograma-usuario.entity';
-import { CronogramaBaseInactivoException } from '../../domain/exeption/cronograma-base-inactivo.exception';
-import { CronogramaUsuarioYaInicializadoException } from '../../domain/exeption/cronograma-usuario-ya-inicializado.exception';
+import { CronogramaBaseInactivoException } from '../../domain/exeption/cronograma/cronograma-base-inactivo.exception';
+import { CronogramaUsuarioYaInicializadoException } from '../../domain/exeption/cronograma/cronograma-usuario-ya-inicializado.exception';
 import { CronogramaUsuarioRepository } from '../../domain/repositories/cronograma-usuario.repository';
 import { CronogramaUsuarioMapper } from '../mappers/cronograma-usuario.mapper';
 
