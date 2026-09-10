@@ -4,8 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  schemas   = ["cronograma", "usuario"]
+  provider = "postgresql"
+  schemas  = ["chat", "cronograma", "usuario"]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -115,6 +115,16 @@ model usuarios {
   consentimiendo_aceptado                                                           Boolean?
   registro_consumo_aceptado                                                         Boolean?
   id_consentimiento                                                                 String?                    @db.Uuid
+  exportaciones                                                                     exportaciones[]
+  flujo_conversacion                                                                flujo_conversacion[]
+  historial_nodos                                                                   historial_nodos[]
+  nodos                                                                             nodos[]
+  perfil_clinico                                                                    perfil_clinico?
+  punto_control                                                                     punto_control[]
+  chat_sesiones                                                                          chat_sesiones[]
+  sincronizaciones                                                                  sincronizaciones[]
+  tipo_terapia_tipo_terapia_administrador_responsableTousuarios                     tipo_terapia[]             @relation("tipo_terapia_administrador_responsableTousuarios")
+  tipo_terapia_tipo_terapia_id_usuarioTousuarios                                    tipo_terapia?              @relation("tipo_terapia_id_usuarioTousuarios")
   cronogramas_usuario                                                               cronogramas_usuario?
   pausas_administrativas_pausas_administrativas_id_usuarioTousuarios                pausas_administrativas[]   @relation("pausas_administrativas_id_usuarioTousuarios")
   pausas_administrativas_pausas_administrativas_id_usuario_administrativoTousuarios pausas_administrativas[]   @relation("pausas_administrativas_id_usuario_administrativoTousuarios")
@@ -136,6 +146,7 @@ model contenidos {
   fecha_creacion        DateTime               @default(now()) @db.Timestamptz(6)
   fecha_actualizacion   DateTime               @default(now()) @db.Timestamptz(6)
   tipo_contenido        tipo_contenido_enum
+  nodos                 nodos[]
   contenidos_cronograma contenidos_cronograma?
   recursos_contenido    recursos_contenido[]
 
@@ -166,16 +177,16 @@ model contenidos_cronograma {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model cronogramas {
-  id_cronograma         String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre_cronograma     String                  @db.VarChar(150)
-  estado                estado_cronograma_enum  @default(INACTIVO)
-  es_base               Boolean                 @unique(map: "uq_cronogramas_base_activo", where: raw("((es_base = true) AND (estado = 'ACTIVO'::cronograma.estado_cronograma_enum))")) @default(false)
-  fecha_activacion      DateTime?               @db.Timestamptz(6)
-  fecha_creacion        DateTime                @default(now()) @db.Timestamptz(6)
-  fecha_actualizacion   DateTime                @default(now()) @db.Timestamptz(6)
-  cronogramas_usuario   cronogramas_usuario[]
-  eventos_contenido     eventos_contenido[]
-  unidades_temporales   unidades_temporales[]
+  id_cronograma       String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre_cronograma   String                 @db.VarChar(150)
+  estado              estado_cronograma_enum @default(INACTIVO)
+  es_base             Boolean                @unique(map: "uq_cronogramas_base_activo", where: raw("((es_base = true) AND (estado = 'ACTIVO'::cronograma.estado_cronograma_enum))")) @default(false)
+  fecha_activacion    DateTime?              @db.Timestamptz(6)
+  fecha_creacion      DateTime               @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion DateTime               @default(now()) @db.Timestamptz(6)
+  cronogramas_usuario cronogramas_usuario[]
+  eventos_contenido   eventos_contenido[]
+  unidades_temporales unidades_temporales[]
 
   @@schema("cronograma")
 }
@@ -206,9 +217,9 @@ model eventos_contenido {
   fecha_cambio              DateTime                    @default(now()) @db.Timestamptz(6)
   version_evento            String                      @default("1.0") @db.VarChar(10)
   payload                   Json
+  entregas_evento_contenido entregas_evento_contenido[]
   contenidos_cronograma     contenidos_cronograma       @relation(fields: [id_contenido_cronograma], references: [id_contenido_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_contenido")
   cronogramas               cronogramas                 @relation(fields: [id_cronograma], references: [id_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_cronograma")
-  entregas_evento_contenido entregas_evento_contenido[]
 
   @@unique([id_contenido_cronograma, estado_nuevo], map: "uq_evento_contenido_transicion")
   @@index([id_cronograma, fecha_cambio], map: "ix_eventos_contenido_cronograma")
@@ -220,8 +231,8 @@ model modulos_sistema {
   codigo_modulo             String                      @unique(map: "uq_modulo_codigo") @db.VarChar(10)
   nombre_modulo             String                      @db.VarChar(100)
   activo                    Boolean                     @default(true)
-  recursos_modulos_destino  recursos_modulos_destino[]
   entregas_evento_contenido entregas_evento_contenido[]
+  recursos_modulos_destino  recursos_modulos_destino[]
 
   @@schema("cronograma")
 }
@@ -235,7 +246,7 @@ model entregas_evento_contenido {
   fecha_publicacion    DateTime?         @db.Timestamptz(6)
   ultimo_error         String?           @db.VarChar(500)
   eventos_contenido    eventos_contenido @relation(fields: [id_evento], references: [id_evento], onDelete: Cascade, onUpdate: NoAction, map: "fk_entrega_evento")
-  modulos_sistema      modulos_sistema   @relation(fields: [id_modulo], references: [id_modulo], onDelete: Restrict, onUpdate: NoAction, map: "fk_entrega_modulo")
+  modulos_sistema      modulos_sistema   @relation(fields: [id_modulo], references: [id_modulo], onUpdate: NoAction, map: "fk_entrega_modulo")
 
   @@id([id_evento, id_modulo])
   @@index([fecha_creacion], map: "ix_entregas_evento_pendientes", where: raw("(fecha_publicacion IS NULL)"))
@@ -309,12 +320,306 @@ model unidades_temporales {
   utilizada_por_usuarios Boolean                 @default(false)
   fecha_creacion         DateTime                @default(now()) @db.Timestamptz(6)
   fecha_actualizacion    DateTime                @default(now()) @db.Timestamptz(6)
+  sincronizaciones       sincronizaciones[]
   contenidos_cronograma  contenidos_cronograma[]
   cronogramas            cronogramas             @relation(fields: [id_cronograma], references: [id_cronograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_unidad_temporal_cronograma")
 
   @@unique([id_cronograma, orden_unidad], map: "uq_unidad_temporal_orden")
   @@index([id_cronograma], map: "ix_unidades_temporales_cronograma")
   @@schema("cronograma")
+}
+
+model estado_conectividad {
+  id_estado_conectividad String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre                 String       @unique @db.VarChar(20)
+  respuestas             respuestas[]
+
+  @@schema("chat")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model estado_sesiones {
+  id_sesion           String             @id @db.Uuid
+  estado_actual       estado_sesion_enum @default(ACTIVA)
+  motivo_pausa        motivo_pausa_enum?
+  fecha_pausa         DateTime?          @db.Timestamptz(6)
+  fecha_reanudacion   DateTime?          @db.Timestamptz(6)
+  fecha_completada    DateTime?          @db.Timestamptz(6)
+  fecha_actualizacion DateTime           @default(now()) @db.Timestamptz(6)
+  sesiones            chat_sesiones      @relation(fields: [id_sesion], references: [id_sesion], onDelete: Cascade, onUpdate: NoAction, map: "fk_estado_sesion")
+
+  @@schema("chat")
+}
+
+model exportaciones {
+  id_exportacion       String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_usuario           String                  @db.Uuid
+  formato              String                  @db.VarChar(20)
+  estado               estado_exportacion_enum @default(PENDIENTE)
+  clave_almacenamiento String?
+  solicitado_por       String                  @db.Uuid
+  fecha_solicitud      DateTime                @default(now()) @db.Timestamptz(6)
+  fecha_generacion     DateTime?               @db.Timestamptz(6)
+  perfil_clinico       perfil_clinico          @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_exportacion_perfil")
+  usuarios             usuarios                @relation(fields: [solicitado_por], references: [id_usuario], onUpdate: NoAction, map: "fk_exportacion_solicitante")
+
+  @@schema("chat")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model flujo_conversacion {
+  id_flujo          String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre            String                 @db.VarChar(150)
+  modalidad         modalidad_enum         @unique(map: "uq_flujo_publicado_grupal", where: raw("((estado = 'PUBLICADO'::chat.estado_flujo_enum) AND (modalidad = 'GRUPAL'::chat.modalidad_enum))"))
+  tipo_dependencia  tipo_dependencia_enum?
+  tipo_craving      tipo_craving_enum?
+  estado            estado_flujo_enum      @default(BORRADOR)
+  version           Int                    @default(1)
+  creado_por        String                 @db.Uuid
+  fecha_creacion    DateTime               @default(now()) @db.Timestamptz(6)
+  fecha_publicacion DateTime?              @db.Timestamptz(6)
+  fecha_archivado   DateTime?              @db.Timestamptz(6)
+  usuarios          usuarios               @relation(fields: [creado_por], references: [id_usuario], onUpdate: NoAction, map: "fk_flujo_creado_por")
+  nodos             nodos?
+  reglas_nodos      reglas_nodos[]
+  sesiones          chat_sesiones[]
+
+  @@unique([modalidad, tipo_dependencia, tipo_craving], map: "uq_flujo_publicado_personalizada", where: raw("((estado = 'PUBLICADO'::chat.estado_flujo_enum) AND (modalidad = 'PERSONALIZADA'::chat.modalidad_enum))"))
+  @@schema("chat")
+}
+
+model historial_nodos {
+  id_historial                                 BigInt                         @id @default(autoincrement())
+  id_sesion                                    String                         @db.Uuid
+  id_nodo                                      String                         @db.Uuid
+  id_usuario                                   String                         @db.Uuid
+  respuesta_usuario                            Json?
+  id_nodo_destino                              String?                        @db.Uuid
+  estado_registro                              estado_registro_historial_enum @default(REGISTRADO)
+  timestamp_interaccion                        DateTime                       @default(now()) @db.Timestamptz(6)
+  nodos_historial_nodos_id_nodoTonodos         nodos                          @relation("historial_nodos_id_nodoTonodos", fields: [id_nodo], references: [id_nodo], onUpdate: NoAction, map: "fk_historial_nodo")
+  nodos_historial_nodos_id_nodo_destinoTonodos nodos?                         @relation("historial_nodos_id_nodo_destinoTonodos", fields: [id_nodo_destino], references: [id_nodo], onDelete: Restrict, onUpdate: NoAction, map: "fk_historial_nodo_destino")
+  sesiones                                     chat_sesiones                  @relation(fields: [id_sesion], references: [id_sesion], onDelete: Cascade, onUpdate: NoAction, map: "fk_historial_sesion")
+  usuarios                                     usuarios                       @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_historial_usuario")
+
+  @@index([id_sesion, timestamp_interaccion], map: "ix_historial_sesion")
+  @@schema("chat")
+}
+
+model interacciones {
+  id_interaccion        String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_sesion             String                     @db.Uuid
+  id_nodo               String                     @db.Uuid
+  timestamp_interaccion DateTime                   @default(now()) @db.Timestamptz(6)
+  estado_sincronizacion estado_sincronizacion_enum @default(SINCRONIZADO)
+  fecha_creacion        DateTime                   @default(now()) @db.Timestamptz(6)
+  nodos                 nodos                      @relation(fields: [id_nodo], references: [id_nodo], onUpdate: NoAction, map: "fk_interaccion_nodo")
+  sesiones              chat_sesiones              @relation(fields: [id_sesion], references: [id_sesion], onDelete: Cascade, onUpdate: NoAction, map: "fk_interaccion_sesion")
+  respuestas            respuestas[]
+
+  @@index([id_sesion, timestamp_interaccion], map: "ix_interacciones_sesion_tiempo")
+  @@schema("chat")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model nodos {
+  id_nodo                                                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_flujo                                               String             @unique(map: "uq_nodo_inicial_por_flujo", where: raw("(es_nodo_inicial = true)")) @db.Uuid
+  id_tipo_nodo                                           String             @db.Uuid
+  contenido                                              Json
+  es_nodo_inicial                                        Boolean            @default(false)
+  orden                                                  Int?
+  id_contenido_cronograma                                String?            @db.Uuid
+  creado_por                                             String             @db.Uuid
+  fecha_creacion                                         DateTime           @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion                                    DateTime           @default(now()) @db.Timestamptz(6)
+  historial_nodos_historial_nodos_id_nodoTonodos         historial_nodos[]  @relation("historial_nodos_id_nodoTonodos")
+  historial_nodos_historial_nodos_id_nodo_destinoTonodos historial_nodos[]  @relation("historial_nodos_id_nodo_destinoTonodos")
+  interacciones                                          interacciones[]
+  contenidos                                             contenidos?        @relation(fields: [id_contenido_cronograma], references: [id_contenido], onUpdate: NoAction, map: "fk_nodo_contenido_cronograma")
+  usuarios                                               usuarios           @relation(fields: [creado_por], references: [id_usuario], onUpdate: NoAction, map: "fk_nodo_creado_por")
+  flujo_conversacion                                     flujo_conversacion @relation(fields: [id_flujo], references: [id_flujo], onDelete: Cascade, onUpdate: NoAction, map: "fk_nodo_flujo")
+  tipo_nodo                                              tipo_nodo          @relation(fields: [id_tipo_nodo], references: [id_tipo_nodo], onUpdate: NoAction, map: "fk_nodo_tipo")
+  punto_control                                          punto_control[]
+  reglas_nodos_reglas_nodos_id_nodo_destinoTonodos       reglas_nodos[]     @relation("reglas_nodos_id_nodo_destinoTonodos")
+  reglas_nodos_reglas_nodos_id_nodo_origenTonodos        reglas_nodos[]     @relation("reglas_nodos_id_nodo_origenTonodos")
+  respuestas                                             respuestas[]
+  sesiones                                               chat_sesiones[]
+
+  @@schema("chat")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model perfil_clinico {
+  id_usuario                String                 @id @db.Uuid
+  tipo_dependencia          tipo_dependencia_enum?
+  tipo_craving              tipo_craving_enum?
+  fecha_captura_dependencia DateTime?              @db.Timestamptz(6)
+  fecha_captura_craving     DateTime?              @db.Timestamptz(6)
+  perfil_completo           Boolean?               @default(dbgenerated("((tipo_dependencia IS NOT NULL) AND (tipo_craving IS NOT NULL))"))
+  fecha_actualizacion       DateTime               @default(now()) @db.Timestamptz(6)
+  exportaciones             exportaciones[]
+  usuarios                  usuarios               @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_perfil_usuario")
+
+  @@schema("chat")
+}
+
+model punto_control {
+  id_punto_control       String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_nodo                String                    @db.Uuid
+  id_usuario_responsable String                    @db.Uuid
+  tipo_control           String                    @db.VarChar(50)
+  estado                 estado_punto_control_enum @default(PENDIENTE)
+  observaciones          String?
+  fecha_creacion         DateTime                  @default(now()) @db.Timestamptz(6)
+  fecha_resolucion       DateTime?                 @db.Timestamptz(6)
+  nodos                  nodos                     @relation(fields: [id_nodo], references: [id_nodo], onDelete: Cascade, onUpdate: NoAction, map: "fk_punto_control_nodo")
+  usuarios               usuarios                  @relation(fields: [id_usuario_responsable], references: [id_usuario], onUpdate: NoAction, map: "fk_punto_control_usuario")
+
+  @@schema("chat")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model reglas_nodos {
+  id_regla                                  String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_flujo                                  String                  @db.Uuid
+  id_nodo_origen                            String                  @db.Uuid
+  id_nodo_destino                           String                  @db.Uuid
+  id_regla_validacion                       String                  @db.Uuid
+  operador_condicion                        operador_condicion_enum
+  valor_condicion                           Json
+  orden_evaluacion                          Int
+  fecha_creacion                            DateTime                @default(now()) @db.Timestamptz(6)
+  flujo_conversacion                        flujo_conversacion      @relation(fields: [id_flujo], references: [id_flujo], onDelete: Cascade, onUpdate: NoAction, map: "fk_regla_flujo")
+  nodos_reglas_nodos_id_nodo_destinoTonodos nodos                   @relation("reglas_nodos_id_nodo_destinoTonodos", fields: [id_nodo_destino], references: [id_nodo], onUpdate: NoAction, map: "fk_regla_nodo_destino")
+  nodos_reglas_nodos_id_nodo_origenTonodos  nodos                   @relation("reglas_nodos_id_nodo_origenTonodos", fields: [id_nodo_origen], references: [id_nodo], onDelete: Cascade, onUpdate: NoAction, map: "fk_regla_nodo_origen")
+  reglas_validaciones                       reglas_validaciones     @relation(fields: [id_regla_validacion], references: [id_regla_validacion], onUpdate: NoAction, map: "fk_regla_validacion")
+
+  @@unique([id_nodo_origen, orden_evaluacion], map: "uq_regla_orden_por_nodo")
+  @@schema("chat")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reglas_validaciones {
+  id_regla_validacion String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipo_dato           tipo_dato_validacion_enum
+  obligatorio         Boolean                   @default(true)
+  valor_min           Decimal?                  @db.Decimal
+  valor_max           Decimal?                  @db.Decimal
+  formato_regex       String?
+  valores_permitidos  String[]
+  mensaje_error       String
+  reglas_nodos        reglas_nodos[]
+
+  @@schema("chat")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model respuestas {
+  id_respuesta           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_interaccion         String              @db.Uuid
+  id_nodo                String              @db.Uuid
+  id_tipo_entrada        String              @db.Uuid
+  id_tipo_respuesta      String?             @db.Uuid
+  id_estado_conectividad String              @db.Uuid
+  valor_respuesta        Json
+  es_valida              Boolean             @default(true)
+  fecha_captura          DateTime            @default(now()) @db.Timestamptz(6)
+  estado_conectividad    estado_conectividad @relation(fields: [id_estado_conectividad], references: [id_estado_conectividad], onUpdate: NoAction, map: "fk_respuesta_conectividad")
+  interacciones          interacciones       @relation(fields: [id_interaccion], references: [id_interaccion], onDelete: Cascade, onUpdate: NoAction, map: "fk_respuesta_interaccion")
+  nodos                  nodos               @relation(fields: [id_nodo], references: [id_nodo], onUpdate: NoAction, map: "fk_respuesta_nodo")
+  tipo_entrada           tipo_entrada        @relation(fields: [id_tipo_entrada], references: [id_tipo_entrada], onUpdate: NoAction, map: "fk_respuesta_tipo_entrada")
+  tipo_respuesta         tipo_respuesta?     @relation(fields: [id_tipo_respuesta], references: [id_tipo_respuesta], onDelete: Restrict, onUpdate: NoAction, map: "fk_respuesta_tipo_respuesta")
+
+  @@schema("chat")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model chat_sesiones {
+  id_sesion                String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_usuario               String                     @db.Uuid
+  id_flujo_conversacional  String                     @db.Uuid
+  version_arbol_utilizada  Int
+  modalidad_activa         modalidad_enum
+  tipo_dependencia         tipo_dependencia_enum?
+  tipo_craving             tipo_craving_enum?
+  id_nodo_actual           String                     @db.Uuid
+  fecha_inicio             DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_ultima_interaccion DateTime                   @default(now()) @db.Timestamptz(6)
+  estado_sincronizacion    estado_sincronizacion_enum @default(SINCRONIZADO)
+  estado_sesiones          estado_sesiones?
+  historial_nodos          historial_nodos[]
+  interacciones            interacciones[]
+  flujo_conversacion       flujo_conversacion         @relation(fields: [id_flujo_conversacional], references: [id_flujo], onUpdate: NoAction, map: "fk_sesion_flujo")
+  nodos                    nodos                      @relation(fields: [id_nodo_actual], references: [id_nodo], onUpdate: NoAction, map: "fk_sesion_nodo_actual")
+  usuarios                 usuarios                   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_sesion_usuario")
+  sincronizaciones         sincronizaciones[]
+
+  @@index([id_usuario], map: "ix_sesiones_usuario")
+  @@map("sesiones")
+  @@schema("chat")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sincronizaciones {
+  id_sincronizacion              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_usuario                     String               @db.Uuid
+  id_sesion                      String?              @db.Uuid
+  id_unidad_temporal             String               @db.Uuid
+  version_arbol_local            Int?
+  version_arbol_servidor         Int
+  estado_precarga                estado_precarga_enum @default(PENDIENTE)
+  limite_almacenamiento_local    Int?
+  espacio_disponible_dispositivo Int?
+  timestamp_precarga             DateTime             @default(now()) @db.Timestamptz(6)
+  sesiones                       chat_sesiones?       @relation(fields: [id_sesion], references: [id_sesion], onUpdate: NoAction, map: "fk_sync_sesion")
+  unidades_temporales            unidades_temporales  @relation(fields: [id_unidad_temporal], references: [id_unidad_temporal], onDelete: Cascade, onUpdate: NoAction, map: "fk_sync_unidad_temporal")
+  usuarios                       usuarios             @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_sync_usuario")
+
+  @@schema("chat")
+}
+
+model tipo_entrada {
+  id_tipo_entrada String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre          String       @unique @db.VarChar(50)
+  respuestas      respuestas[]
+
+  @@schema("chat")
+}
+
+model tipo_nodo {
+  id_tipo_nodo String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre       String  @unique @db.VarChar(50)
+  nodos        nodos[]
+
+  @@schema("chat")
+}
+
+model tipo_respuesta {
+  id_tipo_respuesta String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo            String       @unique @db.VarChar(50)
+  descripcion       String?
+  respuestas        respuestas[]
+
+  @@schema("chat")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tipo_terapia {
+  id_tipo_terapia                                           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_usuario                                                String         @unique(map: "uq_tipoterapia_vigente_por_usuario", where: raw("(fecha_vigencia_hasta IS NULL)")) @db.Uuid
+  id_programa                                               Int
+  modalidad                                                 modalidad_enum
+  fecha_vigencia_desde                                      DateTime       @default(now()) @db.Timestamptz(6)
+  fecha_vigencia_hasta                                      DateTime?      @db.Timestamptz(6)
+  administrador_responsable                                 String?        @db.Uuid
+  usuarios_tipo_terapia_administrador_responsableTousuarios usuarios?      @relation("tipo_terapia_administrador_responsableTousuarios", fields: [administrador_responsable], references: [id_usuario], onUpdate: NoAction, map: "fk_tipoterapia_admin")
+  usuarios_tipo_terapia_id_usuarioTousuarios                usuarios       @relation("tipo_terapia_id_usuarioTousuarios", fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_tipoterapia_usuario")
+
+  @@schema("chat")
 }
 
 enum estado_aplicacion_enum {
@@ -427,4 +732,104 @@ enum tipo_recurso_enum {
   DOCUMENTO
 
   @@schema("cronograma")
+}
+
+enum estado_exportacion_enum {
+  PENDIENTE
+  GENERADA
+  ERROR
+
+  @@schema("chat")
+}
+
+enum estado_flujo_enum {
+  BORRADOR
+  PUBLICADO
+  ARCHIVADO
+
+  @@schema("chat")
+}
+
+enum estado_precarga_enum {
+  PENDIENTE
+  COMPLETA
+  PARCIAL
+  FALLIDA
+
+  @@schema("chat")
+}
+
+enum estado_punto_control_enum {
+  PENDIENTE
+  RESUELTO
+
+  @@schema("chat")
+}
+
+enum estado_registro_historial_enum {
+  REGISTRADO
+  SESION_INTERRUMPIDA
+
+  @@schema("chat")
+}
+
+enum estado_sesion_enum {
+  ACTIVA
+  PAUSADA
+  COMPLETADA
+
+  @@schema("chat")
+}
+
+enum estado_sincronizacion_enum {
+  SINCRONIZADO
+  PENDIENTE_SINCRONIZACION
+  ERROR_SINCRONIZACION
+
+  @@schema("chat")
+}
+
+enum modalidad_enum {
+  GRUPAL
+  PERSONALIZADA
+
+  @@schema("chat")
+}
+
+enum motivo_pausa_enum {
+  MANUAL
+  SOS_CRAVING
+
+  @@schema("chat")
+}
+
+enum operador_condicion_enum {
+  IGUALDAD
+  RANGO
+  CATEGORIA
+
+  @@schema("chat")
+}
+
+enum tipo_craving_enum {
+  POSITIVO
+  NEGATIVO
+
+  @@schema("chat")
+}
+
+enum tipo_dato_validacion_enum {
+  TEXTO
+  NUMERICO
+  FECHA
+  SELECCION
+
+  @@schema("chat")
+}
+
+enum tipo_dependencia_enum {
+  ABSTINENCIA_FISICA
+  TOLERANCIA
+
+  @@schema("chat")
 }
