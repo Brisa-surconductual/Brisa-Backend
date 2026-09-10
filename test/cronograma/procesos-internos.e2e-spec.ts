@@ -7,16 +7,20 @@ import {
 import { AutorizarConsumoEventoContenidoService } from '../../src/modules/cronograma/application/service/autorizar-consumo-evento-contenido.service';
 import { InicializarCronogramaUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/inicializar-cronograma-usuario.use-case';
 import { PublicarEventosCambioEstadoUseCase } from '../../src/modules/cronograma/application/use-cases/contenido/publicar-eventos-cambio-estado.use-case';
+import { CalcularUbicacionTemporalUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/calcular-ubicacion-temporal-usuario.use-case';
 import { CondicionesInicializacionUsuario } from '../../src/modules/cronograma/domain/entities/condiciones-inicializacion-usuario.entity';
 import { ContenidoEstadoPendiente } from '../../src/modules/cronograma/domain/entities/contenido-estado-pendiente.entity';
 import { Cronograma } from '../../src/modules/cronograma/domain/entities/cronograma.entity';
 import { EventoContenido } from '../../src/modules/cronograma/domain/entities/evento-contenido.entity';
+import { UbicacionTemporalUsuario } from '../../src/modules/cronograma/domain/entities/ubicacion-temporal-usuario.entity';
+import { FechaInicioUsuarioNoRegistradaException } from '../../src/modules/cronograma/domain/exeption/cronograma/fecha-inicio-usuario-no-registrada.exception';
 import { EstadoContenido } from '../../src/modules/cronograma/domain/enums/estado-contenido.enum';
 import { EstadoCronograma } from '../../src/modules/cronograma/domain/enums/estado-cronograma.enum';
 import { CondicionesInicializacionUsuarioRepository } from '../../src/modules/cronograma/domain/repositories/condiciones-inicializacion-usuario.repository';
 import { CronogramaUsuarioRepository } from '../../src/modules/cronograma/domain/repositories/cronograma-usuario.repository';
 import { CronogramaRepository } from '../../src/modules/cronograma/domain/repositories/cronograma.repository';
 import { EventoContenidoRepository } from '../../src/modules/cronograma/domain/repositories/evento-contenido.repository';
+import { UbicacionTemporalUsuarioRepository } from '../../src/modules/cronograma/domain/repositories/ubicacion-temporal-usuario.repository';
 import { PublicarEventosContenidoCron } from '../../src/modules/cronograma/infrastructure/cron/publicar-eventos-contenido.cron';
 import { NestEventoContenidoPublisher } from '../../src/modules/cronograma/infrastructure/messaging/nest-evento-contenido.publisher';
 import { EstadoRegistro } from '../../src/modules/usuarios/domain/enums/estado-registro.enum';
@@ -159,6 +163,78 @@ describe('Cronograma - procesos internos (e2e)', () => {
       expect.any(Date),
     );
     expect(eventoRepository.registrarFalloEntrega).not.toHaveBeenCalled();
+    await modulo.close();
+  });
+
+  it('RF-22 entrega a los módulos la ubicación calculada exclusivamente por PostgreSQL', async () => {
+    const fechaCalculo = new Date('2026-09-15T12:00:00.000Z');
+    const ubicacionRepository = {
+      calcular: jest
+        .fn()
+        .mockResolvedValue(
+          new UbicacionTemporalUsuario(
+            idUsuario,
+            '00000000-0000-4000-8000-000000000007',
+            idCronograma,
+            '00000000-0000-4000-8000-000000000008',
+            'Semana 2',
+            2,
+            fechaCalculo,
+            604800,
+            false,
+            null,
+          ),
+        ),
+    };
+    const modulo = await Test.createTestingModule({
+      providers: [
+        CalcularUbicacionTemporalUsuarioUseCase,
+        {
+          provide: UbicacionTemporalUsuarioRepository,
+          useValue: ubicacionRepository,
+        },
+      ],
+    }).compile();
+
+    const resultado = await modulo
+      .get(CalcularUbicacionTemporalUsuarioUseCase)
+      .execute(idUsuario, fechaCalculo);
+
+    expect(resultado).toEqual(
+      expect.objectContaining({
+        id_unidad_temporal: '00000000-0000-4000-8000-000000000008',
+        tiempo_efectivo_transcurrido_segundos: 604800,
+        cronograma_finalizado: false,
+      }),
+    );
+    expect(ubicacionRepository.calcular).toHaveBeenCalledWith(
+      idUsuario,
+      fechaCalculo,
+    );
+    await modulo.close();
+  });
+
+  it('RF-22 conserva como HTTP 422 la ausencia de fecha de inicio detectada por PostgreSQL', async () => {
+    const ubicacionRepository = {
+      calcular: jest
+        .fn()
+        .mockRejectedValue(new FechaInicioUsuarioNoRegistradaException()),
+    };
+    const modulo = await Test.createTestingModule({
+      providers: [
+        CalcularUbicacionTemporalUsuarioUseCase,
+        {
+          provide: UbicacionTemporalUsuarioRepository,
+          useValue: ubicacionRepository,
+        },
+      ],
+    }).compile();
+
+    const operacion = modulo
+      .get(CalcularUbicacionTemporalUsuarioUseCase)
+      .execute(idUsuario);
+
+    await expect(operacion).rejects.toMatchObject({ status: 422 });
     await modulo.close();
   });
 });

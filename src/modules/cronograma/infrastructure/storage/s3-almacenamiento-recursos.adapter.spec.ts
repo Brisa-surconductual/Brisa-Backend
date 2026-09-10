@@ -78,7 +78,7 @@ describe('S3AlmacenamientoRecursosAdapter', () => {
     jest.spyOn(s3, 'send').mockRejectedValue({
       name: 'NotFound',
       $metadata: { httpStatusCode: 404 },
-    });
+    } as never);
 
     await expect(
       adapter.obtenerMetadatos({

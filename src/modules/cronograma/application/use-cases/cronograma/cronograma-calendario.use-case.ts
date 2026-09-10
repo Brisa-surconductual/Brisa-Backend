@@ -6,7 +6,7 @@ import { ObtenerContenidosUnidadDtoResponse } from '../../dto/contenido/obtener-
 import { UnidadTemporalNoEncontradaException } from '../../../domain/exeption/unidades-temporales/unidad-temporal-no-encotrada.exception';
 import { UnidadTemporalNoPerteneceACronogramaException } from '../../../domain/exeption/unidades-temporales/unidad-temporal-no-pertence-cronograma.expetion';
 import {CronogramaNoEncontradoException} from "../../../domain/exeption/cronograma/cronograma-no-encontrado.exeption";
-import { CronogramaRepository } from 'src/modules/cronograma/domain/repositories/cronograma.repository';
+import { CronogramaRepository } from '../../../domain/repositories/cronograma.repository';
 import {UnidadTemporal} from "../../../domain/entities/unidad-temporal.entity";
 
 @Injectable()

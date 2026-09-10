@@ -1,6 +1,6 @@
 import { IsEnum, IsString } from "class-validator";
 import {ContenidoDetalleResponseDto} from "../contenido/contenido-detalle.dto-response";
-import { EstadoContenido } from "src/modules/cronograma/domain/enums/estado-contenido.enum";
+import { EstadoContenido } from "../../../domain/enums/estado-contenido.enum";
 import {EstadoCronograma} from "../../../domain/enums/estado-cronograma.enum";
 
 

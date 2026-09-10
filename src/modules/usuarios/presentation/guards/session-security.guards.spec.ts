@@ -42,6 +42,7 @@ describe('Seguridad HTTP de sesiones PWA', () => {
       buscarPorCorreo: jest.fn(),
       buscarPorId: jest.fn(),
       actualizar: jest.fn(),
+      crearAdministrador: jest.fn(),
     };
     sessionConfig = {
       obtenerLimiteInactividadMinutos: jest.fn().mockReturnValue(15),
@@ -51,6 +52,7 @@ describe('Seguridad HTTP de sesiones PWA', () => {
       obtenerNombreCookie: jest.fn().mockReturnValue('brisa_session'),
       esSegura: jest.fn().mockReturnValue(false),
       obtenerSameSite: jest.fn().mockReturnValue('lax'),
+      obtenerOpcionesCookie: jest.fn().mockReturnValue({}),
     };
     tokenHasher = {
       hash: jest.fn(async (valor: string) => `hash-${valor}`),

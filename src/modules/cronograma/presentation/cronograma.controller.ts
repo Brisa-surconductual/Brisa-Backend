@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { CreacionUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/crear-unidad-temporal.use-case';
 import { UnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-request';
 import { UnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-response';
@@ -34,16 +45,24 @@ import { ModuloDestinoDtoResponse } from '../application/dto/modulosDestino/modu
 import { ReordenarRecursosContenidoDtoRequest } from '../application/dto/recursoContenido/reordenar-recursos-contenido.dto-request';
 import { ReordenarRecursosContenidoDtoResponse } from '../application/dto/recursoContenido/reordenar-recursos-contenido.dto-response';
 import { ReordenarRecursosContenidoUseCase } from '../application/use-cases/recurso-contenido/reordenar-recursos-contenido.use-case';
-import {ActualizarUnidadTemporalUseCase} from "../application/use-cases/unidad-temporal/actualizar-unidad-temporal.use-case";
-import {ActualizarUnidadTemporalDtoRequest} from "../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-request";
-import {ActualizarUnidadTemporalDtoResponse} from "../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-response";
+import { ActualizarUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/actualizar-unidad-temporal.use-case';
+import { ActualizarUnidadTemporalDtoRequest } from '../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-request';
+import { ActualizarUnidadTemporalDtoResponse } from '../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-response';
 import { EliminarAsociacionContenidoUnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-response';
 import { EliminarAsociacionContenidoUnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/eliminar-asociacion-contenido-unidad-temporal.dto-request';
 import { EliminarAsociacionContenidoUnidadTemporalUseCase } from '../application/use-cases/asociasion-unidad-temporal-contenido/eliminar-asosiacion-contenido-unidad-temporal.use-case';
+import { RegistrarPausaAdministrativaDtoRequest } from '../application/dto/pausaAdministrativa/registrar-pausa-administrativa.dto-request';
+import { RegistrarPausaAdministrativaDtoResponse } from '../application/dto/pausaAdministrativa/registrar-pausa-administrativa.dto-response';
+import { RegistrarPausaAdministrativaUseCase } from '../application/use-cases/pausa-administrativa/registrar-pausa-administrativa.use-case';
+import type { AuthenticatedSessionRequest } from '../../usuarios/presentation/http/authenticated-session-request';
+import { ConsultarPausasAdministrativasUsuarioUseCase } from '../application/use-cases/pausa-administrativa/consultar-pausas-administrativas-usuario.use-case';
+import { PausaAdministrativaDtoResponse } from '../application/dto/pausaAdministrativa/pausa-administrativa.dto-response';
+import { AnularPausaAdministrativaUseCase } from '../application/use-cases/pausa-administrativa/anular-pausa-administrativa.use-case';
+import { AnularPausaAdministrativaDtoResponse } from '../application/dto/pausaAdministrativa/anular-pausa-administrativa.dto-response';
 import { EliminarUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/eliminar-unidad-temporal.use-case';
 import { EliminarUnidadTemporalDtoRequest } from '../application/dto/unidadTemporal/eliminar-unidad-temporal.dto.request';
 import { EliminarUnidadTemporalDtoResponse } from '../application/dto/unidadTemporal/eliminar-unidad-temporal.dto.response';
-import {CronogramaCalendarioUseCase} from '../application/use-cases/cronograma/cronograma-calendario.use-case';
+import { CronogramaCalendarioUseCase } from '../application/use-cases/cronograma/cronograma-calendario.use-case';
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -60,8 +79,11 @@ export class CronogramaController {
     private readonly actualizarDisponibilidadContenido: ActualizarDisponibilidadContenidoUseCase,
     private readonly actualizarUnidadTemporalUseCase: ActualizarUnidadTemporalUseCase,
     private readonly eliminarAsociacionContenidoUnidadTemporalUseCase: EliminarAsociacionContenidoUnidadTemporalUseCase,
-    private readonly eliminarUnidadTemporalUseCase: EliminarUnidadTemporalUseCase, 
-    private readonly cronogramaCalendarioUseCase: CronogramaCalendarioUseCase
+    private readonly registrarPausaAdministrativaUseCase: RegistrarPausaAdministrativaUseCase,
+    private readonly consultarPausasAdministrativasUsuarioUseCase: ConsultarPausasAdministrativasUsuarioUseCase,
+    private readonly anularPausaAdministrativaUseCase: AnularPausaAdministrativaUseCase,
+    private readonly eliminarUnidadTemporalUseCase: EliminarUnidadTemporalUseCase,
+    private readonly cronogramaCalendarioUseCase: CronogramaCalendarioUseCase,
   ) {}
 
   @Post('/crear/unidad-temporal')
@@ -180,22 +202,62 @@ export class CronogramaController {
     return this.eliminarAsociacionContenidoUnidadTemporalUseCase.execute(dto);
   }
 
+  @Post('/usuarios/:id_usuario/pausas-administrativas')
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async registrarPausaAdministrativa(
+    @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,
+    @Body() dto: RegistrarPausaAdministrativaDtoRequest,
+    @Req() request: AuthenticatedSessionRequest,
+  ): Promise<RegistrarPausaAdministrativaDtoResponse> {
+    return this.registrarPausaAdministrativaUseCase.execute(
+      idUsuario,
+      request.autenticacion.usuario.id_usuario,
+      dto,
+    );
+  }
+
+  @Get('/usuarios/:id_usuario/pausas-administrativas')
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
+  async consultarPausasAdministrativas(
+    @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,
+  ): Promise<PausaAdministrativaDtoResponse[]> {
+    return this.consultarPausasAdministrativasUsuarioUseCase.execute(idUsuario);
+  }
+
+  @Patch('/usuarios/:id_usuario/pausas-administrativas/:id_pausa/anular')
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async anularPausaAdministrativa(
+    @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,
+    @Param('id_pausa', new ParseUUIDPipe()) idPausa: string,
+  ): Promise<AnularPausaAdministrativaDtoResponse> {
+    return this.anularPausaAdministrativaUseCase.execute(idUsuario, idPausa);
+  }
+
   @Delete('/eliminar-unidad-temporal')
   @Roles(Rol.ADMINISTRATIVO)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
-  async eliminarUnidadTemporal( @Body() dto: EliminarUnidadTemporalDtoRequest): Promise<EliminarUnidadTemporalDtoResponse> {
+  async eliminarUnidadTemporal(
+    @Body() dto: EliminarUnidadTemporalDtoRequest,
+  ): Promise<EliminarUnidadTemporalDtoResponse> {
     return this.eliminarUnidadTemporalUseCase.execute(dto);
   }
 
   @Get('/:idCronograma/unidades-temporales/:idUnidadTemporal/contenidos')
   @Roles(Rol.ADMINISTRATIVO)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
-    async obtenerContenidos( @Param('idCronograma') idCronograma: string, @Param('idUnidadTemporal') idUnidadTemporal: string ) {
-        return this.cronogramaCalendarioUseCase.execute({
-            idCronograma,
-            idUnidadTemporal
-        });
-    }
-
-
+  async obtenerContenidos(
+    @Param('idCronograma') idCronograma: string,
+    @Param('idUnidadTemporal') idUnidadTemporal: string,
+  ) {
+    return this.cronogramaCalendarioUseCase.execute({
+      idCronograma,
+      idUnidadTemporal,
+    });
+  }
 }

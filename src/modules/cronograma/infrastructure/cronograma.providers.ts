@@ -25,7 +25,18 @@ import { CalculoEstadoContenidoPort } from '../application/ports/calculo-estado-
 import { PrismaCalculoEstadoContenidoAdapter } from './persistence/prisma-calculo-estado-contenido.repository';
 import { ModuloSistemaRepository } from '../domain/repositories/modulo-sistema.repository';
 import { PrismaModuloSistemaRepository } from './persistence/prisma-modulo-sistema.repository';
-
+import { PausaAdministrativaRepository } from '../domain/repositories/pausa-administrativa.repository';
+import { PrismaPausaAdministrativaRepository } from './persistence/prisma-pausa-administrativa.repository';
+import { UbicacionTemporalUsuarioRepository } from '../domain/repositories/ubicacion-temporal-usuario.repository';
+import { PrismaUbicacionTemporalUsuarioRepository } from './persistence/prisma-ubicacion-temporal-usuario.repository';
+import { ContenidoVigenteUsuarioRepository } from '../domain/repositories/contenido-vigente-usuario.repository';
+import { PrismaContenidoVigenteUsuarioRepository } from './persistence/prisma-contenido-vigente-usuario.repository';
+import { ModuloApiKeyHasherPort } from '../application/ports/modulo-api-key-hasher.port';
+import { Sha256ModuloApiKeyHasher } from './security/sha256-modulo-api-key-hasher';
+import { ModuloInternoCredentialsConfigPort } from '../application/ports/modulo-interno-credentials-config.port';
+import { EnvironmentModuloInternoCredentialsConfig } from './config/environment-modulo-interno-credentials.config';
+import { InformacionTemporalUsuarioRepository } from '../domain/repositories/informacion-temporal-usuario.repository';
+import { PrismaInformacionTemporalUsuarioRepository } from './persistence/prisma-informacion-temporal-usuario.repository';
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -80,6 +91,31 @@ export const CronogramaInfrastructureProviders = [
   {
     provide: CalculoEstadoContenidoPort,
     useClass: PrismaCalculoEstadoContenidoAdapter,
+  },
+  {
+    provide: PausaAdministrativaRepository,
+    useClass: PrismaPausaAdministrativaRepository,
+  },
+  {
+    provide: UbicacionTemporalUsuarioRepository,
+    useClass: PrismaUbicacionTemporalUsuarioRepository,
+  },
+  {
+    provide: ContenidoVigenteUsuarioRepository,
+    useClass: PrismaContenidoVigenteUsuarioRepository,
+  },
+  {
+    provide: InformacionTemporalUsuarioRepository,
+    useClass: PrismaInformacionTemporalUsuarioRepository,
+  },
+  EnvironmentModuloInternoCredentialsConfig,
+  {
+    provide: ModuloInternoCredentialsConfigPort,
+    useExisting: EnvironmentModuloInternoCredentialsConfig,
+  },
+  {
+    provide: ModuloApiKeyHasherPort,
+    useClass: Sha256ModuloApiKeyHasher,
   },
 
   InicializarCronogramasPendientesCron,

@@ -35,6 +35,7 @@
   - [6. Generar el cliente de Prisma](#6-generar-el-cliente-de-prisma)
   - [7. Ejecutar el proyecto](#7-ejecutar-el-proyecto)
 - [Recursos multimedia con S3](#recursos-multimedia-con-s3)
+- [Autenticación de módulos internos](#autenticación-de-módulos-internos)
 - [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)
 - [Arquitectura](#arquitectura)
 - [Organización del proyecto](#organización-del-proyecto)
@@ -112,6 +113,11 @@ AWS_SECRET_ACCESS_KEY=
 AWS_SESSION_TOKEN=
 AWS_S3_UPLOAD_EXPIRATION_SECONDS=300
 AWS_S3_RESOURCE_PREFIX=cronograma/recursos
+
+INTERNAL_MODULE_API_KEY_HASH_CHAT=
+INTERNAL_MODULE_API_KEY_HASH_SEGUIM=
+INTERNAL_MODULE_API_KEY_HASH_GAMIF=
+INTERNAL_MODULE_API_KEY_HASH_NOTIF=
 ```
 
 > ⚠️ **Importante:** `DATABASE_URL` y `SHADOW_DATABASE_URL` son las únicas variables que Prisma necesita para trabajar con la base de datos y las migraciones. Toda la configuración adicional de migraciones (datasource, shadow database, etc.) vive en `prisma.config.ts`, ya versionado en el repositorio — no hay que tocarlo para levantar el proyecto, solo completar estas dos URLs.
@@ -220,6 +226,63 @@ El usuario o rol IAM de la aplicación necesita solamente `s3:PutObject` y
 `arn:aws:s3:::<bucket>/cronograma/recursos/*`. En despliegue se recomienda un rol
 IAM; las variables `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY` pueden omitirse
 cuando el entorno ya proporciona credenciales mediante dicho rol.
+
+---
+
+## Autenticación de módulos internos
+
+RF-21 y RF-23 exponen únicamente endpoints servidor-a-servidor:
+
+- `GET /cronograma/interno/usuarios/:id_usuario/contenidos-vigentes`
+- `GET /cronograma/interno/usuarios/:id_usuario/informacion-temporal`
+
+Los módulos `CHAT`, `SEGUIM`, `GAMIF` y `NOTIF` deben enviar:
+
+```http
+Authorization: Bearer <api-key-del-modulo>
+X-Module-Code: CHAT
+```
+
+RF-23 acepta opcionalmente `fecha_consulta` en formato ISO 8601 y responde con
+los contratos de RF-22 y RF-21 agrupados bajo campos estables:
+
+```json
+{
+  "ubicacion_temporal": {
+    "id_usuario": "uuid",
+    "id_cronograma_usuario": "uuid",
+    "id_cronograma": "uuid",
+    "id_unidad_temporal": "uuid",
+    "nombre_unidad": "Semana 2",
+    "orden_unidad": 2,
+    "fecha_calculo": "2026-09-15T12:00:00.000Z",
+    "tiempo_efectivo_transcurrido_segundos": 604800,
+    "cronograma_finalizado": false,
+    "mensaje": null
+  },
+  "contenidos_vigentes": []
+}
+```
+
+Aunque no exista contenido vigente, RF-23 retorna HTTP 200 con la ubicación y
+`contenidos_vigentes: []`. El endpoint es de solo lectura y responde con
+`Cache-Control: no-store`.
+
+Cada módulo debe usar una API key aleatoria diferente, de al menos 32
+caracteres. El backend no almacena el valor en texto plano: en `config/.env` se
+configura solamente su SHA-256 mediante la variable correspondiente al código
+del módulo. La API key debe entregarse al módulo por un canal seguro y nunca
+incluirse en el frontend, repositorio o logs.
+
+Para generar una API key y su hash puede ejecutarse localmente:
+
+```bash
+node -e "const {randomBytes,createHash}=require('crypto');const key=randomBytes(32).toString('base64url');console.log('API key:',key);console.log('SHA-256:',createHash('sha256').update(key).digest('hex'))"
+```
+
+El valor `SHA-256` se guarda en la variable de entorno; el valor `API key` se
+configura como secreto únicamente en el módulo consumidor. Si el hash falta o
+es inválido, el acceso queda denegado de forma segura.
 
 ---
 

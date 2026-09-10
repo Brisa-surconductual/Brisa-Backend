@@ -5,6 +5,7 @@ import { ListarModulosDestinoUseCase } from './modulos/listar-modulos-destino.us
 describe('ListarModulosDestinoUseCase (RF-154)', () => {
   it('expone únicamente los datos necesarios para seleccionar el módulo', async () => {
     const repository: jest.Mocked<ModuloSistemaRepository> = {
+      buscarActivoPorCodigo: jest.fn(),
       listarActivos: jest
         .fn()
         .mockResolvedValue([

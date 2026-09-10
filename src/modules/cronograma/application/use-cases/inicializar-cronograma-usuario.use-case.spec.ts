@@ -28,6 +28,7 @@ describe('InicializarCronogramaUsuarioUseCase (RF-17)', () => {
     cronogramaRepository = {
       buscarBaseActiva: jest.fn().mockResolvedValue(cronogramaBaseActivo()),
       existeBaseConfigurado: jest.fn(),
+      buscarPorId: jest.fn(),
     };
     cronogramaUsuarioRepository = {
       buscarPorUsuario: jest.fn().mockResolvedValue(null),

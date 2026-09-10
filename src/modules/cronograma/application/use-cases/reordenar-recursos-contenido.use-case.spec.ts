@@ -23,7 +23,7 @@ describe('ReordenarRecursosContenidoUseCase (RF-153)', () => {
           new Contenido(
             idContenido,
             'Contenido',
-            TipoContenido.MIXTO,
+            TipoContenido.MULTIMEDIA,
             new Date(),
             new Date(),
           ),
