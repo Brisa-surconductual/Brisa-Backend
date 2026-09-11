@@ -27,6 +27,7 @@ import { ConsultarPausasAdministrativasUsuarioUseCase } from './use-cases/pausa-
 import { AnularPausaAdministrativaUseCase } from './use-cases/pausa-administrativa/anular-pausa-administrativa.use-case';
 import { ConsultarInformacionTemporalUsuarioUseCase } from './use-cases/cronograma/consultar-informacion-temporal-usuario.use-case';
 import { ConsultarUbicacionesTemporalesParticipantesUseCase } from './use-cases/cronograma/consultar-ubicaciones-temporales-participantes.use-case';
+import { CatologoContenitosUseCase } from './use-cases/contenido/catalogo-contenitos.use-case';
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -58,4 +59,5 @@ export const CronogramaApplicationProviders = [
   ValidarConsistenciaCronogramaService,
   EliminarUnidadTemporalUseCase,
   CronogramaCalendarioUseCase,
+  CatologoContenitosUseCase,
 ];
