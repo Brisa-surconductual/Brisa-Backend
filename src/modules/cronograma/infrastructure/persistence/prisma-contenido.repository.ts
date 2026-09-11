@@ -9,6 +9,12 @@ import { ContenidoMapper } from '../mappers/contenido.mapper';
 @Injectable()
 export class PrismaContenidoRepository implements ContenidoRepository {
   constructor(private readonly prisma: PrismaService) {}
+  
+  listar(): Promise<Contenido[]> {
+    return this.prisma.contenidos.findMany().then((contenidos) =>
+      contenidos.map((contenido) => ContenidoMapper.toDomain(contenido)),
+    );
+  }
 
   async crear(contenido: Contenido): Promise<Contenido> {
     const creado = await this.prisma.contenidos.create({
