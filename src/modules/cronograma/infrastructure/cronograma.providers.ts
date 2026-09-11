@@ -37,6 +37,8 @@ import { ModuloInternoCredentialsConfigPort } from '../application/ports/modulo-
 import { EnvironmentModuloInternoCredentialsConfig } from './config/environment-modulo-interno-credentials.config';
 import { InformacionTemporalUsuarioRepository } from '../domain/repositories/informacion-temporal-usuario.repository';
 import { PrismaInformacionTemporalUsuarioRepository } from './persistence/prisma-informacion-temporal-usuario.repository';
+import { UbicacionesTemporalesParticipantesRepository } from '../domain/repositories/ubicaciones-temporales-participantes.repository';
+import { PrismaUbicacionesTemporalesParticipantesRepository } from './persistence/prisma-ubicaciones-temporales-participantes.repository';
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -107,6 +109,10 @@ export const CronogramaInfrastructureProviders = [
   {
     provide: InformacionTemporalUsuarioRepository,
     useClass: PrismaInformacionTemporalUsuarioRepository,
+  },
+  {
+    provide: UbicacionesTemporalesParticipantesRepository,
+    useClass: PrismaUbicacionesTemporalesParticipantesRepository,
   },
   EnvironmentModuloInternoCredentialsConfig,
   {
