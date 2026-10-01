@@ -91,6 +91,13 @@ describe('Casos de uso del árbol conversacional (RF-25)', () => {
   );
   const repository: jest.Mocked<ArbolConversacionalRepository> = {
     crearFlujoGrupal: jest.fn(),
+    crearFlujoPersonalizado: jest.fn(),
+    clonarVersionPersonalizada: jest.fn(),
+    listarFlujosPersonalizados: jest.fn(),
+    buscarPublicadoPersonalizado: jest.fn(),
+    listarAuditoriaArbol: jest.fn(),
+    publicarPersonalizado: jest.fn(),
+    archivarPersonalizado: jest.fn(),
     obtenerArbol: jest.fn(),
     listarTiposNodo: jest.fn(),
     crearNodo: jest.fn(),
@@ -140,71 +147,86 @@ describe('Casos de uso del árbol conversacional (RF-25)', () => {
   it('edita un nodo válido dentro del flujo indicado', async () => {
     const useCase = new ActualizarNodoConversacionalUseCase(repository);
 
-    await useCase.execute(idFlujo, idNodoB, {
-      contenido: { texto: 'Pregunta actualizada' },
-      orden: 3,
-    });
+    await useCase.execute(
+      idFlujo,
+      idNodoB,
+      {
+        contenido: { texto: 'Pregunta actualizada' },
+        orden: 3,
+      },
+      idAdministrador,
+    );
 
     expect(repository.actualizarNodo.mock.calls[0][0]).toEqual({
       idFlujo,
       idNodo: idNodoB,
       contenido: { texto: 'Pregunta actualizada' },
       orden: 3,
+      actualizadoPor: idAdministrador,
     });
   });
 
   it('rechaza una edición de nodo sin cambios', () => {
     const useCase = new ActualizarNodoConversacionalUseCase(repository);
 
-    expect(() => useCase.execute(idFlujo, idNodoB, {})).toThrow(
-      SolicitudActualizacionVaciaException,
-    );
+    expect(() =>
+      useCase.execute(idFlujo, idNodoB, {}, idAdministrador),
+    ).toThrow(SolicitudActualizacionVaciaException);
     expect(repository.actualizarNodo.mock.calls).toHaveLength(0);
   });
 
   it('crea una transición junto con su regla válida', async () => {
     const useCase = new CrearTransicionConversacionalUseCase(repository);
 
-    await useCase.execute(idFlujo, {
-      id_nodo_origen: idNodoA,
-      id_nodo_destino: idNodoB,
-      operador_condicion: OperadorCondicion.IGUALDAD,
-      valor_condicion: true,
-      orden_evaluacion: 1,
-      regla_validacion: {
-        tipo_dato: TipoDatoValidacion.TEXTO,
-        obligatorio: true,
-        valores_permitidos: [],
-        mensaje_error: 'Respuesta requerida',
+    await useCase.execute(
+      idFlujo,
+      {
+        id_nodo_origen: idNodoA,
+        id_nodo_destino: idNodoB,
+        operador_condicion: OperadorCondicion.IGUALDAD,
+        valor_condicion: true,
+        orden_evaluacion: 1,
+        regla_validacion: {
+          tipo_dato: TipoDatoValidacion.TEXTO,
+          obligatorio: true,
+          valores_permitidos: [],
+          mensaje_error: 'Respuesta requerida',
+        },
       },
-    });
+      idAdministrador,
+    );
 
     const command = repository.crearTransicion.mock.calls[0][0];
     expect(command.idFlujo).toBe(idFlujo);
     expect(command.idNodoOrigen).toBe(idNodoA);
     expect(command.idNodoDestino).toBe(idNodoB);
     expect(command.reglaValidacion.tipoDato).toBe(TipoDatoValidacion.TEXTO);
+    expect(command.creadoPor).toBe(idAdministrador);
   });
 
   it('rechaza una regla inválida antes de persistir la transición', () => {
     const useCase = new CrearTransicionConversacionalUseCase(repository);
 
     expect(() =>
-      useCase.execute(idFlujo, {
-        id_nodo_origen: idNodoA,
-        id_nodo_destino: idNodoB,
-        operador_condicion: OperadorCondicion.RANGO,
-        valor_condicion: 10,
-        orden_evaluacion: 1,
-        regla_validacion: {
-          tipo_dato: TipoDatoValidacion.NUMERICO,
-          obligatorio: true,
-          valor_min: 10,
-          valor_max: 1,
-          valores_permitidos: [],
-          mensaje_error: 'Fuera de rango',
+      useCase.execute(
+        idFlujo,
+        {
+          id_nodo_origen: idNodoA,
+          id_nodo_destino: idNodoB,
+          operador_condicion: OperadorCondicion.RANGO,
+          valor_condicion: 10,
+          orden_evaluacion: 1,
+          regla_validacion: {
+            tipo_dato: TipoDatoValidacion.NUMERICO,
+            obligatorio: true,
+            valor_min: 10,
+            valor_max: 1,
+            valores_permitidos: [],
+            mensaje_error: 'Fuera de rango',
+          },
         },
-      }),
+        idAdministrador,
+      ),
     ).toThrow(ReglaValidacionInvalidaException);
     expect(repository.crearTransicion.mock.calls).toHaveLength(0);
   });
@@ -222,9 +244,11 @@ describe('Casos de uso del árbol conversacional (RF-25)', () => {
   it('publica mediante la operación transaccional del repositorio', async () => {
     const useCase = new PublicarArbolConversacionalUseCase(repository);
 
-    const resultado = await useCase.execute(idFlujo);
+    const resultado = await useCase.execute(idFlujo, idAdministrador);
 
-    expect(repository.publicar.mock.calls).toEqual([[idFlujo]]);
+    expect(repository.publicar.mock.calls).toEqual([
+      [idFlujo, idAdministrador],
+    ]);
     expect(resultado.estado).toBe(EstadoFlujoConversacional.PUBLICADO);
   });
 

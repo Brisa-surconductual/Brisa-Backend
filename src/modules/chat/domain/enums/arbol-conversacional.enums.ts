@@ -9,6 +9,16 @@ export enum ModalidadConversacional {
   PERSONALIZADA = 'PERSONALIZADA',
 }
 
+export enum TipoDependenciaClinica {
+  ABSTINENCIA_FISICA = 'ABSTINENCIA_FISICA',
+  TOLERANCIA = 'TOLERANCIA',
+}
+
+export enum TipoCravingClinico {
+  POSITIVO = 'POSITIVO',
+  NEGATIVO = 'NEGATIVO',
+}
+
 export enum OperadorCondicion {
   IGUALDAD = 'IGUALDAD',
   RANGO = 'RANGO',

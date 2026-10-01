@@ -22,7 +22,9 @@ import {
   ValidacionArbolDtoResponse,
 } from '../dto/arbol-conversacional.dto-response';
 
-async function ejecutarSeguro<T>(operacion: () => Promise<T>): Promise<T> {
+export async function ejecutarSeguro<T>(
+  operacion: () => Promise<T>,
+): Promise<T> {
   try {
     return await operacion();
   } catch (error: unknown) {
@@ -110,6 +112,7 @@ export class ActualizarNodoConversacionalUseCase {
     idFlujo: string,
     idNodo: string,
     dto: ActualizarNodoConversacionalDtoRequest,
+    idAdministrador: string,
   ): Promise<NodoConversacionalDtoResponse> {
     if (Object.values(dto).every((valor) => valor === undefined)) {
       throw new SolicitudActualizacionVaciaException();
@@ -125,6 +128,7 @@ export class ActualizarNodoConversacionalUseCase {
           esNodoInicial: dto.es_nodo_inicial,
           orden: dto.orden,
           idContenidoCronograma: dto.id_contenido_cronograma,
+          actualizadoPor: idAdministrador,
         }),
       ),
     );
@@ -138,6 +142,7 @@ export class CrearTransicionConversacionalUseCase {
   execute(
     idFlujo: string,
     dto: CrearTransicionConversacionalDtoRequest,
+    idAdministrador: string,
   ): Promise<TransicionConversacionalDtoResponse> {
     const regla = dto.regla_validacion;
     new ReglaValidacion(
@@ -169,6 +174,7 @@ export class CrearTransicionConversacionalUseCase {
             valoresPermitidos: regla.valores_permitidos,
             mensajeError: regla.mensaje_error,
           },
+          creadoPor: idAdministrador,
         }),
       ),
     );
@@ -183,6 +189,7 @@ export class ActualizarTransicionConversacionalUseCase {
     idFlujo: string,
     idTransicion: string,
     dto: ActualizarTransicionConversacionalDtoRequest,
+    idAdministrador: string,
   ): Promise<TransicionConversacionalDtoResponse> {
     if (Object.values(dto).every((valor) => valor === undefined)) {
       throw new SolicitudActualizacionVaciaException();
@@ -211,6 +218,7 @@ export class ActualizarTransicionConversacionalUseCase {
                   valoresPermitidos: regla.valores_permitidos,
                   mensajeError: regla.mensaje_error,
                 },
+          actualizadoPor: idAdministrador,
         }),
       ),
     );
@@ -234,10 +242,13 @@ export class ValidarArbolConversacionalUseCase {
 export class PublicarArbolConversacionalUseCase {
   constructor(private readonly repository: ArbolConversacionalRepository) {}
 
-  execute(idFlujo: string): Promise<FlujoConversacionalDtoResponse> {
+  execute(
+    idFlujo: string,
+    idAdministrador: string,
+  ): Promise<FlujoConversacionalDtoResponse> {
     return ejecutarSeguro(async () =>
       FlujoConversacionalDtoResponse.crear(
-        await this.repository.publicar(idFlujo),
+        await this.repository.publicar(idFlujo, idAdministrador),
       ),
     );
   }

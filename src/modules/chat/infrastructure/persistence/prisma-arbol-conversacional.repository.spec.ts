@@ -90,6 +90,10 @@ describe('PrismaArbolConversacionalRepository (RF-25)', () => {
       findUnique: jest.fn(),
       findMany: jest.fn(),
     },
+    auditoria_arboles: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+    },
   };
   const prisma = {
     ...tx,
@@ -164,6 +168,7 @@ describe('PrismaArbolConversacionalRepository (RF-25)', () => {
 
     const resultado = await repository.crearTransicion({
       idFlujo,
+      creadoPor: idAdministrador,
       idNodoOrigen: idNodoA,
       idNodoDestino: idNodoB,
       operadorCondicion: OperadorCondicion.IGUALDAD,
@@ -192,6 +197,7 @@ describe('PrismaArbolConversacionalRepository (RF-25)', () => {
     await expect(
       repository.crearTransicion({
         idFlujo,
+        creadoPor: idAdministrador,
         idNodoOrigen: idNodoA,
         idNodoDestino: idNodoB,
         operadorCondicion: OperadorCondicion.IGUALDAD,
@@ -226,6 +232,7 @@ describe('PrismaArbolConversacionalRepository (RF-25)', () => {
     await expect(
       repository.crearTransicion({
         idFlujo,
+        creadoPor: idAdministrador,
         idNodoOrigen: idNodoA,
         idNodoDestino: idNodoB,
         operadorCondicion: OperadorCondicion.IGUALDAD,

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import {
   ArbolConversacional,
+  AuditoriaArbolConversacional,
   FlujoConversacional,
   NodoConversacional,
   ReglaValidacion,
@@ -13,30 +14,41 @@ import {
   EstadoFlujoConversacional,
   ModalidadConversacional,
   OperadorCondicion,
+  TipoCravingClinico,
   TipoDatoValidacion,
+  TipoDependenciaClinica,
 } from '../../domain/enums/arbol-conversacional.enums';
 import {
   ContenidoCronogramaNoEncontradoException,
   FlujoConversacionalNoEditableException,
   FlujoConversacionalNoEncontradoException,
   FlujoGrupalPublicadoExistenteException,
+  FlujoPersonalizadoArchivadoException,
+  FlujoPersonalizadoNoEncontradoException,
+  FlujoPersonalizadoPublicadoExistenteException,
+  FlujoPersonalizadoYaArchivadoException,
   NodoConversacionalDuplicadoException,
   NodoConversacionalNoEncontradoException,
   NodoDestinoNoEncontradoException,
   NodoInicialDuplicadoException,
   NodoOrigenNoEncontradoException,
   OrdenTransicionDuplicadoException,
+  PerfilClinicoArbolInvalidoException,
   TipoNodoNoEncontradoException,
   TransicionConversacionalNoEncontradaException,
+  VersionPersonalizadaDuplicadaException,
+  VersionPersonalizadaNoClonableException,
 } from '../../domain/exeption/arbol-conversacional.exceptions';
 import {
   ActualizarNodoCommand,
   ActualizarTransicionCommand,
   ArbolConversacionalRepository,
   CrearFlujoGrupalCommand,
+  CrearFlujoPersonalizadoCommand,
   CrearNodoCommand,
   CrearTransicionCommand,
   DatosReglaValidacionCommand,
+  PerfilClinicoArbol,
 } from '../../domain/repositories/arbol-conversacional.repository';
 
 type ClienteArbol = Pick<
@@ -46,6 +58,7 @@ type ClienteArbol = Pick<
   | 'reglas_nodos'
   | 'reglas_validaciones'
   | 'tipo_nodo'
+  | 'auditoria_arboles'
 >;
 
 interface FlujoRow {
@@ -57,6 +70,9 @@ interface FlujoRow {
   creado_por: string;
   fecha_creacion: Date;
   fecha_publicacion: Date | null;
+  fecha_archivado: Date | null;
+  tipo_dependencia: string | null;
+  tipo_craving: string | null;
 }
 
 interface NodoRow {
@@ -102,17 +118,283 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
   async crearFlujoGrupal(
     command: CrearFlujoGrupalCommand,
   ): Promise<FlujoConversacional> {
-    const flujo = await this.prisma.flujo_conversacion.create({
-      data: {
-        nombre: command.nombre,
-        modalidad: ModalidadConversacional.GRUPAL,
-        estado: EstadoFlujoConversacional.BORRADOR,
-        version: command.version,
-        creado_por: command.creadoPor,
+    return this.ejecutarTransaccion(async (tx) => {
+      const flujo = await tx.flujo_conversacion.create({
+        data: {
+          nombre: command.nombre,
+          modalidad: ModalidadConversacional.GRUPAL,
+          estado: EstadoFlujoConversacional.BORRADOR,
+          version: command.version,
+          creado_por: command.creadoPor,
+        },
+      });
+      await this.auditar(tx, flujo.id_flujo, command.creadoPor, 'CREAR_FLUJO');
+      return this.mapearFlujo(flujo);
+    });
+  }
+
+  async crearFlujoPersonalizado(
+    command: CrearFlujoPersonalizadoCommand,
+  ): Promise<FlujoConversacional> {
+    this.validarPerfil(command);
+    try {
+      return await this.ejecutarTransaccion(async (tx) => {
+        const version = await this.siguienteVersion(tx, command);
+        const flujo = await tx.flujo_conversacion.create({
+          data: {
+            nombre: command.nombre,
+            modalidad: ModalidadConversacional.PERSONALIZADA,
+            tipo_dependencia: command.tipoDependencia,
+            tipo_craving: command.tipoCraving,
+            estado: EstadoFlujoConversacional.BORRADOR,
+            version,
+            creado_por: command.creadoPor,
+          },
+        });
+        await this.auditar(
+          tx,
+          flujo.id_flujo,
+          command.creadoPor,
+          'CREAR_FLUJO',
+        );
+        return this.mapearFlujo(flujo);
+      });
+    } catch (error: unknown) {
+      this.traducirErrorVersion(error);
+    }
+  }
+
+  async clonarVersionPersonalizada(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional> {
+    try {
+      return await this.ejecutarTransaccion(async (tx) => {
+        const origen = await this.cargarArbol(tx, idFlujo);
+        if (
+          origen === null ||
+          origen.flujo.modalidad !== ModalidadConversacional.PERSONALIZADA
+        ) {
+          throw new FlujoPersonalizadoNoEncontradoException();
+        }
+        if (origen.flujo.estado === EstadoFlujoConversacional.BORRADOR) {
+          throw new VersionPersonalizadaNoClonableException();
+        }
+        const perfil = this.perfilDeFlujo(origen.flujo);
+        const version = await this.siguienteVersion(tx, perfil);
+        const nuevo = await tx.flujo_conversacion.create({
+          data: {
+            nombre: origen.flujo.nombre,
+            modalidad: ModalidadConversacional.PERSONALIZADA,
+            tipo_dependencia: perfil.tipoDependencia,
+            tipo_craving: perfil.tipoCraving,
+            estado: EstadoFlujoConversacional.BORRADOR,
+            version,
+            creado_por: idActor,
+          },
+        });
+        const idsNuevos = new Map<string, string>();
+        for (const nodo of origen.nodos) {
+          const creado = await tx.nodos.create({
+            data: {
+              id_flujo: nuevo.id_flujo,
+              id_tipo_nodo: nodo.idTipoNodo,
+              contenido: nodo.contenido as Prisma.InputJsonValue,
+              es_nodo_inicial: nodo.esNodoInicial,
+              orden: nodo.orden,
+              id_contenido_cronograma: nodo.idContenidoCronograma,
+              creado_por: idActor,
+            },
+          });
+          idsNuevos.set(nodo.idNodo, creado.id_nodo);
+        }
+        for (const transicion of origen.transiciones) {
+          const regla = transicion.reglaValidacion;
+          const validacion = await tx.reglas_validaciones.create({
+            data: this.datosCrearRegla({
+              tipoDato: regla.tipoDato,
+              obligatorio: regla.obligatorio,
+              valorMin: regla.valorMin,
+              valorMax: regla.valorMax,
+              formatoRegex: regla.formatoRegex,
+              valoresPermitidos: regla.valoresPermitidos,
+              mensajeError: regla.mensajeError,
+            }),
+          });
+          const origenNuevo = idsNuevos.get(transicion.idNodoOrigen);
+          const destinoNuevo = idsNuevos.get(transicion.idNodoDestino);
+          if (origenNuevo === undefined || destinoNuevo === undefined) {
+            throw new FlujoConversacionalNoEditableException();
+          }
+          await tx.reglas_nodos.create({
+            data: {
+              id_flujo: nuevo.id_flujo,
+              id_nodo_origen: origenNuevo,
+              id_nodo_destino: destinoNuevo,
+              id_regla_validacion: validacion.id_regla_validacion,
+              operador_condicion: transicion.operadorCondicion,
+              valor_condicion: this.aJsonEntrada(transicion.valorCondicion),
+              orden_evaluacion: transicion.ordenEvaluacion,
+            },
+          });
+        }
+        await this.auditar(
+          tx,
+          nuevo.id_flujo,
+          idActor,
+          'CLONAR_VERSION',
+          idFlujo,
+        );
+        return this.mapearFlujo(nuevo);
+      });
+    } catch (error: unknown) {
+      this.traducirErrorVersion(error);
+    }
+  }
+
+  async listarFlujosPersonalizados(): Promise<FlujoConversacional[]> {
+    const flujos = await this.prisma.flujo_conversacion.findMany({
+      where: { modalidad: ModalidadConversacional.PERSONALIZADA },
+      orderBy: [
+        { tipo_dependencia: 'asc' },
+        { tipo_craving: 'asc' },
+        { version: 'desc' },
+      ],
+    });
+    return flujos.map((flujo) => this.mapearFlujo(flujo));
+  }
+
+  async buscarPublicadoPersonalizado(
+    perfil: PerfilClinicoArbol,
+  ): Promise<FlujoConversacional | null> {
+    this.validarPerfil(perfil);
+    const flujo = await this.prisma.flujo_conversacion.findFirst({
+      where: {
+        modalidad: ModalidadConversacional.PERSONALIZADA,
+        tipo_dependencia: perfil.tipoDependencia,
+        tipo_craving: perfil.tipoCraving,
+        estado: EstadoFlujoConversacional.PUBLICADO,
       },
     });
+    return flujo === null ? null : this.mapearFlujo(flujo);
+  }
 
-    return this.mapearFlujo(flujo);
+  async listarAuditoriaArbol(
+    idFlujo: string,
+  ): Promise<AuditoriaArbolConversacional[]> {
+    const flujo = await this.prisma.flujo_conversacion.findUnique({
+      where: { id_flujo: idFlujo },
+      select: { modalidad: true },
+    });
+    if (
+      flujo === null ||
+      String(flujo.modalidad) !== String(ModalidadConversacional.PERSONALIZADA)
+    ) {
+      throw new FlujoPersonalizadoNoEncontradoException();
+    }
+    const registros = await this.prisma.auditoria_arboles.findMany({
+      where: { id_flujo: idFlujo },
+      orderBy: { id_auditoria: 'asc' },
+    });
+    return registros.map(
+      (registro) =>
+        new AuditoriaArbolConversacional(
+          registro.id_auditoria,
+          registro.id_flujo,
+          registro.id_actor,
+          registro.accion,
+          registro.id_objeto,
+          registro.fecha_operacion,
+        ),
+    );
+  }
+
+  async publicarPersonalizado(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional> {
+    try {
+      return await this.ejecutarTransaccion(async (tx) => {
+        const arbol = await this.cargarArbol(tx, idFlujo);
+        if (
+          arbol === null ||
+          arbol.flujo.modalidad !== ModalidadConversacional.PERSONALIZADA
+        ) {
+          throw new FlujoPersonalizadoNoEncontradoException();
+        }
+        if (arbol.flujo.estado === EstadoFlujoConversacional.ARCHIVADO) {
+          throw new FlujoPersonalizadoArchivadoException();
+        }
+        if (arbol.flujo.estado !== EstadoFlujoConversacional.BORRADOR) {
+          throw new FlujoConversacionalNoEditableException();
+        }
+        const perfil = this.perfilDeFlujo(arbol.flujo);
+        arbol.validarEstructura();
+
+        const anterior = await tx.flujo_conversacion.findFirst({
+          where: {
+            modalidad: ModalidadConversacional.PERSONALIZADA,
+            tipo_dependencia: perfil.tipoDependencia,
+            tipo_craving: perfil.tipoCraving,
+            estado: EstadoFlujoConversacional.PUBLICADO,
+          },
+        });
+        const ahora = new Date();
+        if (anterior !== null) {
+          await tx.flujo_conversacion.update({
+            where: { id_flujo: anterior.id_flujo },
+            data: {
+              estado: EstadoFlujoConversacional.ARCHIVADO,
+              fecha_archivado: ahora,
+            },
+          });
+          await this.auditar(tx, anterior.id_flujo, idActor, 'ARCHIVAR');
+        }
+        const publicado = await tx.flujo_conversacion.update({
+          where: { id_flujo: idFlujo },
+          data: {
+            estado: EstadoFlujoConversacional.PUBLICADO,
+            fecha_publicacion: ahora,
+          },
+        });
+        await this.auditar(tx, idFlujo, idActor, 'PUBLICAR');
+        return this.mapearFlujo(publicado);
+      });
+    } catch (error: unknown) {
+      this.traducirErrorPublicacionPersonalizada(error);
+    }
+  }
+
+  async archivarPersonalizado(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional> {
+    return this.ejecutarTransaccion(async (tx) => {
+      const flujo = await tx.flujo_conversacion.findUnique({
+        where: { id_flujo: idFlujo },
+      });
+      if (
+        flujo === null ||
+        String(flujo.modalidad) !==
+          String(ModalidadConversacional.PERSONALIZADA)
+      ) {
+        throw new FlujoPersonalizadoNoEncontradoException();
+      }
+      if (
+        String(flujo.estado) === String(EstadoFlujoConversacional.ARCHIVADO)
+      ) {
+        throw new FlujoPersonalizadoYaArchivadoException();
+      }
+      const archivado = await tx.flujo_conversacion.update({
+        where: { id_flujo: idFlujo },
+        data: {
+          estado: EstadoFlujoConversacional.ARCHIVADO,
+          fecha_archivado: new Date(),
+        },
+      });
+      await this.auditar(tx, idFlujo, idActor, 'ARCHIVAR');
+      return this.mapearFlujo(archivado);
+    });
   }
 
   obtenerArbol(idFlujo: string): Promise<ArbolConversacional | null> {
@@ -146,6 +428,14 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           },
           include: { tipo_nodo: { select: { nombre: true } } },
         });
+
+        await this.auditar(
+          tx,
+          command.idFlujo,
+          command.creadoPor,
+          'CREAR_NODO',
+          nodo.id_nodo,
+        );
 
         return this.mapearNodo(nodo);
       });
@@ -187,6 +477,13 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           data,
           include: { tipo_nodo: { select: { nombre: true } } },
         });
+        await this.auditar(
+          tx,
+          command.idFlujo,
+          command.actualizadoPor,
+          'EDITAR_NODO',
+          nodo.id_nodo,
+        );
         return this.mapearNodo(nodo);
       });
     } catch (error: unknown) {
@@ -244,6 +541,13 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           },
           include: { reglas_validaciones: true },
         });
+        await this.auditar(
+          tx,
+          command.idFlujo,
+          command.creadoPor,
+          'CREAR_TRANSICION',
+          transicion.id_regla,
+        );
         return this.mapearTransicion(transicion);
       });
     } catch (error: unknown) {
@@ -349,6 +653,13 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           },
           include: { reglas_validaciones: true },
         });
+        await this.auditar(
+          tx,
+          command.idFlujo,
+          command.actualizadoPor,
+          'EDITAR_TRANSICION',
+          transicion.id_regla,
+        );
         return this.mapearTransicion(transicion);
       });
     } catch (error: unknown) {
@@ -356,13 +667,19 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     }
   }
 
-  async publicar(idFlujo: string): Promise<FlujoConversacional> {
+  async publicar(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional> {
     try {
       return await this.ejecutarTransaccion(async (tx) => {
         await this.asegurarFlujoEditable(tx, idFlujo);
         const arbol = await this.cargarArbol(tx, idFlujo);
         if (arbol === null)
           throw new FlujoConversacionalNoEncontradoException();
+        if (arbol.flujo.modalidad !== ModalidadConversacional.GRUPAL) {
+          throw new FlujoConversacionalNoEditableException();
+        }
         arbol.validarEstructura();
 
         const flujo = await tx.flujo_conversacion.update({
@@ -372,6 +689,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
             fecha_publicacion: new Date(),
           },
         });
+        await this.auditar(tx, idFlujo, idActor, 'PUBLICAR');
         return this.mapearFlujo(flujo);
       });
     } catch (error: unknown) {
@@ -488,6 +806,73 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     return this.datosCrearRegla(datos);
   }
 
+  private validarPerfil(perfil: PerfilClinicoArbol): void {
+    if (
+      !Object.values(TipoDependenciaClinica).includes(perfil.tipoDependencia) ||
+      !Object.values(TipoCravingClinico).includes(perfil.tipoCraving)
+    ) {
+      throw new PerfilClinicoArbolInvalidoException();
+    }
+  }
+
+  private perfilDeFlujo(flujo: FlujoConversacional): PerfilClinicoArbol {
+    const perfil = {
+      tipoDependencia: flujo.tipoDependencia as TipoDependenciaClinica,
+      tipoCraving: flujo.tipoCraving as TipoCravingClinico,
+    };
+    this.validarPerfil(perfil);
+    return perfil;
+  }
+
+  private async siguienteVersion(
+    tx: Prisma.TransactionClient,
+    perfil: PerfilClinicoArbol,
+  ): Promise<number> {
+    const ultima = await tx.flujo_conversacion.findFirst({
+      where: {
+        modalidad: ModalidadConversacional.PERSONALIZADA,
+        tipo_dependencia: perfil.tipoDependencia,
+        tipo_craving: perfil.tipoCraving,
+      },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    });
+    return (ultima?.version ?? 0) + 1;
+  }
+
+  private async auditar(
+    tx: Prisma.TransactionClient,
+    idFlujo: string,
+    idActor: string,
+    accion: string,
+    idObjeto: string | null = null,
+  ): Promise<void> {
+    await tx.auditoria_arboles.create({
+      data: {
+        id_flujo: idFlujo,
+        id_actor: idActor,
+        accion,
+        id_objeto: idObjeto,
+      },
+    });
+  }
+
+  private traducirErrorVersion(error: unknown): never {
+    if (error instanceof HttpException) throw error;
+    if (this.esErrorPrisma(error, 'P2002')) {
+      throw new VersionPersonalizadaDuplicadaException();
+    }
+    throw error;
+  }
+
+  private traducirErrorPublicacionPersonalizada(error: unknown): never {
+    if (error instanceof HttpException) throw error;
+    if (this.esErrorPrisma(error, 'P2002')) {
+      throw new FlujoPersonalizadoPublicadoExistenteException();
+    }
+    throw error;
+  }
+
   private mapearFlujo(flujo: FlujoRow): FlujoConversacional {
     return new FlujoConversacional(
       flujo.id_flujo,
@@ -498,6 +883,9 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       flujo.creado_por,
       flujo.fecha_creacion,
       flujo.fecha_publicacion,
+      flujo.tipo_dependencia as TipoDependenciaClinica | null,
+      flujo.tipo_craving as TipoCravingClinico | null,
+      flujo.fecha_archivado,
     );
   }
 
@@ -641,7 +1029,13 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         });
       } catch (error: unknown) {
-        if (!this.esErrorPrisma(error, 'P2034') || intento === maximoIntentos) {
+        const conflictoVersion =
+          this.esErrorPrisma(error, 'P2002') &&
+          this.obtenerDetalle(error).includes('uq_flujo_version_personalizada');
+        if (
+          (!this.esErrorPrisma(error, 'P2034') && !conflictoVersion) ||
+          intento === maximoIntentos
+        ) {
           throw error;
         }
       }

@@ -315,6 +315,41 @@ La migración de catálogo de RF-25 registra de forma idempotente los tipos
 `MENSAJE`, `PREGUNTA`, `DECISION` y `CONTENIDO`; no agrega tablas ni modifica el
 esquema existente.
 
+### Árboles personalizados por perfil clínico (RF-25C)
+
+Los árboles personalizados reutilizan los nodos, transiciones, reglas y el
+validador de RF-25. El equipo de psicología usa cuentas `ADMINISTRATIVO`, único
+rol administrativo disponible actualmente. Todas las escrituras requieren
+sesión completa y token CSRF.
+
+Base: `/chat/administracion/arboles-personalizados`.
+
+- `POST /`: crea un borrador para una combinación
+  `tipo_dependencia` × `tipo_craving`; asigna automáticamente la siguiente
+  versión libre de esa combinación.
+- `GET /`: lista las cuatro combinaciones, el publicado vigente y el historial
+  de versiones de cada una.
+- `GET /publicado?tipo_dependencia=...&tipo_craving=...`: consulta el publicado
+  vigente; retorna `null` si todavía no existe. El caso de uso correspondiente
+  también puede ser consumido internamente por RF-26B.
+- `GET /:id_flujo`: consulta el árbol completo de una versión.
+- `GET /:id_flujo/auditoria`: consulta su historial de operaciones.
+- `POST /:id_flujo/nueva-version`: crea un borrador copiando los nodos,
+  transiciones y validaciones de una versión publicada o archivada.
+- `POST /:id_flujo/publicar`: valida la estructura, archiva el publicado
+  anterior de la misma combinación y publica el borrador de forma atómica.
+- `POST /:id_flujo/archivar`: retira un borrador o publicado sin borrarlo.
+- `DELETE /:id_flujo`: responde `403`; los árboles se conservan para las
+  sesiones históricas.
+
+La edición de nodos y transiciones en borradores personalizados usa los mismos
+endpoints `POST`/`PATCH /chat/administracion/flujos/:id_flujo/nodos` y
+`/transiciones` de RF-25. Una versión publicada o archivada es inmutable; para
+editarla se crea una versión nueva. La migración de RF-25C agrega la unicidad de
+`(tipo_dependencia, tipo_craving, version)` y la tabla de auditoría inmutable.
+El índice único parcial que impide dos publicados por combinación ya existe en
+PostgreSQL y se conserva.
+
 ---
 
 ## Flujo de trabajo con Prisma

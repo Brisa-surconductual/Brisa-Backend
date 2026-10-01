@@ -8,7 +8,9 @@ import {
   EstadoFlujoConversacional,
   ModalidadConversacional,
   OperadorCondicion,
+  TipoCravingClinico,
   TipoDatoValidacion,
+  TipoDependenciaClinica,
 } from '../enums/arbol-conversacional.enums';
 
 export class FlujoConversacional {
@@ -21,6 +23,20 @@ export class FlujoConversacional {
     readonly creadoPor: string,
     readonly fechaCreacion: Date,
     readonly fechaPublicacion: Date | null,
+    readonly tipoDependencia: TipoDependenciaClinica | null = null,
+    readonly tipoCraving: TipoCravingClinico | null = null,
+    readonly fechaArchivado: Date | null = null,
+  ) {}
+}
+
+export class AuditoriaArbolConversacional {
+  constructor(
+    readonly idAuditoria: bigint,
+    readonly idFlujo: string,
+    readonly idActor: string,
+    readonly accion: string,
+    readonly idObjeto: string | null,
+    readonly fechaOperacion: Date,
   ) {}
 }
 
