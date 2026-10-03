@@ -7,7 +7,6 @@ import { UnidadTemporalNoEncontradaException } from '../../../domain/exeption/un
 import { UnidadTemporalNoPerteneceACronogramaException } from '../../../domain/exeption/unidades-temporales/unidad-temporal-no-pertence-cronograma.expetion';
 import {CronogramaNoEncontradoException} from "../../../domain/exeption/cronograma/cronograma-no-encontrado.exeption";
 import { CronogramaRepository } from '../../../domain/repositories/cronograma.repository';
-import {UnidadTemporal} from "../../../domain/entities/unidad-temporal.entity";
 
 @Injectable()
 export class CronogramaCalendarioUseCase {
@@ -40,6 +39,7 @@ export class CronogramaCalendarioUseCase {
             const contenido = relacion.contenidos;
             return {
                 idContenido: contenido.id_contenido,
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 nombreContenido: contenido.nombre_contenido,
                 tipo: contenido.tipo_contenido,
                 recursos: contenido.recursos_contenido.map(recurso => ({

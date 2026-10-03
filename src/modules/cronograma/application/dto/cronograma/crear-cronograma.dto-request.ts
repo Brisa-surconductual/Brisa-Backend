@@ -1,5 +1,6 @@
+import { IS_ENUM, IsBoolean, IsDate, IsEnum, IsString } from 'class-validator';
+import { EstadoCronograma } from '../../../domain/enums/estado-cronograma.enum';
 import { Transform } from 'class-transformer';
-import { IsDate, IsString, IsUUID } from 'class-validator';
 
 function toDateWithMidnight({ value }: { value: unknown }): Date | undefined {
   if (typeof value !== 'string') return undefined;
@@ -8,19 +9,13 @@ function toDateWithMidnight({ value }: { value: unknown }): Date | undefined {
   return new Date(soloFecha ? `${value}T00:00:00.000Z` : value);
 }
 
-export class UnidadTemporalDtoRequest {
-  @IsUUID()
-  id_cronograma!: string;
+export class CrearCronogramaDtoRequest {
 
   @IsString()
   nombre!: string;
-
-  @Transform(toDateWithMidnight)
   @IsDate()
-  fecha_inicio!: Date;
-
   @Transform(toDateWithMidnight)
-  @IsDate()
-  fecha_fin!: Date;
-
+  fecha_activacion!: Date;
+  @IsBoolean()
+  es_base: boolean;
 }

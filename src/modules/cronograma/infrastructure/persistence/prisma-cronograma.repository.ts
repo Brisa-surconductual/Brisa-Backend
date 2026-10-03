@@ -7,7 +7,15 @@ import { CronogramaMapper } from '../mappers/cronograma.mapper';
 @Injectable()
 export class PrismaCronogramaRepository implements CronogramaRepository {
   constructor(private readonly prisma: PrismaService) {}
-  
+
+  async save(cronograma: Cronograma): Promise<void> {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.cronogramas.create({
+          data: CronogramaMapper.toDomain(cronograma) as any,
+        });
+      });
+  }
+
   async buscarPorId(id: string): Promise<Cronograma> {
     return this.prisma.cronogramas
       .findFirst({
