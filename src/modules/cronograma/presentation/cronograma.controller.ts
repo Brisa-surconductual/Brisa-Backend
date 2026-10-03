@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import {  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { CreacionUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/crear-unidad-temporal.use-case';
 import { UnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-request';
 import { UnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-response';
@@ -63,8 +52,12 @@ import { EliminarUnidadTemporalUseCase } from '../application/use-cases/unidad-t
 import { EliminarUnidadTemporalDtoRequest } from '../application/dto/unidadTemporal/eliminar-unidad-temporal.dto.request';
 import { EliminarUnidadTemporalDtoResponse } from '../application/dto/unidadTemporal/eliminar-unidad-temporal.dto.response';
 import { CronogramaCalendarioUseCase } from '../application/use-cases/cronograma/cronograma-calendario.use-case';
-import {CatologoContenitosUseCase} from '../application/use-cases/contenido/catalogo-contenitos.use-case';
-import {ContenidosExitentesDtoResponse} from '../application/dto/contenido/contenidos-exitentes.dto-response';
+import { CatologoContenitosUseCase } from '../application/use-cases/contenido/catalogo-contenitos.use-case';
+import { ContenidosExitentesDtoResponse } from '../application/dto/contenido/contenidos-exitentes.dto-response';
+import { CrearCronogramaUseCase } from '../application/use-cases/cronograma/crear-cronograma.use-case';
+import { CrearCronogramaDtoRequest } from '../application/dto/cronograma/crear-cronograma.dto-request';
+import { CrearCronogramaDtoResponse } from '../application/dto/cronograma/crear-cronograma.dto-response';
+
 @Controller('/cronograma')
 export class CronogramaController {
   constructor(
@@ -86,6 +79,7 @@ export class CronogramaController {
     private readonly eliminarUnidadTemporalUseCase: EliminarUnidadTemporalUseCase,
     private readonly cronogramaCalendarioUseCase: CronogramaCalendarioUseCase,
     private readonly catalogoContenitosUseCase: CatologoContenitosUseCase,
+    private readonly crearCronogramaUseCase: CrearCronogramaUseCase,
   ) {}
 
   @Post('/crear/unidad-temporal')
@@ -267,5 +261,14 @@ export class CronogramaController {
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async obtenerCatalogoContenidos(): Promise<ContenidosExitentesDtoResponse[]> {
     return this.catalogoContenitosUseCase.execute();
+  }
+
+  @Post('/crear-cronograma')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async crearCronograma(
+    @Body() dto: CrearCronogramaDtoRequest,
+  ): Promise<CrearCronogramaDtoResponse> {
+    return this.crearCronogramaUseCase.execute(dto);
   }
 }
