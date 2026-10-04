@@ -57,6 +57,11 @@ import { ContenidosExitentesDtoResponse } from '../application/dto/contenido/con
 import { CrearCronogramaUseCase } from '../application/use-cases/cronograma/crear-cronograma.use-case';
 import { CrearCronogramaDtoRequest } from '../application/dto/cronograma/crear-cronograma.dto-request';
 import { CrearCronogramaDtoResponse } from '../application/dto/cronograma/crear-cronograma.dto-response';
+import { ObtenerCronogramasUseCase } from '../application/use-cases/cronograma/obtener-cronogrmas.use-case';
+import { ObtenerCronogramasDtoResponse } from '../application/dto/cronograma/obtener-cronogramas.dto-response';
+import {ObtenerUnidadesTemporalesUseCase} from '../application/use-cases/unidad-temporal/obtener-unidades-temporales.use-case';
+import {ObtenerUnidadesTemporalesDtoResponse} from '../application/dto/unidadTemporal/obtener-unidades-temporales.dto-response';
+
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -80,6 +85,8 @@ export class CronogramaController {
     private readonly cronogramaCalendarioUseCase: CronogramaCalendarioUseCase,
     private readonly catalogoContenitosUseCase: CatologoContenitosUseCase,
     private readonly crearCronogramaUseCase: CrearCronogramaUseCase,
+    private readonly obtenerCronogramasUseCase: ObtenerCronogramasUseCase,
+    private readonly ObtenerUnidadesTemporalesUseCase: ObtenerUnidadesTemporalesUseCase,
   ) {}
 
   @Post('/crear/unidad-temporal')
@@ -270,5 +277,21 @@ export class CronogramaController {
     @Body() dto: CrearCronogramaDtoRequest,
   ): Promise<CrearCronogramaDtoResponse> {
     return this.crearCronogramaUseCase.execute(dto);
+  }
+
+  @Get('/obtener-cronogramas')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async obtenerCronogramas(): Promise<ObtenerCronogramasDtoResponse[]> {
+    return this.obtenerCronogramasUseCase.execute();
+  }
+
+  @Get('/obtener-unidades-temporales/:idCronograma')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async obtenerUnidadesTemporales(
+    @Param('idCronograma') idCronograma: string,
+  ): Promise<ObtenerUnidadesTemporalesDtoResponse[]> {
+    return this.ObtenerUnidadesTemporalesUseCase.execute(idCronograma);
   }
 }
