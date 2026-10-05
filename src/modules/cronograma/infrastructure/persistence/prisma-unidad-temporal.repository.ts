@@ -9,6 +9,33 @@ import { AsignacionOrdenUnidad } from "../../application/service/reordenar-unida
 export class PrismaUnidadTemporalRepository implements UnidadTemporalRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async crearConReordenamiento(
+    unidadTemporal: UnidadTemporal,
+    reordenamientoHermanas: AsignacionOrdenUnidad[],
+  ): Promise<UnidadTemporal> {
+    await this.prisma.$transaction(async (tx) => {
+      for (const asignacion of reordenamientoHermanas) {
+        await tx.unidades_temporales.update({
+          where: { id_unidad_temporal: asignacion.id_unidad_temporal },
+          data: { orden_unidad: -asignacion.orden_unidad },
+        });
+      }
+
+      await tx.unidades_temporales.create({
+        data: UnidadesTemporalesMapper.toPrisma(unidadTemporal) as any,
+      });
+
+      for (const asignacion of reordenamientoHermanas) {
+        await tx.unidades_temporales.update({
+          where: { id_unidad_temporal: asignacion.id_unidad_temporal },
+          data: { orden_unidad: asignacion.orden_unidad },
+        });
+      }
+    });
+
+    return unidadTemporal;
+  }
+
   async obtenerUnidadesTemporalesPorIdCronograma(
     id_cronograma: string,
   ): Promise<UnidadTemporal[]> {
