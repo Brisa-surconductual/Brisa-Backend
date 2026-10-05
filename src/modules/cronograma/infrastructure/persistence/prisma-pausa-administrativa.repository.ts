@@ -27,6 +27,11 @@ interface PausaAdministrativaRow {
 @Injectable()
 export class PrismaPausaAdministrativaRepository implements PausaAdministrativaRepository {
   constructor(private readonly prisma: PrismaService) {}
+  listarPausasAdministrativas(): Promise<PausaAdministrativa[]> {
+    return this.prisma.pausas_administrativas.findMany().then((pausas) =>
+      pausas.map((pausa) => PausaAdministrativaMapper.toDomain(pausa)),
+    );
+  }
 
   async buscarContextoCronogramaActivo(
     idUsuario: string,

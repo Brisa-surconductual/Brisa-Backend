@@ -61,7 +61,8 @@ import { ObtenerCronogramasUseCase } from '../application/use-cases/cronograma/o
 import { ObtenerCronogramasDtoResponse } from '../application/dto/cronograma/obtener-cronogramas.dto-response';
 import {ObtenerUnidadesTemporalesUseCase} from '../application/use-cases/unidad-temporal/obtener-unidades-temporales.use-case';
 import {ObtenerUnidadesTemporalesDtoResponse} from '../application/dto/unidadTemporal/obtener-unidades-temporales.dto-response';
-
+import { ConsultarPausasAdministraivasUseCase } from '../application/use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
+import { ConsultarPausasAdministrativasUsuarioDtoResponse } from '../application/dto/pausaAdministrativa/conusltar-pausas-administarivas.dto-response';
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -87,6 +88,7 @@ export class CronogramaController {
     private readonly crearCronogramaUseCase: CrearCronogramaUseCase,
     private readonly obtenerCronogramasUseCase: ObtenerCronogramasUseCase,
     private readonly ObtenerUnidadesTemporalesUseCase: ObtenerUnidadesTemporalesUseCase,
+    private readonly consultarPausasAdministraivasUseCase: ConsultarPausasAdministraivasUseCase
   ) {}
 
   @Post('/crear/unidad-temporal')
@@ -293,5 +295,12 @@ export class CronogramaController {
     @Param('idCronograma') idCronograma: string,
   ): Promise<ObtenerUnidadesTemporalesDtoResponse[]> {
     return this.ObtenerUnidadesTemporalesUseCase.execute(idCronograma);
+  }
+
+  @Get('/obtener-pausas-administrativas')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async obtenerPausasAdministrativas(): Promise<ConsultarPausasAdministrativasUsuarioDtoResponse[]> {
+    return this.consultarPausasAdministraivasUseCase.execute();
   }
 }

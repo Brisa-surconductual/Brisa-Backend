@@ -78,4 +78,22 @@ export class PrismaUsuarioRepository implements UsuarioRepository {
                 data: UsuarioMapper.toPrisma(usuario) as any,
             });
         }
+
+  async buscarPorTermino(termino: string): Promise<Usuario[]> {
+    const terminoLimpio = termino ? termino.trim() : '';
+
+      const usuarios = await this.prisma.usuarios.findMany({
+        where: {
+          rol: 'ESTUDIANTE', // <-- 1. Filtro estricto para traer solo estudiantes
+          ...(terminoLimpio ? {
+            OR: [
+              { correo_electronico: { contains: terminoLimpio, mode: 'insensitive' } },
+            ]
+          } : {})
+        },
+        take: 10,
+      });
+
+      return usuarios.map((u) => UsuarioMapper.toDomain(u));
+  }
 }

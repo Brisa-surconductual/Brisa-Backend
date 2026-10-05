@@ -31,6 +31,7 @@ import { CatologoContenitosUseCase } from './use-cases/contenido/catalogo-conten
 import {CrearCronogramaUseCase} from './use-cases/cronograma/crear-cronograma.use-case';
 import {ObtenerCronogramasUseCase} from './use-cases/cronograma/obtener-cronogrmas.use-case';
 import {ObtenerUnidadesTemporalesUseCase} from './use-cases/unidad-temporal/obtener-unidades-temporales.use-case';
+import {ConsultarPausasAdministraivasUseCase} from './use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -65,5 +66,6 @@ export const CronogramaApplicationProviders = [
   CatologoContenitosUseCase,
   CrearCronogramaUseCase,
   ObtenerCronogramasUseCase,
-  ObtenerUnidadesTemporalesUseCase
+  ObtenerUnidadesTemporalesUseCase,
+  ConsultarPausasAdministraivasUseCase
 ];
