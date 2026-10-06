@@ -45,7 +45,11 @@ export class CronogramaCalendarioUseCase {
                 recursos: contenido.recursos_contenido.map(recurso => ({
                     idRecurso: recurso.id_recurso,
                     claveAlmacenamiento: recurso.clave_almacenamiento,
-                }))
+                })),
+                idContenidoCronograma: relacion.id_contenido_cronograma,
+                ordenContenido: relacion.orden_contenido,
+                fechaInicioDisponibilidad: relacion.fecha_inicio_disponibilidad,
+                fechaFinDisponibilidad: relacion.fecha_fin_disponibilidad,
             };
         });
 
