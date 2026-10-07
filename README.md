@@ -36,6 +36,7 @@
   - [7. Ejecutar el proyecto](#7-ejecutar-el-proyecto)
 - [Recursos multimedia con S3](#recursos-multimedia-con-s3)
 - [Autenticación de módulos internos](#autenticación-de-módulos-internos)
+- [Gestión del árbol conversacional](#gestión-del-árbol-conversacional)
 - [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)
 - [Arquitectura](#arquitectura)
 - [Organización del proyecto](#organización-del-proyecto)
@@ -283,6 +284,36 @@ node -e "const {randomBytes,createHash}=require('crypto');const key=randomBytes(
 El valor `SHA-256` se guarda en la variable de entorno; el valor `API key` se
 configura como secreto únicamente en el módulo consumidor. Si el hash falta o
 es inválido, el acceso queda denegado de forma segura.
+
+---
+
+## Gestión del árbol conversacional
+
+RF-25 expone la gestión administrativa del árbol grupal bajo
+`/chat/administracion`. Requiere una sesión completa con rol `ADMINISTRATIVO` y
+las operaciones de escritura también requieren el token CSRF de la sesión.
+
+- `POST /flujos`: crea una versión grupal en estado `BORRADOR`.
+- `GET /tipos-nodo`: consulta el catálogo de tipos de nodo.
+- `GET /flujos/:id_flujo/arbol`: consulta nodos, transiciones y validaciones.
+- `POST|PATCH /flujos/:id_flujo/nodos`: crea nodos; la edición usa además
+  `/:id_nodo`.
+- `POST|PATCH /flujos/:id_flujo/transiciones`: crea de forma atómica una
+  transición y su regla de validación; la edición usa además
+  `/:id_transicion`.
+- `POST /flujos/:id_flujo/validar`: comprueba la estructura completa.
+- `POST /flujos/:id_flujo/publicar`: valida y publica en una misma transacción.
+
+La validación usa BFS desde el único nodo inicial para detectar nodos huérfanos
+y DFS sobre el grafo dirigido para detectar ciclos. El modelo actual no define
+un límite, contador ni otra forma de distinguir ciclos controlados; por esa
+razón RF-25 rechaza conservadoramente **todos los ciclos**. Las mutaciones se
+ejecutan con aislamiento serializable para evitar carreras entre la edición y
+la publicación de un mismo flujo.
+
+La migración de catálogo de RF-25 registra de forma idempotente los tipos
+`MENSAJE`, `PREGUNTA`, `DECISION` y `CONTENIDO`; no agrega tablas ni modifica el
+esquema existente.
 
 ---
 
