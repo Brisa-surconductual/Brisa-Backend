@@ -1,0 +1,129 @@
+import { CondicionesInicializacionUsuarioRepository } from '../domain/repositories/condiciones-inicializacion-usuario.repository';
+import { CronogramaRepository } from '../domain/repositories/cronograma.repository';
+import { CronogramaUsuarioRepository } from '../domain/repositories/cronograma-usuario.repository';
+import { InicializarCronogramasPendientesCron } from './cron/inicializar-cronogramas-pendientes.cron';
+import { PrismaCondicionesInicializacionUsuarioRepository } from './persistence/prisma-condiciones-inicializacion-usuario.repository';
+import { PrismaCronogramaRepository } from './persistence/prisma-cronograma.repository';
+import { PrismaCronogramaUsuarioRepository } from './persistence/prisma-cronograma-usuario.repository';
+import { PrismaUnidadTemporalRepository } from './persistence/prisma-unidad-temporal.repository';
+import { UnidadTemporalRepository } from '../domain/repositories/unidad-temporal.repository';
+import { ContenidoRepository } from '../domain/repositories/contenido.repository';
+import { PrismaContenidoRepository } from './persistence/prisma-contenido.repository';
+import { RecursoContenidoRepository } from '../domain/repositories/recurso-contenido.repository';
+import { PrismaRecursoContenidoRepository } from './persistence/prisma-recurso-contenido.repository';
+import { EventoContenidoRepository } from '../domain/repositories/evento-contenido.repository';
+import { EventoContenidoPublisher } from '../application/ports/evento-contenido.publisher';
+import { PublicarEventosContenidoCron } from './cron/publicar-eventos-contenido.cron';
+import { NestEventoContenidoPublisher } from './messaging/nest-evento-contenido.publisher';
+import { PrismaEventoContenidoRepository } from './persistence/prisma-evento-contenido.repository';
+import { PrismaContenidoCronogramaRepository } from './persistence/primsa-contenido-cronograma.repository';
+import { ContenidoCronogramaRepository } from '../domain/repositories/contenido-cronograma.repository';
+import { AlmacenamientoRecursosPort } from '../application/ports/almacenamiento-recursos.port';
+import { S3AlmacenamientoRecursosAdapter } from './storage/s3-almacenamiento-recursos.adapter';
+import { crearS3Client, S3_CLIENT } from './storage/s3-client.provider';
+import { CalculoEstadoContenidoPort } from '../application/ports/calculo-estado-contenido.port';
+import { PrismaCalculoEstadoContenidoAdapter } from './persistence/prisma-calculo-estado-contenido.repository';
+import { ModuloSistemaRepository } from '../domain/repositories/modulo-sistema.repository';
+import { PrismaModuloSistemaRepository } from './persistence/prisma-modulo-sistema.repository';
+import { PausaAdministrativaRepository } from '../domain/repositories/pausa-administrativa.repository';
+import { PrismaPausaAdministrativaRepository } from './persistence/prisma-pausa-administrativa.repository';
+import { UbicacionTemporalUsuarioRepository } from '../domain/repositories/ubicacion-temporal-usuario.repository';
+import { PrismaUbicacionTemporalUsuarioRepository } from './persistence/prisma-ubicacion-temporal-usuario.repository';
+import { ContenidoVigenteUsuarioRepository } from '../domain/repositories/contenido-vigente-usuario.repository';
+import { PrismaContenidoVigenteUsuarioRepository } from './persistence/prisma-contenido-vigente-usuario.repository';
+import { ModuloApiKeyHasherPort } from '../application/ports/modulo-api-key-hasher.port';
+import { Sha256ModuloApiKeyHasher } from './security/sha256-modulo-api-key-hasher';
+import { ModuloInternoCredentialsConfigPort } from '../application/ports/modulo-interno-credentials-config.port';
+import { EnvironmentModuloInternoCredentialsConfig } from './config/environment-modulo-interno-credentials.config';
+import { InformacionTemporalUsuarioRepository } from '../domain/repositories/informacion-temporal-usuario.repository';
+import { PrismaInformacionTemporalUsuarioRepository } from './persistence/prisma-informacion-temporal-usuario.repository';
+import { UbicacionesTemporalesParticipantesRepository } from '../domain/repositories/ubicaciones-temporales-participantes.repository';
+import { PrismaUbicacionesTemporalesParticipantesRepository } from './persistence/prisma-ubicaciones-temporales-participantes.repository';
+
+export const CronogramaInfrastructureProviders = [
+  {
+    provide: CondicionesInicializacionUsuarioRepository,
+    useClass: PrismaCondicionesInicializacionUsuarioRepository,
+  },
+  {
+    provide: CronogramaRepository,
+    useClass: PrismaCronogramaRepository,
+  },
+  {
+    provide: CronogramaUsuarioRepository,
+    useClass: PrismaCronogramaUsuarioRepository,
+  },
+  {
+    provide: UnidadTemporalRepository,
+    useClass: PrismaUnidadTemporalRepository,
+  },
+  {
+    provide: ContenidoRepository,
+    useClass: PrismaContenidoRepository,
+  },
+  {
+    provide: RecursoContenidoRepository,
+    useClass: PrismaRecursoContenidoRepository,
+  },
+  {
+    provide: EventoContenidoRepository,
+    useClass: PrismaEventoContenidoRepository,
+  },
+  {
+    provide: EventoContenidoPublisher,
+    useClass: NestEventoContenidoPublisher,
+  },
+  {
+    provide: S3_CLIENT,
+    useFactory: crearS3Client,
+  },
+  {
+    provide: AlmacenamientoRecursosPort,
+    useClass: S3AlmacenamientoRecursosAdapter,
+  },
+  {
+    provide: ModuloSistemaRepository,
+    useClass: PrismaModuloSistemaRepository,
+  },
+  {
+    provide: ContenidoCronogramaRepository,
+    useClass: PrismaContenidoCronogramaRepository,
+  },
+
+  {
+    provide: CalculoEstadoContenidoPort,
+    useClass: PrismaCalculoEstadoContenidoAdapter,
+  },
+  {
+    provide: PausaAdministrativaRepository,
+    useClass: PrismaPausaAdministrativaRepository,
+  },
+  {
+    provide: UbicacionTemporalUsuarioRepository,
+    useClass: PrismaUbicacionTemporalUsuarioRepository,
+  },
+  {
+    provide: ContenidoVigenteUsuarioRepository,
+    useClass: PrismaContenidoVigenteUsuarioRepository,
+  },
+  {
+    provide: InformacionTemporalUsuarioRepository,
+    useClass: PrismaInformacionTemporalUsuarioRepository,
+  },
+  {
+    provide: UbicacionesTemporalesParticipantesRepository,
+    useClass: PrismaUbicacionesTemporalesParticipantesRepository,
+  },
+  EnvironmentModuloInternoCredentialsConfig,
+  {
+    provide: ModuloInternoCredentialsConfigPort,
+    useExisting: EnvironmentModuloInternoCredentialsConfig,
+  },
+  {
+    provide: ModuloApiKeyHasherPort,
+    useClass: Sha256ModuloApiKeyHasher,
+  },
+
+  InicializarCronogramasPendientesCron,
+  PublicarEventosContenidoCron,
+];

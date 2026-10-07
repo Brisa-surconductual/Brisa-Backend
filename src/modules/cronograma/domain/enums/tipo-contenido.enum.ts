@@ -1,0 +1,5 @@
+export enum TipoContenido {
+  INFORMATIVO = 'INFORMATIVO',
+  ACTIVIDAD = 'ACTIVIDAD',
+  MULTIMEDIA = 'MULTIMEDIA',
+}
