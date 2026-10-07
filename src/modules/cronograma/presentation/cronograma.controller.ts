@@ -1,4 +1,17 @@
-import {  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { CreacionUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/crear-unidad-temporal.use-case';
 import { UnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-request';
 import { UnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-response';
@@ -34,6 +47,13 @@ import { ModuloDestinoDtoResponse } from '../application/dto/modulosDestino/modu
 import { ReordenarRecursosContenidoDtoRequest } from '../application/dto/recursoContenido/reordenar-recursos-contenido.dto-request';
 import { ReordenarRecursosContenidoDtoResponse } from '../application/dto/recursoContenido/reordenar-recursos-contenido.dto-response';
 import { ReordenarRecursosContenidoUseCase } from '../application/use-cases/recurso-contenido/reordenar-recursos-contenido.use-case';
+import { ActualizarRecursoContenidoDtoRequest } from '../application/dto/recursoContenido/actualizar-recurso-contenido.dto-request';
+import { RecursoDetalleDtoResponse } from '../application/dto/recursoContenido/recurso-detalle.dto-response';
+import {
+  ActualizarRecursoContenidoUseCase,
+  EliminarRecursoContenidoUseCase,
+  ListarRecursosContenidoUseCase,
+} from '../application/use-cases/recurso-contenido/gestionar-recurso-contenido.use-cases';
 import { ActualizarUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/actualizar-unidad-temporal.use-case';
 import { ActualizarUnidadTemporalDtoRequest } from '../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-request';
 import { ActualizarUnidadTemporalDtoResponse } from '../application/dto/unidadTemporal/actualizar-unidad-temporal.dto-response';
@@ -59,8 +79,8 @@ import { CrearCronogramaDtoRequest } from '../application/dto/cronograma/crear-c
 import { CrearCronogramaDtoResponse } from '../application/dto/cronograma/crear-cronograma.dto-response';
 import { ObtenerCronogramasUseCase } from '../application/use-cases/cronograma/obtener-cronogrmas.use-case';
 import { ObtenerCronogramasDtoResponse } from '../application/dto/cronograma/obtener-cronogramas.dto-response';
-import {ObtenerUnidadesTemporalesUseCase} from '../application/use-cases/unidad-temporal/obtener-unidades-temporales.use-case';
-import {ObtenerUnidadesTemporalesDtoResponse} from '../application/dto/unidadTemporal/obtener-unidades-temporales.dto-response';
+import { ObtenerUnidadesTemporalesUseCase } from '../application/use-cases/unidad-temporal/obtener-unidades-temporales.use-case';
+import { ObtenerUnidadesTemporalesDtoResponse } from '../application/dto/unidadTemporal/obtener-unidades-temporales.dto-response';
 import { ConsultarPausasAdministraivasUseCase } from '../application/use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
 import { ConsultarPausasAdministrativasUsuarioDtoResponse } from '../application/dto/pausaAdministrativa/conusltar-pausas-administarivas.dto-response';
 
@@ -75,6 +95,9 @@ export class CronogramaController {
     private readonly solicitarUrlSubidaRecursoUseCase: SolicitarUrlSubidaRecursoUseCase,
     private readonly listarModulosDestinoUseCase: ListarModulosDestinoUseCase,
     private readonly reordenarRecursosContenidoUseCase: ReordenarRecursosContenidoUseCase,
+    private readonly listarRecursosContenidoUseCase: ListarRecursosContenidoUseCase,
+    private readonly actualizarRecursoContenidoUseCase: ActualizarRecursoContenidoUseCase,
+    private readonly eliminarRecursoContenidoUseCase: EliminarRecursoContenidoUseCase,
     private readonly asociarContenidoUnidadTemporalUseCase: AsociarContenidoUnidadTemporalUseCase,
     private readonly actualizarDisponibilidadContenido: ActualizarDisponibilidadContenidoUseCase,
     private readonly actualizarUnidadTemporalUseCase: ActualizarUnidadTemporalUseCase,
@@ -88,7 +111,7 @@ export class CronogramaController {
     private readonly crearCronogramaUseCase: CrearCronogramaUseCase,
     private readonly obtenerCronogramasUseCase: ObtenerCronogramasUseCase,
     private readonly ObtenerUnidadesTemporalesUseCase: ObtenerUnidadesTemporalesUseCase,
-    private readonly consultarPausasAdministraivasUseCase: ConsultarPausasAdministraivasUseCase
+    private readonly consultarPausasAdministraivasUseCase: ConsultarPausasAdministraivasUseCase,
   ) {}
 
   @Post('/crear/unidad-temporal')
@@ -158,6 +181,38 @@ export class CronogramaController {
     @Body() dto: CrearRecursoContenidoDtoRequest,
   ): Promise<RecursoContenidoDtoResponse> {
     return this.crearRecursoContenidoUseCase.execute(dto);
+  }
+
+  @Get('/contenidos/:id_contenido/recursos')
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
+  async listarRecursosContenido(
+    @Param('id_contenido', new ParseUUIDPipe()) idContenido: string,
+  ): Promise<RecursoDetalleDtoResponse[]> {
+    return this.listarRecursosContenidoUseCase.execute(idContenido);
+  }
+
+  @Patch('/recursos/:id_recurso')
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async actualizarRecursoContenido(
+    @Param('id_recurso', new ParseUUIDPipe()) idRecurso: string,
+    @Body() dto: ActualizarRecursoContenidoDtoRequest,
+  ): Promise<RecursoDetalleDtoResponse> {
+    return this.actualizarRecursoContenidoUseCase.execute(idRecurso, dto);
+  }
+
+  @Delete('/recursos/:id_recurso')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @AlcancesSesion(AlcanceSesion.COMPLETA)
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async eliminarRecursoContenido(
+    @Param('id_recurso', new ParseUUIDPipe()) idRecurso: string,
+  ): Promise<void> {
+    return this.eliminarRecursoContenidoUseCase.execute(idRecurso);
   }
 
   @Patch('/contenidos/:id_contenido/recursos/orden')
@@ -300,7 +355,9 @@ export class CronogramaController {
   @Get('/obtener-pausas-administrativas')
   @Roles(Rol.ADMINISTRATIVO)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
-  async obtenerPausasAdministrativas(): Promise<ConsultarPausasAdministrativasUsuarioDtoResponse[]> {
+  async obtenerPausasAdministrativas(): Promise<
+    ConsultarPausasAdministrativasUsuarioDtoResponse[]
+  > {
     return this.consultarPausasAdministraivasUseCase.execute();
   }
 }

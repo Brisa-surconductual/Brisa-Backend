@@ -292,6 +292,24 @@ model recursos_contenido {
   recursos_modulos_destino recursos_modulos_destino[]
 
   @@unique([id_contenido, orden_bloque], map: "uq_recurso_orden")
+  @@unique([clave_almacenamiento], map: "uq_recurso_clave_almacenamiento", where: raw("(clave_almacenamiento IS NOT NULL)"))
+  @@schema("cronograma")
+}
+
+/// Outbox de eliminación S3; conserva el contenido de origen aunque sea eliminado.
+model limpieza_objetos_recurso {
+  id_limpieza          BigInt    @id @default(autoincrement())
+  id_contenido         String    @db.Uuid
+  clave_almacenamiento String    @unique
+  estado               String    @default("PENDIENTE") @db.VarChar(16)
+  intentos             Int       @default(0)
+  disponible_desde     DateTime  @default(dbgenerated("(now() + '01:05:00'::interval)")) @db.Timestamptz(6)
+  reclamado_en         DateTime? @db.Timestamptz(6)
+  fecha_creacion       DateTime  @default(now()) @db.Timestamptz(6)
+  fecha_completado     DateTime? @db.Timestamptz(6)
+  ultimo_error         String?
+
+  @@index([disponible_desde, id_limpieza], map: "ix_limpieza_objetos_pendientes", where: raw("((estado)::text <> 'COMPLETADO'::text)"))
   @@schema("cronograma")
 }
 

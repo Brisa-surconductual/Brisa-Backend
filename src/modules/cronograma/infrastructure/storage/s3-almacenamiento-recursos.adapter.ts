@@ -1,5 +1,6 @@
 import {
   HeadObjectCommand,
+  DeleteObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -30,7 +31,7 @@ export class S3AlmacenamientoRecursosAdapter implements AlmacenamientoRecursosPo
     solicitud: SolicitudUrlSubidaRecurso,
   ): Promise<UrlSubidaRecurso> {
     const config = this.obtenerConfiguracion();
-    const clave = `${config.prefijo}/${solicitud.idContenido}/${randomUUID()}`;
+    const clave = `${config.prefijo}/${solicitud.idContenido.toLowerCase()}/${randomUUID()}`;
 
     try {
       const url = await getSignedUrl(
@@ -87,6 +88,23 @@ export class S3AlmacenamientoRecursosAdapter implements AlmacenamientoRecursosPo
     }
   }
 
+  async eliminarObjeto(solicitud: SolicitudObjetoAlmacenado): Promise<void> {
+    const config = this.obtenerConfiguracion();
+    if (!this.clavePerteneceAlContenido(solicitud, config.prefijo)) {
+      throw new AlmacenamientoRecursoNoDisponibleException();
+    }
+    try {
+      await this.s3.send(
+        new DeleteObjectCommand({
+          Bucket: config.bucket,
+          Key: solicitud.claveAlmacenamiento,
+        }),
+      );
+    } catch {
+      throw new AlmacenamientoRecursoNoDisponibleException();
+    }
+  }
+
   private obtenerConfiguracion(): ConfiguracionS3Recursos {
     const bucket = process.env.AWS_S3_BUCKET?.trim();
     const prefijo = (
@@ -116,13 +134,16 @@ export class S3AlmacenamientoRecursosAdapter implements AlmacenamientoRecursosPo
     solicitud: SolicitudObjetoAlmacenado,
     prefijo: string,
   ): boolean {
-    const inicio = `${prefijo}/${solicitud.idContenido}/`;
-    const identificador = solicitud.claveAlmacenamiento.slice(inicio.length);
+    const inicio = `${prefijo}/`;
+    const [idContenido, identificador, ...segmentosExtra] =
+      solicitud.claveAlmacenamiento.slice(inicio.length).split('/');
 
     return (
       solicitud.claveAlmacenamiento.startsWith(inicio) &&
+      idContenido?.toLowerCase() === solicitud.idContenido.toLowerCase() &&
+      segmentosExtra.length === 0 &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-        identificador,
+        identificador ?? '',
       )
     );
   }

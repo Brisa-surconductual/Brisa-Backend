@@ -13,12 +13,14 @@ describe('SolicitarUrlSubidaRecursoUseCase', () => {
 
   beforeEach(() => {
     contenidoRepository = {
+      listar: jest.fn(),
       crear: jest.fn(),
       buscarPorId: jest.fn().mockResolvedValue(contenidoExistente()),
       actualizar: jest.fn(),
       eliminar: jest.fn(),
     };
     almacenamiento = {
+      eliminarObjeto: jest.fn(),
       crearUrlSubida: jest.fn().mockResolvedValue({
         claveAlmacenamiento: `cronograma/recursos/${idContenido}/00000000-0000-4000-8000-000000000010`,
         url: 'https://bucket.s3.amazonaws.com/firma',
