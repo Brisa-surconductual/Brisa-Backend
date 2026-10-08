@@ -24,6 +24,16 @@ import { ConsultarPausasAdministrativasUsuarioUseCase } from '../../src/modules/
 import { AnularPausaAdministrativaUseCase } from '../../src/modules/cronograma/application/use-cases/pausa-administrativa/anular-pausa-administrativa.use-case';
 import { EliminarUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/unidad-temporal/eliminar-unidad-temporal.use-case';
 import { CronogramaCalendarioUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/cronograma-calendario.use-case';
+import { CatologoContenitosUseCase } from '../../src/modules/cronograma/application/use-cases/contenido/catalogo-contenitos.use-case';
+import { CrearCronogramaUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/crear-cronograma.use-case';
+import { ObtenerCronogramasUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/obtener-cronogrmas.use-case';
+import { ObtenerUnidadesTemporalesUseCase } from '../../src/modules/cronograma/application/use-cases/unidad-temporal/obtener-unidades-temporales.use-case';
+import { ConsultarPausasAdministraivasUseCase } from '../../src/modules/cronograma/application/use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
+import {
+  ActualizarRecursoContenidoUseCase,
+  EliminarRecursoContenidoUseCase,
+  ListarRecursosContenidoUseCase,
+} from '../../src/modules/cronograma/application/use-cases/recurso-contenido/gestionar-recurso-contenido.use-cases';
 import { TipoContenido } from '../../src/modules/cronograma/domain/enums/tipo-contenido.enum';
 import { ContenidoCronogramaActivoException } from '../../src/modules/cronograma/domain/exeption/contenido-cronograma/contenido-cronograma-activo.exception';
 import { CronogramaUsuarioActivoNoEncontradoException } from '../../src/modules/cronograma/domain/exeption/cronograma/cronograma-usuario-activo-no-encontrado.exception';
@@ -49,6 +59,9 @@ describe('Cronograma - endpoints propios (e2e)', () => {
   const solicitarUrlSubida = { execute: jest.fn() };
   const listarModulos = { execute: jest.fn() };
   const reordenarRecursos = { execute: jest.fn() };
+  const actualizarRecurso = { execute: jest.fn() };
+  const eliminarRecurso = { execute: jest.fn() };
+  const listarRecursos = { execute: jest.fn() };
   const asociarContenido = { execute: jest.fn() };
   const actualizarDisponibilidad = { execute: jest.fn() };
   const actualizarUnidadTemporal = { execute: jest.fn() };
@@ -75,6 +88,19 @@ describe('Cronograma - endpoints propios (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       controllers: [CronogramaController],
       providers: [
+        ...[
+          CatologoContenitosUseCase,
+          CrearCronogramaUseCase,
+          ObtenerCronogramasUseCase,
+          ObtenerUnidadesTemporalesUseCase,
+          ConsultarPausasAdministraivasUseCase,
+        ].map((provide) => ({ provide, useValue: { execute: jest.fn() } })),
+        {
+          provide: ActualizarRecursoContenidoUseCase,
+          useValue: actualizarRecurso,
+        },
+        { provide: EliminarRecursoContenidoUseCase, useValue: eliminarRecurso },
+        { provide: ListarRecursosContenidoUseCase, useValue: listarRecursos },
         {
           provide: CreacionUnidadTemporalUseCase,
           useValue: crearUnidadTemporal,
@@ -186,6 +212,71 @@ describe('Cronograma - endpoints propios (e2e)', () => {
       }),
     );
   });
+
+  it('edita texto con PATCH y valida el UUID del recurso', async () => {
+    actualizarRecurso.execute.mockResolvedValue({
+      id_recurso: idContenido,
+      texto_contenido: 'Nuevo texto',
+    });
+    await request(app.getHttpServer())
+      .patch(`/cronograma/recursos/${idContenido}`)
+      .send({ texto_contenido: '  Nuevo texto  ' })
+      .expect(200);
+    expect(actualizarRecurso.execute).toHaveBeenCalledWith(
+      idContenido,
+      expect.objectContaining({ texto_contenido: 'Nuevo texto' }),
+    );
+    await request(app.getHttpServer())
+      .patch('/cronograma/recursos/invalido')
+      .send({ texto_contenido: 'Texto' })
+      .expect(400);
+  });
+
+  it.each([
+    { id_contenido: idContenido },
+    { tipo_recurso: 'TEXTO' },
+    { orden_bloque: 2 },
+    { id_modulos: [] },
+    { texto_contenido: null },
+    { tamano_bytes: null },
+  ])('rechaza campos inmutables y valores inválidos: %p', async (body) => {
+    await request(app.getHttpServer())
+      .patch(`/cronograma/recursos/${idContenido}`)
+      .send(body)
+      .expect(400);
+    expect(actualizarRecurso.execute).not.toHaveBeenCalled();
+  });
+
+  it('devuelve 204 sin cuerpo al eliminar', async () => {
+    eliminarRecurso.execute.mockResolvedValue(undefined);
+    const respuesta = await request(app.getHttpServer())
+      .delete(`/cronograma/recursos/${idContenido}`)
+      .expect(204);
+    expect(respuesta.text).toBe('');
+    expect(eliminarRecurso.execute).toHaveBeenCalledWith(idContenido);
+  });
+
+  it('devuelve el detalle necesario para editar y una lista vacía para contenido sin recursos', async () => {
+    listarRecursos.execute.mockResolvedValue([]);
+    await request(app.getHttpServer())
+      .get(`/cronograma/contenidos/${idContenido}/recursos`)
+      .expect(200)
+      .expect([]);
+    expect(listarRecursos.execute).toHaveBeenCalledWith(idContenido);
+  });
+
+  it.each(['patch', 'delete'] as const)(
+    'impide %s a un rol no autorizado',
+    async (metodo) => {
+      autorizarRol.canActivate.mockReturnValue(false);
+      await request(app.getHttpServer())
+        [metodo](`/cronograma/recursos/${idContenido}`)
+        .send({ texto_contenido: 'Texto' })
+        .expect(403);
+      expect(actualizarRecurso.execute).not.toHaveBeenCalled();
+      expect(eliminarRecurso.execute).not.toHaveBeenCalled();
+    },
+  );
 
   it('rechaza campos fuera del contrato antes de ejecutar el caso de uso', async () => {
     await request(app.getHttpServer())

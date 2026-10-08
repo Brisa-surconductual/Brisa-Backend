@@ -19,6 +19,9 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
   const solicitarUrlSubidaRecursoUseCase = { execute: jest.fn() };
   const listarModulosDestinoUseCase = { execute: jest.fn() };
   const reordenarRecursosContenidoUseCase = { execute: jest.fn() };
+  const listarRecursosContenidoUseCase = { execute: jest.fn() };
+  const actualizarRecursoContenidoUseCase = { execute: jest.fn() };
+  const eliminarRecursoContenidoUseCase = { execute: jest.fn() };
   const asociarContenidoUnidadTemporalUseCase = { execute: jest.fn() };
   const actualizarDisponibilidadContenidoUseCase = { execute: jest.fn() };
   const actualizarUnidadTemporalUseCase = { execute: jest.fn() };
@@ -49,6 +52,9 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
       solicitarUrlSubidaRecursoUseCase as never,
       listarModulosDestinoUseCase as never,
       reordenarRecursosContenidoUseCase as never,
+      listarRecursosContenidoUseCase as never,
+      actualizarRecursoContenidoUseCase as never,
+      eliminarRecursoContenidoUseCase as never,
       asociarContenidoUnidadTemporalUseCase as never,
       actualizarDisponibilidadContenidoUseCase as never,
       actualizarUnidadTemporalUseCase as never,
@@ -58,6 +64,11 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
       anularPausaAdministrativaUseCase as never,
       eliminarUnidadTemporalUseCase as never,
       cronogramaCalendarioUseCase as never,
+      { execute: jest.fn() } as never,
+      { execute: jest.fn() } as never,
+      { execute: jest.fn() } as never,
+      { execute: jest.fn() } as never,
+      { execute: jest.fn() } as never,
     );
   });
 
@@ -165,6 +176,8 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
     'solicitarUrlSubidaRecurso',
     'crearRecursoContenido',
     'reordenarRecursosContenido',
+    'actualizarRecursoContenido',
+    'eliminarRecursoContenido',
   ] as const)(
     'protege %s con sesión completa, rol administrativo y CSRF',
     (metodo) => {

@@ -39,6 +39,7 @@ import { InformacionTemporalUsuarioRepository } from '../domain/repositories/inf
 import { PrismaInformacionTemporalUsuarioRepository } from './persistence/prisma-informacion-temporal-usuario.repository';
 import { UbicacionesTemporalesParticipantesRepository } from '../domain/repositories/ubicaciones-temporales-participantes.repository';
 import { PrismaUbicacionesTemporalesParticipantesRepository } from './persistence/prisma-ubicaciones-temporales-participantes.repository';
+import { LimpiarObjetosRecursoCron } from './cron/limpiar-objetos-recurso.cron';
 
 export const CronogramaInfrastructureProviders = [
   {
@@ -126,4 +127,5 @@ export const CronogramaInfrastructureProviders = [
 
   InicializarCronogramasPendientesCron,
   PublicarEventosContenidoCron,
+  LimpiarObjetosRecursoCron,
 ];

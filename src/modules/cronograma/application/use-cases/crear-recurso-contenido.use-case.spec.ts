@@ -17,18 +17,25 @@ describe('CrearRecursoContenidoUseCase (RF-153/RF-154)', () => {
 
   beforeEach(() => {
     contenidoRepository = {
+      listar: jest.fn(),
       crear: jest.fn(),
       buscarPorId: jest.fn().mockResolvedValue(contenidoExistente()),
       actualizar: jest.fn(),
       eliminar: jest.fn(),
     };
     recursoRepository = {
+      listarPorContenido: jest.fn(),
+      buscarDetalle: jest.fn(),
+      asegurarContenidoEditable: jest.fn(),
+      actualizar: jest.fn(),
+      eliminar: jest.fn(),
       crearConModulosDestino: jest
         .fn()
         .mockImplementation((recurso) => Promise.resolve(recurso)),
       reordenar: jest.fn(),
     };
     almacenamientoRecursos = {
+      eliminarObjeto: jest.fn(),
       crearUrlSubida: jest.fn(),
       obtenerMetadatos: jest.fn().mockResolvedValue({
         mimeType: 'image/png',
