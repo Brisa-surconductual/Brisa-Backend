@@ -8,7 +8,10 @@ import { ListaRecursosReordenamientoInvalidaException } from '../../domain/exept
 import { ModuloDestinoNoDisponibleException } from '../../domain/exeption/modulo/modulo-destino-no-disponible.exception';
 import { OrdenRecursoDuplicadoException } from '../../domain/exeption/recurso-contenido/orden-recurso-duplicado.exception';
 import { RecursoSinModuloDestinoException } from '../../domain/exeption/recurso-contenido/recurso-sin-modulo-destino.exception';
-import { RecursoContenidoRepository } from '../../domain/repositories/recurso-contenido.repository';
+import {
+  RecursoContenidoConModulos,
+  RecursoContenidoRepository,
+} from '../../domain/repositories/recurso-contenido.repository';
 import { RecursoContenidoMapper } from '../mappers/recurso-contenido.mapper';
 
 @Injectable()
@@ -52,6 +55,27 @@ export class PrismaRecursoContenidoRepository implements RecursoContenidoReposit
     } catch (error: unknown) {
       this.traducirErrorPersistencia(error);
     }
+  }
+
+  async listarPorContenido(
+    idContenido: string,
+  ): Promise<RecursoContenidoConModulos[]> {
+    const recursos = await this.prisma.recursos_contenido.findMany({
+      where: { id_contenido: idContenido },
+      include: {
+        recursos_modulos_destino: {
+          select: { id_modulo: true },
+        },
+      },
+      orderBy: { orden_bloque: 'asc' },
+    });
+
+    return recursos.map((recurso) => ({
+      recurso: RecursoContenidoMapper.toDomain(recurso),
+      idModulos: recurso.recursos_modulos_destino.map(
+        (modulo) => modulo.id_modulo,
+      ),
+    }));
   }
 
   async reordenar(idContenido: string, idRecursos: string[]): Promise<void> {

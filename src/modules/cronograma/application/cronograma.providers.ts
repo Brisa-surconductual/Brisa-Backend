@@ -32,6 +32,7 @@ import {CrearCronogramaUseCase} from './use-cases/cronograma/crear-cronograma.us
 import {ObtenerCronogramasUseCase} from './use-cases/cronograma/obtener-cronogrmas.use-case';
 import {ObtenerUnidadesTemporalesUseCase} from './use-cases/unidad-temporal/obtener-unidades-temporales.use-case';
 import {ConsultarPausasAdministraivasUseCase} from './use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
+import { ListarRecursosContenidoUseCase } from './use-cases/recurso-contenido/listar-recursos-contenido.use-case';
 
 export const CronogramaApplicationProviders = [
   InicializarCronogramaUsuarioUseCase,
@@ -42,6 +43,7 @@ export const CronogramaApplicationProviders = [
   ActualizarContenidoUseCase,
   EliminarContenidoUseCase,
   CrearRecursoContenidoUseCase,
+  ListarRecursosContenidoUseCase,
   SolicitarUrlSubidaRecursoUseCase,
   ListarModulosDestinoUseCase,
   ReordenarRecursosContenidoUseCase,
