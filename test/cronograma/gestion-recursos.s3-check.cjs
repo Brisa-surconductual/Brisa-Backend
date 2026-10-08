@@ -25,13 +25,14 @@ async function verificar() {
     );
   }
   const client = crearS3Client();
-  let ultimoHttpS3;
+  let ultimoHttpS3 = 0; // Sin respuesta HTTP registrada.
   client.middlewareStack.add(
     (next, context) => async (args) => {
+      ultimoHttpS3 = 0;
       try {
         return await next(args);
       } catch (error) {
-        ultimoHttpS3 = error.$metadata?.httpStatusCode;
+        ultimoHttpS3 = error.$metadata?.httpStatusCode ?? 0;
         console.error(
           `S3 ${context.commandName}: ${error.name}, HTTP ${error.$metadata?.httpStatusCode ?? 'sin respuesta'}`,
         );
