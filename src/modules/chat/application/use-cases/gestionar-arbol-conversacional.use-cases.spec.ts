@@ -200,7 +200,15 @@ describe('Casos de uso del árbol conversacional (RF-25)', () => {
     expect(command.idFlujo).toBe(idFlujo);
     expect(command.idNodoOrigen).toBe(idNodoA);
     expect(command.idNodoDestino).toBe(idNodoB);
-    expect(command.reglaValidacion.tipoDato).toBe(TipoDatoValidacion.TEXTO);
+    expect(command.reglaValidacion).toEqual({
+      tipoDato: TipoDatoValidacion.TEXTO,
+      obligatorio: true,
+      valorMin: null,
+      valorMax: null,
+      formatoRegex: null,
+      valoresPermitidos: [],
+      mensajeError: 'Respuesta requerida',
+    });
     expect(command.creadoPor).toBe(idAdministrador);
   });
 

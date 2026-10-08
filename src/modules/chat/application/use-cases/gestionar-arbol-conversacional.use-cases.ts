@@ -145,7 +145,7 @@ export class CrearTransicionConversacionalUseCase {
     idAdministrador: string,
   ): Promise<TransicionConversacionalDtoResponse> {
     const regla = dto.regla_validacion;
-    new ReglaValidacion(
+    const reglaValidada = new ReglaValidacion(
       'validacion-previa',
       regla.tipo_dato,
       regla.obligatorio,
@@ -166,13 +166,13 @@ export class CrearTransicionConversacionalUseCase {
           valorCondicion: dto.valor_condicion,
           ordenEvaluacion: dto.orden_evaluacion,
           reglaValidacion: {
-            tipoDato: regla.tipo_dato,
-            obligatorio: regla.obligatorio,
-            valorMin: regla.valor_min ?? null,
-            valorMax: regla.valor_max ?? null,
-            formatoRegex: regla.formato_regex ?? null,
-            valoresPermitidos: regla.valores_permitidos,
-            mensajeError: regla.mensaje_error,
+            tipoDato: reglaValidada.tipoDato,
+            obligatorio: reglaValidada.obligatorio,
+            valorMin: reglaValidada.valorMin,
+            valorMax: reglaValidada.valorMax,
+            formatoRegex: reglaValidada.formatoRegex,
+            valoresPermitidos: reglaValidada.valoresPermitidos,
+            mensajeError: reglaValidada.mensajeError,
           },
           creadoPor: idAdministrador,
         }),
