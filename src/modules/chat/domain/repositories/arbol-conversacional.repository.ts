@@ -1,12 +1,27 @@
 import {
   ArbolConversacional,
+  AuditoriaArbolConversacional,
   FlujoConversacional,
   NodoConversacional,
   ReglaValidacion,
   TipoNodoConversacional,
   TransicionConversacional,
 } from '../entities/arbol-conversacional.entity';
-import { OperadorCondicion } from '../enums/arbol-conversacional.enums';
+import {
+  OperadorCondicion,
+  TipoCravingClinico,
+  TipoDependenciaClinica,
+} from '../enums/arbol-conversacional.enums';
+
+export interface PerfilClinicoArbol {
+  tipoDependencia: TipoDependenciaClinica;
+  tipoCraving: TipoCravingClinico;
+}
+
+export interface CrearFlujoPersonalizadoCommand extends PerfilClinicoArbol {
+  nombre: string;
+  creadoPor: string;
+}
 
 export interface CrearFlujoGrupalCommand {
   nombre: string;
@@ -32,6 +47,7 @@ export interface ActualizarNodoCommand {
   esNodoInicial?: boolean;
   orden?: number | null;
   idContenidoCronograma?: string | null;
+  actualizadoPor: string;
 }
 
 export interface DatosReglaValidacionCommand {
@@ -52,6 +68,7 @@ export interface CrearTransicionCommand {
   valorCondicion: unknown;
   ordenEvaluacion: number;
   reglaValidacion: DatosReglaValidacionCommand;
+  creadoPor: string;
 }
 
 export interface ActualizarTransicionCommand {
@@ -63,11 +80,41 @@ export interface ActualizarTransicionCommand {
   valorCondicion?: unknown;
   ordenEvaluacion?: number;
   reglaValidacion?: Partial<DatosReglaValidacionCommand>;
+  actualizadoPor: string;
 }
 
 export abstract class ArbolConversacionalRepository {
   abstract crearFlujoGrupal(
     command: CrearFlujoGrupalCommand,
+  ): Promise<FlujoConversacional>;
+
+  abstract crearFlujoPersonalizado(
+    command: CrearFlujoPersonalizadoCommand,
+  ): Promise<FlujoConversacional>;
+
+  abstract clonarVersionPersonalizada(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional>;
+
+  abstract listarFlujosPersonalizados(): Promise<FlujoConversacional[]>;
+
+  abstract buscarPublicadoPersonalizado(
+    perfil: PerfilClinicoArbol,
+  ): Promise<FlujoConversacional | null>;
+
+  abstract listarAuditoriaArbol(
+    idFlujo: string,
+  ): Promise<AuditoriaArbolConversacional[]>;
+
+  abstract publicarPersonalizado(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional>;
+
+  abstract archivarPersonalizado(
+    idFlujo: string,
+    idActor: string,
   ): Promise<FlujoConversacional>;
 
   abstract obtenerArbol(idFlujo: string): Promise<ArbolConversacional | null>;
@@ -88,5 +135,8 @@ export abstract class ArbolConversacionalRepository {
     command: ActualizarTransicionCommand,
   ): Promise<TransicionConversacional>;
 
-  abstract publicar(idFlujo: string): Promise<FlujoConversacional>;
+  abstract publicar(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional>;
 }

@@ -9,6 +9,17 @@ import {
   PublicarArbolConversacionalUseCase,
   ValidarArbolConversacionalUseCase,
 } from './use-cases/gestionar-arbol-conversacional.use-cases';
+import {
+  ArchivarArbolPersonalizadoUseCase,
+  ClonarVersionPersonalizadaUseCase,
+  ConsultarArbolPersonalizadoUseCase,
+  ConsultarAuditoriaArbolUseCase,
+  ConsultarPublicadoPersonalizadoUseCase,
+  CrearArbolPersonalizadoUseCase,
+  ListarArbolesPersonalizadosUseCase,
+  PublicarArbolPersonalizadoUseCase,
+  RechazarEliminacionArbolPersonalizadoUseCase,
+} from './use-cases/gestionar-arbol-personalizado.use-cases';
 
 export const ChatApplicationProviders = [
   CrearFlujoGrupalUseCase,
@@ -20,4 +31,13 @@ export const ChatApplicationProviders = [
   ActualizarTransicionConversacionalUseCase,
   ValidarArbolConversacionalUseCase,
   PublicarArbolConversacionalUseCase,
+  CrearArbolPersonalizadoUseCase,
+  ClonarVersionPersonalizadaUseCase,
+  ListarArbolesPersonalizadosUseCase,
+  ConsultarArbolPersonalizadoUseCase,
+  ConsultarPublicadoPersonalizadoUseCase,
+  PublicarArbolPersonalizadoUseCase,
+  ArchivarArbolPersonalizadoUseCase,
+  ConsultarAuditoriaArbolUseCase,
+  RechazarEliminacionArbolPersonalizadoUseCase,
 ];

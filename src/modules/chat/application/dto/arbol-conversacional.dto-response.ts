@@ -10,7 +10,9 @@ import {
   EstadoFlujoConversacional,
   ModalidadConversacional,
   OperadorCondicion,
+  TipoCravingClinico,
   TipoDatoValidacion,
+  TipoDependenciaClinica,
 } from '../../domain/enums/arbol-conversacional.enums';
 
 export class FlujoConversacionalDtoResponse {
@@ -22,6 +24,9 @@ export class FlujoConversacionalDtoResponse {
   creado_por!: string;
   fecha_creacion!: Date;
   fecha_publicacion!: Date | null;
+  tipo_dependencia!: TipoDependenciaClinica | null;
+  tipo_craving!: TipoCravingClinico | null;
+  fecha_archivado!: Date | null;
 
   static crear(flujo: FlujoConversacional): FlujoConversacionalDtoResponse {
     return {
@@ -33,6 +38,9 @@ export class FlujoConversacionalDtoResponse {
       creado_por: flujo.creadoPor,
       fecha_creacion: flujo.fechaCreacion,
       fecha_publicacion: flujo.fechaPublicacion,
+      tipo_dependencia: flujo.tipoDependencia,
+      tipo_craving: flujo.tipoCraving,
+      fecha_archivado: flujo.fechaArchivado,
     };
   }
 }

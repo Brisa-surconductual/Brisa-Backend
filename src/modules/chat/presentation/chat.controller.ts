@@ -109,8 +109,14 @@ export class ChatController {
     @Param('id_flujo', new ParseUUIDPipe()) idFlujo: string,
     @Param('id_nodo', new ParseUUIDPipe()) idNodo: string,
     @Body() dto: ActualizarNodoConversacionalDtoRequest,
+    @Req() request: AuthenticatedSessionRequest,
   ): Promise<NodoConversacionalDtoResponse> {
-    return this.actualizarNodoUseCase.execute(idFlujo, idNodo, dto);
+    return this.actualizarNodoUseCase.execute(
+      idFlujo,
+      idNodo,
+      dto,
+      request.autenticacion.usuario.id_usuario,
+    );
   }
 
   @Post('/flujos/:id_flujo/transiciones')
@@ -118,8 +124,13 @@ export class ChatController {
   crearTransicion(
     @Param('id_flujo', new ParseUUIDPipe()) idFlujo: string,
     @Body() dto: CrearTransicionConversacionalDtoRequest,
+    @Req() request: AuthenticatedSessionRequest,
   ): Promise<TransicionConversacionalDtoResponse> {
-    return this.crearTransicionUseCase.execute(idFlujo, dto);
+    return this.crearTransicionUseCase.execute(
+      idFlujo,
+      dto,
+      request.autenticacion.usuario.id_usuario,
+    );
   }
 
   @Patch('/flujos/:id_flujo/transiciones/:id_transicion')
@@ -128,8 +139,14 @@ export class ChatController {
     @Param('id_flujo', new ParseUUIDPipe()) idFlujo: string,
     @Param('id_transicion', new ParseUUIDPipe()) idTransicion: string,
     @Body() dto: ActualizarTransicionConversacionalDtoRequest,
+    @Req() request: AuthenticatedSessionRequest,
   ): Promise<TransicionConversacionalDtoResponse> {
-    return this.actualizarTransicionUseCase.execute(idFlujo, idTransicion, dto);
+    return this.actualizarTransicionUseCase.execute(
+      idFlujo,
+      idTransicion,
+      dto,
+      request.autenticacion.usuario.id_usuario,
+    );
   }
 
   @Post('/flujos/:id_flujo/validar')
@@ -144,7 +161,11 @@ export class ChatController {
   @UseGuards(CsrfSessionGuard)
   publicarArbol(
     @Param('id_flujo', new ParseUUIDPipe()) idFlujo: string,
+    @Req() request: AuthenticatedSessionRequest,
   ): Promise<FlujoConversacionalDtoResponse> {
-    return this.publicarArbolUseCase.execute(idFlujo);
+    return this.publicarArbolUseCase.execute(
+      idFlujo,
+      request.autenticacion.usuario.id_usuario,
+    );
   }
 }

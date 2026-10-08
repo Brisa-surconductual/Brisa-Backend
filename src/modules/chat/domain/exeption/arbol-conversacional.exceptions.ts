@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   InternalServerErrorException,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 
 export class FlujoConversacionalNoEncontradoException extends NotFoundException {
@@ -15,6 +17,64 @@ export class FlujoConversacionalNoEditableException extends ConflictException {
   constructor() {
     super(
       'Solo se pueden modificar flujos conversacionales en estado BORRADOR.',
+    );
+  }
+}
+
+export class FlujoPersonalizadoNoEncontradoException extends NotFoundException {
+  constructor() {
+    super('El árbol conversacional personalizado no existe.');
+  }
+}
+
+export class PerfilClinicoArbolInvalidoException extends UnprocessableEntityException {
+  constructor() {
+    super(
+      'El árbol debe estar asociado a una combinación válida de perfil clínico antes de ser publicado.',
+    );
+  }
+}
+
+export class FlujoPersonalizadoArchivadoException extends ConflictException {
+  constructor() {
+    super(
+      'No es posible publicar un árbol archivado directamente. Debe crearse una nueva versión en estado borrador.',
+    );
+  }
+}
+
+export class VersionPersonalizadaNoClonableException extends ConflictException {
+  constructor() {
+    super(
+      'Solo se puede crear una nueva versión desde un árbol publicado o archivado.',
+    );
+  }
+}
+
+export class FlujoPersonalizadoYaArchivadoException extends ConflictException {
+  constructor() {
+    super('El árbol conversacional personalizado ya se encuentra archivado.');
+  }
+}
+
+export class VersionPersonalizadaDuplicadaException extends ConflictException {
+  constructor() {
+    super('Ya existe esa versión para la combinación de perfil clínico.');
+  }
+}
+
+export class FlujoPersonalizadoPublicadoExistenteException extends ConflictException {
+  constructor() {
+    super(
+      'Ya existe un árbol personalizado publicado para esa combinación de perfil clínico.',
+    );
+  }
+}
+
+export class EliminacionArbolPersonalizadoProhibidaException extends ForbiddenException {
+  constructor() {
+    super(
+      'No es posible eliminar un árbol conversacional personalizado. Utilice la opción de archivado.',
     );
   }
 }
