@@ -2,6 +2,7 @@ import { ConsultarInformacionTemporalDtoRequest } from '../application/dto/infor
 import { InformacionTemporalUsuarioDtoResponse } from '../application/dto/informacionTemporal/informacion-temporal-usuario.dto-response';
 import { ConsultarInformacionTemporalUsuarioUseCase } from '../application/use-cases/cronograma/consultar-informacion-temporal-usuario.use-case';
 import { ModuloInternoAuthGuard } from './guards/modulo-interno-auth.guard';
+import { Controller, Get, Header, Param, ParseUUIDPipe, Query, UseGuards, } from '@nestjs/common';
 
 @Controller('/cronograma/interno')
 export class InformacionTemporalController {
