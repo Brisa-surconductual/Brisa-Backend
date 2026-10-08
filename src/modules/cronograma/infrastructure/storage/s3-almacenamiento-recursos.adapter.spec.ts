@@ -1,4 +1,8 @@
-import { HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { TipoRecurso } from '../../domain/enums/tipo-recurso.enum';
 import { S3AlmacenamientoRecursosAdapter } from './s3-almacenamiento-recursos.adapter';
 
@@ -72,6 +76,49 @@ describe('S3AlmacenamientoRecursosAdapter', () => {
 
     expect(resultado).toBeNull();
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it('elimina solamente una clave válida del contenido y del bucket configurado', async () => {
+    const send = jest.spyOn(s3, 'send').mockResolvedValue({} as never);
+    await adapter.eliminarObjeto({
+      idContenido,
+      claveAlmacenamiento: claveValida(),
+    });
+    const comando = send.mock.calls[0][0] as DeleteObjectCommand;
+    expect(comando).toBeInstanceOf(DeleteObjectCommand);
+    expect(comando.input).toEqual({
+      Bucket: 'brisa-recursos-pruebas',
+      Key: claveValida(),
+    });
+  });
+
+  it('rechaza una eliminación fuera del contenido sin contactar AWS', async () => {
+    const send = jest.spyOn(s3, 'send');
+    await expect(
+      adapter.eliminarObjeto({
+        idContenido,
+        claveAlmacenamiento: 'otra/clave',
+      }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('reconoce el UUID del contenido independientemente de mayúsculas y no admite subrutas', async () => {
+    const contenidoConLetras = 'abcdef00-0000-4000-8000-000000000001';
+    const clave = `cronograma/recursos/${contenidoConLetras.toUpperCase()}/00000000-0000-4000-8000-000000000010`;
+    const send = jest.spyOn(s3, 'send').mockResolvedValue({} as never);
+    await adapter.eliminarObjeto({
+      idContenido: contenidoConLetras,
+      claveAlmacenamiento: clave,
+    });
+    expect(send).toHaveBeenCalledTimes(1);
+    await expect(
+      adapter.eliminarObjeto({
+        idContenido: contenidoConLetras,
+        claveAlmacenamiento: `${clave}/archivo`,
+      }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
   it('trata un 404 de S3 como archivo no cargado', async () => {

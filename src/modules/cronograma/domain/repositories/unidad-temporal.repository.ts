@@ -9,4 +9,6 @@ export abstract class UnidadTemporalRepository {
     abstract actualizarUnidadTemporal(unidadTemporal: UnidadTemporal): Promise<UnidadTemporal>;
     abstract actualizarConReordenamiento( unidadActualizada: UnidadTemporal, reordenamientoHermanas: AsignacionOrdenUnidad[], ): Promise<UnidadTemporal>;
     abstract eliminarConReordenamiento( idUnidadTemporal: string, reordenamientoHermanas: AsignacionOrdenUnidad[], ): Promise<void>;
+    abstract obtenerUnidadesTemporalesPorIdCronograma(id_cronograma: string): Promise<UnidadTemporal[]>;
+    abstract crearConReordenamiento( nidadTemporal: UnidadTemporal, reordenamientoHermanas: AsignacionOrdenUnidad[], ): Promise<UnidadTemporal>;
 }

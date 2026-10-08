@@ -4,6 +4,7 @@ import { ActualizarContrasenaUseCase } from './use-cases/actualizar-contraseña.
 import { ExpirarCodigosUseCase } from './use-cases/expirar-codigos.use-case';
 import {CreacionAdministradorUseCase} from "./use-cases/creacion-adimistrador.use-case";
 import { SessionService } from './services/sesion.service';
+import {BuscarUsuariosUseCase} from "./use-cases/buscar-usuario.use-case";
 
 export const UsuarioAplicationProviders = [
 
@@ -13,5 +14,5 @@ export const UsuarioAplicationProviders = [
     ExpirarCodigosUseCase,
     CreacionAdministradorUseCase,
     SessionService,
-    
+    BuscarUsuariosUseCase
 ];

@@ -6,4 +6,9 @@ export abstract class CronogramaRepository {
   abstract existeBaseConfigurado(): Promise<boolean>;
 
   abstract buscarPorId(id: string): Promise<Cronograma>;
+
+  abstract save(cronograma: Cronograma): Promise<void>;
+  
+  abstract obtenerCronogramas(): Promise<Cronograma[]>;
+
 }

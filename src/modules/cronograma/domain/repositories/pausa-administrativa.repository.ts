@@ -28,4 +28,6 @@ export abstract class PausaAdministrativaRepository {
     idUsuario: string,
     idPausa: string,
   ): Promise<PausaAdministrativa | null>;
+
+  abstract listarPausasAdministrativas(): Promise<PausaAdministrativa[]>;
 }

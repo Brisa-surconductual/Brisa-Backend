@@ -5,7 +5,6 @@ import { ContenidoCronogramaRepository } from "../../../domain/repositories/cont
 
 @Injectable()
 export class CatologoContenitosUseCase {
-
     constructor(
         private readonly contenidoRepository: ContenidoRepository, 
         private readonly contenidoCronogramaRepository: ContenidoCronogramaRepository

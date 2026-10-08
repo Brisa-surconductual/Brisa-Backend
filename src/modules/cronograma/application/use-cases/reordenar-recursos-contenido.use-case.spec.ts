@@ -16,6 +16,7 @@ describe('ReordenarRecursosContenidoUseCase (RF-153)', () => {
 
   beforeEach(() => {
     contenidoRepository = {
+      listar: jest.fn(),
       crear: jest.fn(),
       buscarPorId: jest
         .fn()
@@ -32,6 +33,11 @@ describe('ReordenarRecursosContenidoUseCase (RF-153)', () => {
       eliminar: jest.fn(),
     };
     recursoRepository = {
+      listarPorContenido: jest.fn(),
+      buscarDetalle: jest.fn(),
+      asegurarContenidoEditable: jest.fn(),
+      actualizar: jest.fn(),
+      eliminar: jest.fn(),
       crearConModulosDestino: jest.fn(),
       reordenar: jest.fn(),
     };

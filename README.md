@@ -36,7 +36,6 @@
   - [7. Ejecutar el proyecto](#7-ejecutar-el-proyecto)
 - [Recursos multimedia con S3](#recursos-multimedia-con-s3)
 - [Autenticación de módulos internos](#autenticación-de-módulos-internos)
-- [Gestión del árbol conversacional](#gestión-del-árbol-conversacional)
 - [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)
 - [Arquitectura](#arquitectura)
 - [Organización del proyecto](#organización-del-proyecto)
@@ -222,11 +221,58 @@ realiza en una única transacción para conservar la unicidad de `orden_bloque`.
 Para texto no se solicita URL: se usa directamente `POST /cronograma/recursos`
 con `tipo_recurso: "TEXTO"` y `texto_contenido`.
 
-El usuario o rol IAM de la aplicación necesita solamente `s3:PutObject` y
-`s3:GetObject` (requerido por `HeadObject`) sobre
+Para gestionar los recursos existentes se exponen:
+
+- `GET /cronograma/contenidos/:id_contenido/recursos`: detalle completo ordenado
+  por bloque, incluidos texto, metadatos y `id_modulos`; devuelve `[]` si el
+  contenido existe pero no tiene recursos y `404` si el contenido no existe.
+- `PATCH /cronograma/recursos/:id_recurso`: modifica `texto_contenido` para TEXTO;
+  para multimedia admite `texto_alternativo` y `duracion_segundos` (ambos
+  aceptan `null` para vaciarlos). `id_modulos` reemplaza todos los destinos y debe
+  incluir al menos un módulo activo. Para sustituir un archivo, solicita otra
+  URL, sube el objeto y envía juntos `clave_almacenamiento`, `mime_type` y
+  `tamano_bytes`; el backend contrasta sus metadatos con S3. Devuelve el detalle.
+- `DELETE /cronograma/recursos/:id_recurso`: devuelve `204`, elimina los destinos
+  por cascada y compacta el orden de los bloques restantes en la misma transacción.
+
+Estas rutas requieren sesión completa y rol ADMINISTRATIVO; PATCH y DELETE
+requieren además el encabezado CSRF usado por el resto de operaciones. Los campos
+`id_contenido`, `tipo_recurso` y `orden_bloque` no se modifican con PATCH; un
+cuerpo vacío, campos ajenos al contrato o combinaciones inválidas devuelven `400`.
+El recurso inexistente devuelve `404`. La creación, edición, eliminación y
+reordenamiento de recursos de un contenido asociado a un cronograma ACTIVO
+devuelven `403`. La BD protege también las asociaciones de módulos y serializa
+estos cambios contra activaciones y asociaciones concurrentes. Los conflictos de
+orden, clave de archivo y concurrencia devuelven `409`.
+
+La migración `20261006120000_gestion_recursos_contenido` incorpora un índice único
+por clave y la cola `cronograma.limpieza_objetos_recurso`. Sus triggers registran
+la limpieza al reemplazar/eliminar un archivo, también al borrar el contenido
+por cascada. Cada cinco minutos un proceso reclama hasta 20 tareas, elimina
+únicamente claves del contenido y prefijo configurados, y reintenta los fallos
+con espera progresiva. La limpieza comienza después de 65 minutos para dejar
+expirar las URLs PUT anteriores (máximo 60 minutos). Un fallo de AWS no invalida
+la transacción de eliminación. Una clave retirada no puede volver a asociarse;
+el worker tampoco elimina objetos que aún estén referenciados. La cola conserva
+el estado de las tareas para inspección y recuperación.
+
+El usuario o rol IAM de la aplicación necesita `s3:PutObject`,
+`s3:GetObject` (requerido por `HeadObject`) y `s3:DeleteObject` sobre
 `arn:aws:s3:::<bucket>/cronograma/recursos/*`. En despliegue se recomienda un rol
 IAM; las variables `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY` pueden omitirse
 cuando el entorno ya proporciona credenciales mediante dicho rol.
+
+Pruebas de integración HTTP: `pnpm test:e2e:cronograma`. Para validar además
+la migración y los triggers en PostgreSQL sin conservar cambios, ejecuta
+`node test/cronograma/gestion-recursos.db-check.cjs` con
+`RUN_DB_RESOURCE_CHECK=1`; la prueba usa fixtures propios y termina con `ROLLBACK`.
+Después de desplegar la migración, agrega `--installed` para validar las garantías
+instaladas sin volver a ejecutar el SQL de migración; solo se revierten los fixtures.
+La comprobación real de S3 está en `test/cronograma/gestion-recursos.s3-check.cjs`:
+ejecútala con `RUN_S3_RESOURCE_CHECK=1`. Crea un único objeto temporal, valida
+URL firmada, PUT, HEAD y DELETE, y limpia el objeto al terminar. Tras un DELETE
+exitoso admite el `403` de HEAD para una clave inexistente sin `ListBucket`,
+según el [contrato de AWS](https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html).
 
 ---
 
@@ -284,71 +330,6 @@ node -e "const {randomBytes,createHash}=require('crypto');const key=randomBytes(
 El valor `SHA-256` se guarda en la variable de entorno; el valor `API key` se
 configura como secreto únicamente en el módulo consumidor. Si el hash falta o
 es inválido, el acceso queda denegado de forma segura.
-
----
-
-## Gestión del árbol conversacional
-
-RF-25 expone la gestión administrativa del árbol grupal bajo
-`/chat/administracion`. Requiere una sesión completa con rol `ADMINISTRATIVO` y
-las operaciones de escritura también requieren el token CSRF de la sesión.
-
-- `POST /flujos`: crea una versión grupal en estado `BORRADOR`.
-- `GET /tipos-nodo`: consulta el catálogo de tipos de nodo.
-- `GET /flujos/:id_flujo/arbol`: consulta nodos, transiciones y validaciones.
-- `POST|PATCH /flujos/:id_flujo/nodos`: crea nodos; la edición usa además
-  `/:id_nodo`.
-- `POST|PATCH /flujos/:id_flujo/transiciones`: crea de forma atómica una
-  transición y su regla de validación; la edición usa además
-  `/:id_transicion`.
-- `POST /flujos/:id_flujo/validar`: comprueba la estructura completa.
-- `POST /flujos/:id_flujo/publicar`: valida y publica en una misma transacción.
-
-La validación usa BFS desde el único nodo inicial para detectar nodos huérfanos
-y DFS sobre el grafo dirigido para detectar ciclos. El modelo actual no define
-un límite, contador ni otra forma de distinguir ciclos controlados; por esa
-razón RF-25 rechaza conservadoramente **todos los ciclos**. Las mutaciones se
-ejecutan con aislamiento serializable para evitar carreras entre la edición y
-la publicación de un mismo flujo.
-
-La migración de catálogo de RF-25 registra de forma idempotente los tipos
-`MENSAJE`, `PREGUNTA`, `DECISION` y `CONTENIDO`; no agrega tablas ni modifica el
-esquema existente.
-
-### Árboles personalizados por perfil clínico (RF-25C)
-
-Los árboles personalizados reutilizan los nodos, transiciones, reglas y el
-validador de RF-25. El equipo de psicología usa cuentas `ADMINISTRATIVO`, único
-rol administrativo disponible actualmente. Todas las escrituras requieren
-sesión completa y token CSRF.
-
-Base: `/chat/administracion/arboles-personalizados`.
-
-- `POST /`: crea un borrador para una combinación
-  `tipo_dependencia` × `tipo_craving`; asigna automáticamente la siguiente
-  versión libre de esa combinación.
-- `GET /`: lista las cuatro combinaciones, el publicado vigente y el historial
-  de versiones de cada una.
-- `GET /publicado?tipo_dependencia=...&tipo_craving=...`: consulta el publicado
-  vigente; retorna `null` si todavía no existe. El caso de uso correspondiente
-  también puede ser consumido internamente por RF-26B.
-- `GET /:id_flujo`: consulta el árbol completo de una versión.
-- `GET /:id_flujo/auditoria`: consulta su historial de operaciones.
-- `POST /:id_flujo/nueva-version`: crea un borrador copiando los nodos,
-  transiciones y validaciones de una versión publicada o archivada.
-- `POST /:id_flujo/publicar`: valida la estructura, archiva el publicado
-  anterior de la misma combinación y publica el borrador de forma atómica.
-- `POST /:id_flujo/archivar`: retira un borrador o publicado sin borrarlo.
-- `DELETE /:id_flujo`: responde `403`; los árboles se conservan para las
-  sesiones históricas.
-
-La edición de nodos y transiciones en borradores personalizados usa los mismos
-endpoints `POST`/`PATCH /chat/administracion/flujos/:id_flujo/nodos` y
-`/transiciones` de RF-25. Una versión publicada o archivada es inmutable; para
-editarla se crea una versión nueva. La migración de RF-25C agrega la unicidad de
-`(tipo_dependencia, tipo_craving, version)` y la tabla de auditoría inmutable.
-El índice único parcial que impide dos publicados por combinación ya existe en
-PostgreSQL y se conserva.
 
 ---
 

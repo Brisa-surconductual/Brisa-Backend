@@ -9,6 +9,22 @@ export class CoherenciaDatosRecursoVO {
     mimeType?: string,
     tamanoBytes?: number,
   ) {
+    CoherenciaDatosRecursoVO.validar(
+      tipoRecurso,
+      textoContenido,
+      claveAlmacenamiento,
+      mimeType,
+      tamanoBytes,
+    );
+  }
+
+  static validar(
+    tipoRecurso: TipoRecurso,
+    textoContenido?: string,
+    claveAlmacenamiento?: string,
+    mimeType?: string,
+    tamanoBytes?: number,
+  ): void {
     const tieneTexto = Boolean(textoContenido?.trim());
     const tieneClave = Boolean(claveAlmacenamiento?.trim());
     const tieneMimeType = Boolean(mimeType?.trim());
