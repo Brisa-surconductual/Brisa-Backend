@@ -29,6 +29,8 @@ import { ConsultarInformacionTemporalUsuarioUseCase } from './use-cases/cronogra
 import { ConsultarUbicacionesTemporalesParticipantesUseCase } from './use-cases/cronograma/consultar-ubicaciones-temporales-participantes.use-case';
 import { CatologoContenitosUseCase } from './use-cases/contenido/catalogo-contenitos.use-case';
 import { CrearCronogramaUseCase } from './use-cases/cronograma/crear-cronograma.use-case';
+import { ConsultaContenidoVigentePort } from './ports/consulta-contenido-vigente.port';
+import { ConsultaContenidoVigenteService } from './service/consulta-contenido-vigente.service';
 import { ObtenerCronogramasUseCase } from './use-cases/cronograma/obtener-cronogrmas.use-case';
 import { ObtenerUnidadesTemporalesUseCase } from './use-cases/unidad-temporal/obtener-unidades-temporales.use-case';
 import { ConsultarPausasAdministraivasUseCase } from './use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
@@ -61,6 +63,10 @@ export const CronogramaApplicationProviders = [
   RegistrarPausaAdministrativaUseCase,
   CalcularUbicacionTemporalUsuarioUseCase,
   ConsultarContenidoVigenteUsuarioUseCase,
+  {
+    provide: ConsultaContenidoVigentePort,
+    useClass: ConsultaContenidoVigenteService,
+  },
   ConsultarPausasAdministrativasUsuarioUseCase,
   AnularPausaAdministrativaUseCase,
   ConsultarInformacionTemporalUsuarioUseCase,
