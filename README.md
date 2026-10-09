@@ -338,7 +338,8 @@ es inválido, el acceso queda denegado de forma segura.
 
 `GET /chat/me/contenidos-vigentes` es la entrada de la PWA del estudiante. Es
 una integración del módulo consumidor M-3 con RF-21; no sustituye los endpoints
-internos ni añade una consulta administrativa de otros usuarios.
+internos. La consulta administrativa de otro usuario utiliza la ruta independiente
+documentada a continuación.
 
 Requiere la cookie de sesión existente, cuenta activa, rol `ESTUDIANTE` y alcance
 `COMPLETA`. El backend obtiene el usuario del contexto autenticado y utiliza
@@ -388,6 +389,53 @@ Verificación: `pnpm test:e2e:chat` usa los módulos y guards reales y reemplaza
 únicamente las dependencias externas. Comprueba el contrato, la autorización,
 el aislamiento de usuarios y el uso de la hora del servidor sin escribir en
 PostgreSQL ni acceder a S3. No requiere migración ni dependencias nuevas.
+
+## Contenido vigente para React administrativo
+
+`GET /cronograma/usuarios/:id_usuario/contenidos-vigentes` permite consultar el
+contenido vigente del estudiante seleccionado con la cookie de sesión existente,
+cuenta activa, rol `ADMINISTRATIVO` y alcance `COMPLETA`. Mantiene la política de
+acceso administrativo global del módulo; no añade permisos por institución ni
+asignaciones entre administrativos y estudiantes.
+
+El UUID del estudiante se recibe exclusivamente en la ruta y se valida con
+`ParseUUIDPipe`. No admite parámetros de consulta ni fechas del cliente: siempre
+utiliza la fecha y hora actuales del servidor. Un UUID inválido o cualquier
+parámetro de consulta devuelve `400`. Una sesión de estudiante devuelve `403`.
+La ruta personal `/chat/me/contenidos-vigentes` sigue restringida a estudiantes.
+
+El controlador reutiliza directamente el caso de uso de RF-21 dentro de Cronograma
+y su función SQL; no se hace pasar por el módulo CHAT ni depende de que CHAT esté
+activo. La autorización corresponde al administrativo autenticado. Los endpoints
+internos conservan su autenticación por módulo sin cambios.
+
+La respuesta conserva los mismos once campos de metadatos y `Cache-Control:
+no-store`: `200` con un arreglo, `204` sin cuerpo cuando no hay contenido, `401`
+por sesión inválida/cerrada/vencida o cuenta inactiva, `403` por rol o alcance no
+autorizado, `404` si no existe cronograma asignado para ese UUID, `422` si falta la
+fecha de inicio o hay una condición temporal inválida y `500` sin detalles de
+infraestructura. No expone recursos, archivos ni URLs de S3.
+
+Desde el cliente administrativo de React, con `withCredentials: true`:
+
+```jsx
+const respuesta = await apiClient.get(
+  `/cronograma/usuarios/${encodeURIComponent(idEstudiante)}/contenidos-vigentes`,
+);
+const contenidos = respuesta.status === 204 ? [] : respuesta.data;
+```
+
+No enviar API keys, `Authorization`, `X-Module-Code` ni parámetros de consulta.
+El frontend debe separar los estados `204`, `404` y `422`, tratar `401`/`403` con
+los flujos existentes y limpiar la consulta al cambiar de estudiante o cerrar
+sesión. Evitar que una petición anterior actualice la vista de otro estudiante
+cancelándola o comprobando el identificador antes de mostrar su resultado.
+Es un GET de solo lectura: no necesita un token CSRF adicional. Se mantiene la
+configuración existente de HTTPS, cookies y `PWA_ORIGINS`.
+
+`pnpm test:e2e:chat` también comprueba esta ruta con los módulos y guards reales,
+incluyendo el rechazo cruzado entre roles y la conservación de la consulta
+personal. No requiere migración ni dependencias nuevas.
 
 ---
 

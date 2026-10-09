@@ -29,12 +29,14 @@ import { SesionRepository } from '../../src/modules/usuarios/domain/repositories
 import { UsuarioRepository } from '../../src/modules/usuarios/domain/repositories/user.repository';
 import { CorreoElectronico } from '../../src/modules/usuarios/domain/value-objects/correo_electronico.vo';
 
-describe('Chat - contenido vigente con sesión PWA (e2e)', () => {
+describe('Contenido vigente - sesiones PWA de estudiante y administrativo (e2e)', () => {
   const ruta = '/chat/me/contenidos-vigentes';
   const idUsuarioA = '00000000-0000-4000-8000-000000000001';
   const idUsuarioB = '00000000-0000-4000-8000-000000000002';
+  const idAdministrador = '00000000-0000-4000-8000-000000000006';
   const tokenA = 'sesion-estudiante-a';
   const tokenB = 'sesion-estudiante-b';
+  const tokenAdministrador = 'sesion-administrativo';
   const hash = (valor: string) =>
     createHash('sha256').update(valor).digest('hex');
   const consultar = jest.fn<
@@ -102,10 +104,19 @@ describe('Chat - contenido vigente con sesión PWA (e2e)', () => {
         return Promise.resolve(crearSesion(idUsuarioA, tokenA));
       if (valor === hash(tokenB))
         return Promise.resolve(crearSesion(idUsuarioB, tokenB));
+      if (valor === hash(tokenAdministrador))
+        return Promise.resolve(
+          crearSesion(idAdministrador, tokenAdministrador),
+        );
       return Promise.resolve(null);
     });
     buscarPorId.mockImplementation((idUsuario: string) =>
-      Promise.resolve(crearUsuario(idUsuario)),
+      Promise.resolve(
+        crearUsuario(
+          idUsuario,
+          idUsuario === idAdministrador ? Rol.ADMINISTRATIVO : Rol.ESTUDIANTE,
+        ),
+      ),
     );
     registrarActividad.mockResolvedValue(true);
     cerrarActiva.mockResolvedValue(true);
@@ -280,6 +291,210 @@ describe('Chat - contenido vigente con sesión PWA (e2e)', () => {
       .get(ruta)
       .set('Cookie', `brisa_session=${token}`);
   }
+
+  describe('consulta administrativa de un estudiante', () => {
+    const rutaAdministrativa = (idUsuario = idUsuarioA) =>
+      `/cronograma/usuarios/${idUsuario}/contenidos-vigentes`;
+
+    function solicitudAdministrativa(
+      idUsuario = idUsuarioA,
+      token = tokenAdministrador,
+    ): request.Test {
+      return request(app.getHttpServer())
+        .get(rutaAdministrativa(idUsuario))
+        .set('Cookie', `brisa_session=${token}`);
+    }
+
+    it('retorna 200 con cookie administrativa y la hora del servidor, sin API key', async () => {
+      const antes = Date.now();
+      await solicitudAdministrativa()
+        .expect(200)
+        .expect('Cache-Control', 'no-store')
+        .expect([contenidoHttp()]);
+      expect(consultar).toHaveBeenCalledWith(idUsuarioA, expect.any(Date));
+      expect(consultar).toHaveBeenCalledTimes(1);
+      const fechaConsulta = consultar.mock.calls[0][1];
+      expect(fechaConsulta.getTime()).toBeGreaterThanOrEqual(antes);
+      expect(fechaConsulta.getTime()).toBeLessThanOrEqual(Date.now());
+      expect(buscarActivoPorCodigo).not.toHaveBeenCalled();
+    });
+
+    it('consulta al estudiante seleccionado en la ruta y no al administrativo autenticado', async () => {
+      consultar.mockImplementation((idUsuario: string) =>
+        Promise.resolve([crearContenido(idUsuario)]),
+      );
+      await solicitudAdministrativa(idUsuarioA)
+        .expect(200)
+        .expect([contenidoHttp(idUsuarioA)]);
+      await solicitudAdministrativa(idUsuarioB)
+        .expect(200)
+        .expect([contenidoHttp(idUsuarioB)]);
+      expect(consultar.mock.calls.map(([id]) => id)).toEqual([
+        idUsuarioA,
+        idUsuarioB,
+      ]);
+    });
+
+    it('retorna 204 sin cuerpo cuando no hay contenido vigente', async () => {
+      consultar.mockResolvedValue([]);
+      await solicitudAdministrativa()
+        .expect(204)
+        .expect('Cache-Control', 'no-store')
+        .expect('');
+    });
+
+    it('rechaza 401 sin cookie aunque se envíen credenciales de módulo y un rol declarado', async () => {
+      await request(app.getHttpServer())
+        .get(rutaAdministrativa())
+        .set('Authorization', `Bearer ${'a'.repeat(40)}`)
+        .set('X-Module-Code', 'CHAT')
+        .set('X-Role', 'ADMINISTRATIVO')
+        .expect(401);
+      expect(consultar).not.toHaveBeenCalled();
+    });
+
+    it('rechaza 401 después del logout o con una sesión inexistente', async () => {
+      buscarActivaPorTokenHash.mockResolvedValue(null);
+      await solicitudAdministrativa().expect(401);
+      expect(consultar).not.toHaveBeenCalled();
+    });
+
+    it('cierra y rechaza 401 una sesión administrativa vencida', async () => {
+      buscarActivaPorTokenHash.mockResolvedValue(
+        crearSesion(
+          idAdministrador,
+          tokenAdministrador,
+          AlcanceSesion.COMPLETA,
+          new Date(Date.now() - 16 * 60_000),
+        ),
+      );
+      await solicitudAdministrativa().expect(401);
+      expect(cerrarActiva).toHaveBeenCalled();
+      expect(consultar).not.toHaveBeenCalled();
+    });
+
+    it('rechaza 401 si la cuenta administrativa está bloqueada', async () => {
+      buscarPorId.mockResolvedValue(
+        crearUsuario(
+          idAdministrador,
+          Rol.ADMINISTRATIVO,
+          EstadoCuenta.BLOQUEADA,
+        ),
+      );
+      await solicitudAdministrativa().expect(401);
+      expect(consultar).not.toHaveBeenCalled();
+    });
+
+    it('rechaza 403 si la sesión administrativa es limitada', async () => {
+      buscarActivaPorTokenHash.mockResolvedValue(
+        crearSesion(
+          idAdministrador,
+          tokenAdministrador,
+          AlcanceSesion.LIMITADA,
+        ),
+      );
+      await solicitudAdministrativa().expect(403);
+      expect(consultar).not.toHaveBeenCalled();
+    });
+
+    it.each([tokenA, tokenB])(
+      'rechaza 403 a un estudiante aunque declare rol administrativo (%s)',
+      async (token) => {
+        await solicitudAdministrativa(idUsuarioA, token)
+          .set('X-Role', 'ADMINISTRATIVO')
+          .expect(403);
+        expect(consultar).not.toHaveBeenCalled();
+      },
+    );
+
+    it('conserva 403 para la sesión administrativa real en la ruta personal del estudiante', async () => {
+      await solicitud(tokenAdministrador).expect(403);
+      expect(consultar).not.toHaveBeenCalled();
+    });
+
+    it.each(['no-es-un-uuid', "1' OR '1'='1"])(
+      'rechaza 400 el identificador inválido %s antes de consultar',
+      async (idUsuario) => {
+        await solicitudAdministrativa(encodeURIComponent(idUsuario)).expect(
+          400,
+        );
+        expect(consultar).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      { id_usuario: idUsuarioB },
+      { fecha_consulta: '2099-01-01T00:00:00.000Z' },
+      { codigo_modulo: 'NOTIF' },
+      { otro: 'valor' },
+    ])('rechaza 400 parámetros ajenos al contrato: %j', async (consulta) => {
+      await solicitudAdministrativa().query(consulta).expect(400);
+      expect(consultar).not.toHaveBeenCalled();
+    });
+
+    it('los encabezados del cliente no sustituyen el UUID de la ruta', async () => {
+      await solicitudAdministrativa()
+        .set('X-User-Id', idUsuarioB)
+        .set('X-Module-Code', 'NOTIF')
+        .expect(200);
+      expect(consultar).toHaveBeenCalledWith(idUsuarioA, expect.any(Date));
+      expect(buscarActivoPorCodigo).not.toHaveBeenCalled();
+    });
+
+    it('no depende de CHAT activo y conserva la restricción de la ruta personal', async () => {
+      buscarActivoPorCodigo.mockResolvedValue(null);
+      await solicitudAdministrativa().expect(200);
+      expect(buscarActivoPorCodigo).not.toHaveBeenCalled();
+      await solicitud().expect(403);
+      expect(buscarActivoPorCodigo).toHaveBeenCalledWith('CHAT');
+      expect(consultar).toHaveBeenCalledTimes(1);
+    });
+
+    it('conserva 404 si el UUID no tiene cronograma asignado', async () => {
+      consultar.mockRejectedValue(new CronogramaUsuarioNoAsignadoException());
+      await solicitudAdministrativa().expect(404);
+    });
+
+    it('conserva 422 si el estudiante no tiene fecha de inicio', async () => {
+      consultar.mockRejectedValue(
+        new FechaInicioUsuarioNoRegistradaException(),
+      );
+      await solicitudAdministrativa().expect(422);
+    });
+
+    it('responde 500 sin filtrar detalles de infraestructura', async () => {
+      consultar.mockRejectedValue(
+        new Error('password authentication failed: secreto'),
+      );
+      const respuesta = await solicitudAdministrativa().expect(500);
+      expect(respuesta.text).not.toContain('password');
+      expect(respuesta.text).not.toContain('secreto');
+    });
+
+    it('permite el preflight administrativo con cookies sin habilitar encabezados internos', async () => {
+      await request(app.getHttpServer())
+        .options(rutaAdministrativa())
+        .set('Origin', 'http://localhost:5173')
+        .set('Access-Control-Request-Method', 'GET')
+        .set('Access-Control-Request-Headers', 'content-type')
+        .expect(204)
+        .expect('Access-Control-Allow-Origin', 'http://localhost:5173')
+        .expect('Access-Control-Allow-Credentials', 'true')
+        .expect('Access-Control-Allow-Headers', 'Content-Type,X-CSRF-Token');
+      expect(consultar).not.toHaveBeenCalled();
+    });
+
+    it.each(['post', 'patch', 'delete'] as const)(
+      'no permite modificar el contenido mediante %s',
+      async (metodo) => {
+        await request(app.getHttpServer())
+          [metodo](rutaAdministrativa())
+          .set('Cookie', `brisa_session=${tokenAdministrador}`)
+          .expect(404);
+        expect(consultar).not.toHaveBeenCalled();
+      },
+    );
+  });
 
   function crearSesion(
     idUsuario: string,
