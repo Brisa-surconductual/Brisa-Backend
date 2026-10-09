@@ -36,6 +36,7 @@
   - [7. Ejecutar el proyecto](#7-ejecutar-el-proyecto)
 - [Recursos multimedia con S3](#recursos-multimedia-con-s3)
 - [Autenticación de módulos internos](#autenticación-de-módulos-internos)
+- [Contenido vigente para React desde Chat](#contenido-vigente-para-react-desde-chat)
 - [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)
 - [Arquitectura](#arquitectura)
 - [Organización del proyecto](#organización-del-proyecto)
@@ -330,6 +331,63 @@ node -e "const {randomBytes,createHash}=require('crypto');const key=randomBytes(
 El valor `SHA-256` se guarda en la variable de entorno; el valor `API key` se
 configura como secreto únicamente en el módulo consumidor. Si el hash falta o
 es inválido, el acceso queda denegado de forma segura.
+
+---
+
+## Contenido vigente para React desde Chat
+
+`GET /chat/me/contenidos-vigentes` es la entrada de la PWA del estudiante. Es
+una integración del módulo consumidor M-3 con RF-21; no sustituye los endpoints
+internos ni añade una consulta administrativa de otros usuarios.
+
+Requiere la cookie de sesión existente, cuenta activa, rol `ESTUDIANTE` y alcance
+`COMPLETA`. El backend obtiene el usuario del contexto autenticado y utiliza
+exclusivamente la fecha y hora actuales del servidor. No admite parámetros de
+consulta: enviar `id_usuario`, `fecha_consulta` u otro parámetro devuelve `400`.
+No se envían `Authorization`, `X-Module-Code` ni API keys desde React. Por ser
+una lectura GET, no requiere un token CSRF adicional.
+
+Chat fija su identidad como `CHAT` en su adaptador de integración. Cronograma
+exporta `ConsultaContenidoVigentePort`, verifica la lista de módulos autorizados
+y que CHAT siga activo en la BD, y reutiliza el caso de uso y la función SQL de
+RF-21. Las llamadas dentro del monolito no requieren API keys ni peticiones HTTP
+al propio servidor. Las API keys siguen siendo obligatorias en las rutas
+`/cronograma/interno/...` para consumidores HTTP externos al proceso.
+
+Respuestas:
+
+- `200`: arreglo con el mismo contrato de metadatos de contenido vigente de RF-21
+  (IDs de contenido y asociación, nombre, tipo, unidad temporal, órdenes, fechas
+  ISO 8601 y estado de disponibilidad).
+- `204`: sin cuerpo, cuando no hay contenido vigente.
+- `401`: cookie ausente, sesión inválida/cerrada/vencida o cuenta no activa.
+- `403`: sesión limitada, rol no autorizado o módulo CHAT inactivo/no registrado.
+- `404`: estudiante sin cronograma asignado.
+- `422`: falta fecha de inicio o una condición temporal inválida reportada por RF-22.
+- `500`: fallo inesperado; no se exponen detalles de infraestructura.
+
+La respuesta exitosa usa `Cache-Control: no-store`. No entrega automáticamente
+recursos, archivos ni URLs de S3; el contrato conserva la consulta de vigencia.
+
+Desde el `apiClient` de React, que ya tiene `withCredentials: true`:
+
+```jsx
+const respuesta = await apiClient.get('/chat/me/contenidos-vigentes');
+const contenidos = respuesta.status === 204 ? [] : respuesta.data;
+```
+
+La PWA debe completar el flujo existente de registro/consentimiento y obtener
+una sesión completa antes de consultar. Debe distinguir contenido vacío (`204`),
+ausencia de asignación (`404`) y falta de fecha de inicio (`422`), y aplicar sus
+flujos existentes de sesión (`401`) y permisos (`403`). No guardar credenciales
+internas ni cachear contenido entre usuarios. En producción, configurar HTTPS,
+el origen autorizado de la PWA (`PWA_ORIGINS`) y las cookies según el despliegue;
+no ampliar CORS para admitir encabezados de módulos internos.
+
+Verificación: `pnpm test:e2e:chat` usa los módulos y guards reales y reemplaza
+únicamente las dependencias externas. Comprueba el contrato, la autorización,
+el aislamiento de usuarios y el uso de la hora del servidor sin escribir en
+PostgreSQL ni acceder a S3. No requiere migración ni dependencias nuevas.
 
 ---
 

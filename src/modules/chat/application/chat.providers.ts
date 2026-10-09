@@ -21,7 +21,10 @@ import {
   RechazarEliminacionArbolPersonalizadoUseCase,
 } from './use-cases/gestionar-arbol-personalizado.use-cases';
 
+import { ConsultarMiContenidoVigenteUseCase } from './use-cases/consultar-mi-contenido-vigente.use-case';
+
 export const ChatApplicationProviders = [
+  ConsultarMiContenidoVigenteUseCase,
   CrearFlujoGrupalUseCase,
   ListarTiposNodoUseCase,
   ConsultarArbolConversacionalUseCase,
