@@ -58,7 +58,6 @@ type ClienteArbol = Pick<
   | 'reglas_nodos'
   | 'reglas_validaciones'
   | 'tipo_nodo'
-  | 'auditoria_arboles'
 >;
 
 interface FlujoRow {
@@ -292,14 +291,25 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     ) {
       throw new FlujoPersonalizadoNoEncontradoException();
     }
-    const registros = await this.prisma.auditoria_arboles.findMany({
-      where: { id_flujo: idFlujo },
-      orderBy: { id_auditoria: 'asc' },
-    });
+    const registros = await this.prisma.$queryRaw<
+      Array<{
+        id_auditoria: string;
+        id_flujo: string;
+        id_actor: string;
+        accion: string;
+        id_objeto: string | null;
+        fecha_operacion: Date;
+      }>
+    >(
+      Prisma.sql`SELECT id_auditoria, id_flujo, id_actor, accion, id_objeto, fecha_operacion
+                 FROM auditoria_arboles
+                 WHERE id_flujo = ${idFlujo}
+                 ORDER BY id_auditoria ASC`,
+    );
     return registros.map(
       (registro) =>
         new AuditoriaArbolConversacional(
-          registro.id_auditoria,
+          BigInt(registro.id_auditoria),
           registro.id_flujo,
           registro.id_actor,
           registro.accion,
@@ -847,14 +857,11 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     accion: string,
     idObjeto: string | null = null,
   ): Promise<void> {
-    await tx.auditoria_arboles.create({
-      data: {
-        id_flujo: idFlujo,
-        id_actor: idActor,
-        accion,
-        id_objeto: idObjeto,
-      },
-    });
+    await tx.$executeRaw(
+      Prisma.sql`INSERT INTO auditoria_arboles
+        (id_flujo, id_actor, accion, id_objeto)
+        VALUES (${idFlujo}, ${idActor}, ${accion}, ${idObjeto})`,
+    );
   }
 
   private traducirErrorVersion(error: unknown): never {
