@@ -10,7 +10,7 @@ import { SessionScopeGuard } from '../../usuarios/presentation/guards/session-sc
 import { Roles } from '../../../shared/presentation/decorators/roles.decorator';
 import { RolesGuard } from '../../../shared/presentation/guards/role-guard';
 
-@Controller('/cronograma/participantes')
+@Controller('/cronograma/')
 export class UbicacionesTemporalesParticipantesController {
   constructor(
     private readonly consultarUbicaciones: ConsultarUbicacionesTemporalesParticipantesUseCase,
