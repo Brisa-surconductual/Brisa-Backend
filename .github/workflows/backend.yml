@@ -1,0 +1,58 @@
+name: Backend CI and Render
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master, feat/despliegue-render]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.17.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate
+      - run: pnpm exec tsc --noEmit -p tsconfig.build.json
+      - run: pnpm exec eslint src/shared/presentation/controllers/health.controller.ts src/shared/presentation/controllers/health.controller.spec.ts
+      - run: node --check scripts/deploy-render.mjs
+      - run: pnpm exec jest --runInBand
+      - run: pnpm test:e2e:cronograma
+      - run: pnpm run build
+      - run: node scripts/check-production.cjs
+        env:
+          NODE_PATH: ./dist
+      - run: docker build --file Dockerfile.production --tag brisa-backend:ci .
+
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request' && vars.RENDER_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Deploy validated commit and verify health
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_SERVICE_URL: ${{ vars.RENDER_SERVICE_URL }}
+        run: node scripts/deploy-render.mjs

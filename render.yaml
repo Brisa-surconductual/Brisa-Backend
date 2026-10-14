@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: brisa-backend
+    runtime: docker
+    plan: free
+    repo: https://github.com/Brisa-surconductual/Brisa-Backend
+    branch: master
+    dockerfilePath: ./Dockerfile.production
+    autoDeployTrigger: 'off'
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: PWA_ORIGINS
+        sync: false

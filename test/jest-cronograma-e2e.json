@@ -1,6 +1,7 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": "..",
+  "modulePaths": ["<rootDir>"],
   "testEnvironment": "node",
   "testRegex": "test/cronograma/.*\\.e2e-spec\\.ts$",
   "transform": {
