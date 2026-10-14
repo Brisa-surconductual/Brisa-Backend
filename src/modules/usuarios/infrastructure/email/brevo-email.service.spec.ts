@@ -2,13 +2,20 @@ import { BrevoEmailService } from './brevo-email.service';
 import { TemplateEngine } from './templete-engine';
 
 describe('BrevoEmailService', () => {
+  let renderizar: jest.SpyInstance<
+    Promise<string>,
+    [string, Record<string, string>]
+  >;
+
   beforeEach(() => {
     jest.replaceProperty(process, 'env', {
       BREVO_API_KEY: 'test-api-key',
       EMAIL_FROM: 'sender@example.com',
       EMAIL_FROM_NAME: 'Brisa',
     });
-    jest.spyOn(TemplateEngine, 'render').mockResolvedValue('<p>123456</p>');
+    renderizar = jest
+      .spyOn(TemplateEngine, 'render')
+      .mockResolvedValue('<p>123456</p>');
   });
   afterEach(() => jest.restoreAllMocks());
 
@@ -20,10 +27,10 @@ describe('BrevoEmailService', () => {
       'recipient@example.com',
       '123456',
     );
-    expect(TemplateEngine.render).toHaveBeenCalledWith(
-      'recuperacion-constrasena.html',
-      { codigo: '123456', minutos: '15' },
-    );
+    expect(renderizar).toHaveBeenCalledWith('recuperacion-constrasena.html', {
+      codigo: '123456',
+      minutos: '15',
+    });
     expect(enviar).toHaveBeenCalledWith(
       'https://api.brevo.com/v3/smtp/email',
       expect.objectContaining({
@@ -40,9 +47,9 @@ describe('BrevoEmailService', () => {
           subject: 'Recuperación de contraseña',
           htmlContent: '<p>123456</p>',
         }),
-        signal: expect.any(AbortSignal),
       }),
     );
+    expect(enviar.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it.each(['BREVO_API_KEY', 'EMAIL_FROM'])(
