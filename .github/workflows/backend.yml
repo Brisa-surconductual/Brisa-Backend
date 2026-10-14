@@ -31,7 +31,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec prisma generate
       - run: pnpm exec tsc --noEmit -p tsconfig.build.json
-      - run: pnpm exec eslint src/shared/presentation/controllers/health.controller.ts src/shared/presentation/controllers/health.controller.spec.ts
+      - run: pnpm exec eslint src/shared/presentation/controllers/health.controller.ts src/shared/presentation/controllers/health.controller.spec.ts src/modules/usuarios/infrastructure/email/brevo-email.service.ts src/modules/usuarios/infrastructure/email/brevo-email.service.spec.ts src/modules/usuarios/infrastructure/email/email-provider.factory.ts src/modules/usuarios/infrastructure/email/email-provider.factory.spec.ts
       - run: node --check scripts/deploy-render.mjs
       - run: pnpm exec jest --runInBand
       - run: pnpm test:e2e:cronograma

@@ -19,7 +19,8 @@ Configurar en Render:
 - `PWA_ORIGINS`: origen HTTPS exacto de Cloudflare Pages, sin rutas; separar con comas si hay varios orígenes autorizados.
 - S3: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET`; opcionalmente `AWS_SESSION_TOKEN`, `AWS_S3_RESOURCE_PREFIX` y `AWS_S3_UPLOAD_EXPIRATION_SECONDS`. Usar permisos limitados al bucket/ruta necesarios.
 - Autenticación entre módulos: `INTERNAL_MODULE_API_KEY_HASH_CHAT`, `INTERNAL_MODULE_API_KEY_HASH_SEGUIM`, `INTERNAL_MODULE_API_KEY_HASH_GAMIF` y `INTERNAL_MODULE_API_KEY_HASH_NOTIF`, cuando corresponda. El navegador no recibe estas credenciales.
-- Correo actual: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER` y `SMTP_PASSWORD`; configurar esas variables no elimina el bloqueo SMTP del plan gratuito. Cargar los secretos en el panel, nunca en el repositorio ni en el Dockerfile.
+- Correo en Render: `EMAIL_PROVIDER=brevo`, `BREVO_API_KEY`, `EMAIL_FROM` (remitente verificado) y opcionalmente `EMAIL_FROM_NAME=Brisa`. Cargar los secretos en el panel, nunca en el repositorio ni en el Dockerfile.
+- Para entornos que permitan SMTP, `EMAIL_PROVIDER=smtp` conserva Nodemailer y las variables `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER` y `SMTP_PASSWORD`. Si no se define proveedor se conserva SMTP por compatibilidad.
 - Conservar las cookies seguras de producción y SameSite=Lax. El frontend llama a su propio origen mediante `/api`.
 
 No cambiar `TRUST_PROXY` sin verificar la cadena de proxies y su efecto sobre la IP que utiliza la aplicación. No compartir el entorno de producción con previews que puedan activar jobs o modificar sus datos.
@@ -34,7 +35,7 @@ En Settings > Secrets and variables > Actions, configurar:
 | Variable | RENDER_SERVICE_URL | Origen HTTPS público del servicio Render |
 | Variable | RENDER_DEPLOY_ENABLED | false durante la preparación; true cuando esté configurado |
 
-El pipeline verifica tipos, lint de los archivos añadidos, tests unitarios, e2e de cronograma con dobles de prueba, compilación, dependencias compiladas y construcción de la imagen. El lint se limita a los archivos de esta entrega; no certifica todo el código existente. Jest resuelve los imports desde la raíz mediante `modulePaths`, siguiendo la decisión documentada en el handoff.
+El pipeline verifica tipos, lint del health check y de los nuevos adaptadores de correo, tests unitarios, e2e de cronograma con dobles de prueba, compilación, dependencias compiladas y construcción de la imagen. El lint se limita a los archivos de esta entrega; no certifica todo el código existente. Jest resuelve los imports desde la raíz mediante `modulePaths`, siguiendo la decisión documentada en el handoff.
 
 El deploy hook recibe el SHA validado. Después, el script espera que `/health` responda con ese mismo SHA mediante `RENDER_GIT_COMMIT`; una versión anterior no cuenta como éxito. Este endpoint comprueba que el proceso HTTP responde, no certifica la disponibilidad de PostgreSQL, S3 ni correo.
 
@@ -56,10 +57,22 @@ Para generar Prisma en CI/construcción se usa una URL ficticia, sin operaciones
 
 ## Pendientes para una prueba funcional completa
 
-- Render gratuito bloquea SMTP en los puertos 25, 465 y 587. El adaptador actual de Nodemailer necesita sustituirse por un proveedor con API HTTPS, o elegir infraestructura que permita ese correo. Esta entrega no implementa un proveedor nuevo; recuperación de contraseña por correo queda pendiente.
+- El adaptador Brevo ya permite enviar por API HTTPS, sin usar los puertos SMTP bloqueados de Render. Falta crear la cuenta, verificar el remitente, completar la autenticación que solicite Brevo y cargar la clave. Las pruebas de código simulan el proveedor; todavía no se ha probado una entrega real.
 - Render gratuito suspende el servicio tras inactividad. Los jobs de Nest y eventos dentro del proceso no se ejecutan durante la suspensión. Para tareas con hora garantizada hará falta un ejecutor persistente/externo y una estrategia de concurrencia.
 - Esta rama parte de `master`: el trabajo de Chat y contenido vigente que existe en otra rama no se integra automáticamente aquí.
 - Acordar cualquier migración de esquema por separado. La imagen y el workflow no migran ni crean tablas.
 - Tras configurar ambos servicios, comprobar inicio/cierre de sesión, CSRF, rutas del cronograma, errores del backend y reactivación tras suspensión en un entorno de prueba con datos autorizados.
 
 Referencias: [Render gratuito](https://render.com/docs/free), [deploy hooks](https://render.com/docs/deploy-hooks), [Blueprint](https://render.com/docs/blueprint-spec), [variables de entorno](https://render.com/docs/environment-variables).
+
+## Configurar el correo de recuperación
+
+1. Crear una cuenta gratuita en Brevo y habilitar su servicio de correo transaccional. El plan gratuito incluye hasta 300 envíos diarios, sujeto a sus límites y validaciones.
+2. Registrar y verificar el remitente; completar los requisitos de autenticación de dominio que indique Brevo.
+3. Generar una clave API de envío y guardarla en Render como `BREVO_API_KEY`. No usar la contraseña SMTP como clave API.
+4. Configurar `EMAIL_PROVIDER=brevo`, `EMAIL_FROM` con la dirección verificada y `EMAIL_FROM_NAME=Brisa`. El Blueprint ya declara esos campos.
+5. Tras aprobar el despliegue y autorizar un destinatario de prueba, comprobar la recuperación completa y la llegada del código. No se envían correos reales durante CI.
+
+Se conserva el puerto `EmailService`, la plantilla y la vigencia del código existente. El adaptador usa `fetch` de Node, timeout de 10 segundos y errores que no incluyen la clave, el código ni el cuerpo del proveedor. Una configuración Brevo sin clave o remitente impide arrancar el servicio, para detectar el problema antes de aceptar solicitudes.
+
+Referencias: [API transaccional de Brevo](https://developers.brevo.com/docs/send-a-transactional-email), [límites del plan gratuito](https://help.brevo.com/hc/en-us/articles/8292912279954-Add-or-remove-emails-from-your-plan).
