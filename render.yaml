@@ -16,8 +16,10 @@ services:
       - key: PWA_ORIGINS
         sync: false
       - key: EMAIL_PROVIDER
-        value: brevo
-      - key: BREVO_API_KEY
+        value: mailjet
+      - key: MAILJET_API_KEY
+        sync: false
+      - key: MAILJET_SECRET_KEY
         sync: false
       - key: EMAIL_FROM
         sync: false

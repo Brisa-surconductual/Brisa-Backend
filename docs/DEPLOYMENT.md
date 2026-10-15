@@ -19,7 +19,8 @@ Configurar en Render:
 - `PWA_ORIGINS`: origen HTTPS exacto de Cloudflare Pages, sin rutas; separar con comas si hay varios orígenes autorizados.
 - S3: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET`; opcionalmente `AWS_SESSION_TOKEN`, `AWS_S3_RESOURCE_PREFIX` y `AWS_S3_UPLOAD_EXPIRATION_SECONDS`. Usar permisos limitados al bucket/ruta necesarios.
 - Autenticación entre módulos: `INTERNAL_MODULE_API_KEY_HASH_CHAT`, `INTERNAL_MODULE_API_KEY_HASH_SEGUIM`, `INTERNAL_MODULE_API_KEY_HASH_GAMIF` y `INTERNAL_MODULE_API_KEY_HASH_NOTIF`, cuando corresponda. El navegador no recibe estas credenciales.
-- Correo en Render: `EMAIL_PROVIDER=brevo`, `BREVO_API_KEY`, `EMAIL_FROM` (remitente verificado) y opcionalmente `EMAIL_FROM_NAME=Brisa`. Cargar los secretos en el panel, nunca en el repositorio ni en el Dockerfile.
+- Correo en Render: `EMAIL_PROVIDER=mailjet`, `MAILJET_API_KEY`, `MAILJET_SECRET_KEY`, `EMAIL_FROM` (remitente verificado) y opcionalmente `EMAIL_FROM_NAME=Brisa`. Cargar ambas claves en el panel, nunca en el repositorio ni en el Dockerfile. `render.yaml` declara Mailjet como proveedor para los servicios nuevos.
+- Brevo sigue disponible con `EMAIL_PROVIDER=brevo`, `BREVO_API_KEY` y el mismo remitente/nombre. La selección es explícita; un fallo de Mailjet no dispara otro envío con Brevo o SMTP.
 - Para entornos que permitan SMTP, `EMAIL_PROVIDER=smtp` conserva Nodemailer y las variables `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER` y `SMTP_PASSWORD`. Si no se define proveedor se conserva SMTP por compatibilidad.
 - Conservar las cookies seguras de producción y SameSite=Lax. El frontend llama a su propio origen mediante `/api`.
 
@@ -57,7 +58,7 @@ Para generar Prisma en CI/construcción se usa una URL ficticia, sin operaciones
 
 ## Pendientes para una prueba funcional completa
 
-- El adaptador Brevo ya permite enviar por API HTTPS, sin usar los puertos SMTP bloqueados de Render. Falta crear la cuenta, verificar el remitente, completar la autenticación que solicite Brevo y cargar la clave. Las pruebas de código simulan el proveedor; todavía no se ha probado una entrega real.
+- Mailjet permite enviar por API HTTPS, sin usar los puertos SMTP bloqueados de Render. Falta verificar el remitente, completar las validaciones de la cuenta que solicite Mailjet y cargar ambas claves. Las pruebas de código simulan el proveedor; todavía no se ha probado una entrega real.
 - Render gratuito suspende el servicio tras inactividad. Los jobs de Nest y eventos dentro del proceso no se ejecutan durante la suspensión. Para tareas con hora garantizada hará falta un ejecutor persistente/externo y una estrategia de concurrencia.
 - Esta rama parte de `master`: el trabajo de Chat y contenido vigente que existe en otra rama no se integra automáticamente aquí.
 - Acordar cualquier migración de esquema por separado. La imagen y el workflow no migran ni crean tablas.
@@ -67,12 +68,24 @@ Referencias: [Render gratuito](https://render.com/docs/free), [deploy hooks](htt
 
 ## Configurar el correo de recuperación
 
-1. Crear una cuenta gratuita en Brevo y habilitar su servicio de correo transaccional. El plan gratuito incluye hasta 300 envíos diarios, sujeto a sus límites y validaciones.
-2. Registrar y verificar el remitente; completar los requisitos de autenticación de dominio que indique Brevo.
-3. Generar una clave API de envío y guardarla en Render como `BREVO_API_KEY`. No usar la contraseña SMTP como clave API.
-4. Configurar `EMAIL_PROVIDER=brevo`, `EMAIL_FROM` con la dirección verificada y `EMAIL_FROM_NAME=Brisa`. El Blueprint ya declara esos campos.
-5. Tras aprobar el despliegue y autorizar un destinatario de prueba, comprobar la recuperación completa y la llegada del código. No se envían correos reales durante CI.
+1. Crear una cuenta gratuita en Mailjet y confirmar el correo de registro. El plan Free incluye hasta 6.000 correos al mes y 200 al día, sujeto a sus validaciones y límites.
+2. En **Account Settings > Senders & Domains > Add a sender address**, agregar la dirección de Brisa y abrir el enlace de confirmación recibido. Comprobar que el remitente figure como **Active** en la cuenta/API key que se utilizará.
+3. En **Account Settings > API Key Management**, obtener la **API Key** y la **Secret Key**. La clave secreta solo se muestra al crearla; guardarla de forma segura. Si ya no está disponible, usar **Reset Secret Key**, teniendo en cuenta que invalida la clave anterior.
+4. En el servicio backend de Render, abrir **Environment** y cargar:
 
-Se conserva el puerto `EmailService`, la plantilla y la vigencia del código existente. El adaptador usa `fetch` de Node, timeout de 10 segundos y errores que no incluyen la clave, el código ni el cuerpo del proveedor. Una configuración Brevo sin clave o remitente impide arrancar el servicio, para detectar el problema antes de aceptar solicitudes.
+   ```dotenv
+   EMAIL_PROVIDER=mailjet
+   MAILJET_API_KEY=<API Key de Mailjet>
+   MAILJET_SECRET_KEY=<Secret Key de Mailjet>
+   EMAIL_FROM=<dirección verificada en Mailjet>
+   EMAIL_FROM_NAME=Brisa
+   ```
 
-Referencias: [API transaccional de Brevo](https://developers.brevo.com/docs/send-a-transactional-email), [límites del plan gratuito](https://help.brevo.com/hc/en-us/articles/8292912279954-Add-or-remove-emails-from-your-plan).
+   No se necesitan variables `SMTP_*` ni `BREVO_API_KEY` para esta selección. En local, se pueden conservar las variables SMTP para usar `EMAIL_PROVIDER=smtp`; no mezclar las claves reales en un archivo versionado. Si el servicio Render ya existía, cambiar estas variables en su panel; actualizar el Blueprint en Git no reemplaza por sí solo la configuración de un servicio creado manualmente.
+5. Tras aprobar el despliegue y autorizar un destinatario de prueba, comprobar la recuperación completa, la llegada del código y su uso dentro de la vigencia existente. Revisar también el estado del mensaje en Mailjet. Una aceptación de API no garantiza la entrega en la bandeja de entrada. No se envían correos reales durante CI.
+
+Para pruebas se puede verificar una dirección individual de Gmail/Outlook. Mailjet advierte que usar un remitente de correo gratuito puede provocar spam o rechazos porque no se puede autenticar su dominio con SPF/DKIM. Comprobar la entrega con los destinatarios de prueba; para un servicio fiable, usar un dominio propio autenticado cuando esté disponible. Registrar la cuenta no certifica la entrega ni que hayan terminado todas sus validaciones.
+
+Se conserva el puerto `EmailService`, la plantilla y la vigencia del código existente. El adaptador usa `fetch` de Node con Basic Auth sobre HTTPS, timeout de 10 segundos, redirecciones bloqueadas y seguimiento de aperturas/clics desactivado. Solo considera aceptado el envío cuando la respuesta HTTP es exitosa y contiene un único mensaje con `Status=success`. Los errores no incluyen claves, códigos ni el cuerpo del proveedor. Una configuración Mailjet sin cualquiera de las dos claves o sin remitente impide arrancar el servicio, para detectar el problema antes de aceptar solicitudes.
+
+Referencias: [Send API v3.1 de Mailjet](https://dev.mailjet.com/docs/email-api/send-api-v31/send-basic-email), [verificar un remitente](https://documentation.mailjet.com/hc/en-us/articles/360042759253-How-to-add-a-sender-address), [API Key y Secret Key](https://documentation.mailjet.com/hc/en-us/articles/360043225693-What-is-an-API-key), [plan gratuito](https://www.mailjet.com/pricing/), [limitaciones de remitentes gratuitos](https://documentation.mailjet.com/hc/en-us/articles/19308800104091-Why-you-should-avoid-free-webmail-as-a-sender-address).
