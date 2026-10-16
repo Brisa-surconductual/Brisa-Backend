@@ -12,8 +12,17 @@ accessSync(
 
 // Importar el módulo comprueba dependencias; no crea Nest ni ejecuta onModuleInit/jobs.
 require(resolve(output, 'src/app.module.js'));
-if (!require('@prisma/client').Prisma.ModelName) {
+const { Prisma } = require('@prisma/client');
+if (!Prisma.ModelName) {
   throw new Error('Falta el cliente Prisma generado.');
+}
+const consentimiento = Prisma.dmmf.datamodel.models
+  .find((model) => model.name === 'usuarios')
+  ?.fields.find((field) => field.name === 'consentimiendo_aceptado');
+if (consentimiento?.dbName !== 'consentimiento_aceptado') {
+  throw new Error(
+    'El cliente Prisma no mapea la columna de consentimiento de Supabase.',
+  );
 }
 require('bcrypt');
 require('dotenv');
