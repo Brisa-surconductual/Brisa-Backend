@@ -66,6 +66,14 @@ Para generar Prisma en CI/construcción se usa una URL ficticia, sin operaciones
 
 Referencias: [Render gratuito](https://render.com/docs/free), [deploy hooks](https://render.com/docs/deploy-hooks), [Blueprint](https://render.com/docs/blueprint-spec), [variables de entorno](https://render.com/docs/environment-variables).
 
+## Registro: columna de consentimiento en Supabase
+
+Si Render informa `P2022` / `column usuarios.consentimiendo_aceptado does not exist`, comprobar el nombre de la columna en la base conectada. La base Supabase utilizada por Brisa tiene `usuario.usuarios.consentimiento_aceptado`; el cliente Prisma conserva el nombre histórico `consentimiendo_aceptado` mediante `@map("consentimiento_aceptado")`. Este mapeo se aplica a lecturas, filtros y escrituras, incluidas las consultas de inicialización de cronogramas.
+
+El cliente debe regenerarse al construir la imagen; el Dockerfile ya ejecuta `prisma generate`. `scripts/check-production.cjs` verifica que el artefacto generado incluya el mapeo antes de aceptar la imagen. Esta corrección se despliega como código y no requiere crear otra columna ni ejecutar SQL sobre esa base Supabase.
+
+La migración histórica `0_init` conserva la grafía antigua. No editar migraciones aplicadas ni ejecutar `db push` para solucionar este incidente. Una base nueva creada desde esa migración necesita reconciliar su esquema mediante una migración acordada por separado; el mapeo presupone la columna `consentimiento_aceptado`.
+
 ## Configurar el correo de recuperación
 
 1. Crear una cuenta gratuita en Mailjet y confirmar el correo de registro. El plan Free incluye hasta 6.000 correos al mes y 200 al día, sujeto a sus validaciones y límites.
