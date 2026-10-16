@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { estado_registro_enum } from "@prisma/client";
 import { UsuarioRepository } from "../../domain/repositories/user.repository";
 import { PrismaService } from "../../../../../prisma/prisma.service"
 import { Usuario } from "../../domain/entities/usuarios.entity";
@@ -10,90 +11,104 @@ import { SesionMapper } from "../mappers/sesion.mapper";
 
 @Injectable()
 export class PrismaUsuarioRepository implements UsuarioRepository {
-    constructor(
-        private readonly prisma: PrismaService
-    ) {}
+  constructor(private readonly prisma: PrismaService) {}
+  actualizarConsentimientoYEstado(
+    id_usuario: string,
+    id_consentimiento: string,
+    nuevoEstadoRegistro: string,
+  ): Promise<void> {
+    return this.prisma.usuarios.update({
+      where: { id_usuario },
+      data: {
+        id_consentimiento,
+        estado_registro: nuevoEstadoRegistro as estado_registro_enum,
+        fecha_actualizacion: new Date(),
+      },
+    }).then(() => {});
+  }
 
-        async buscarPorCorreo(correo: string): Promise<Usuario | null> {
+  async buscarPorCorreo(correo: string): Promise<Usuario | null> {
+    const usuario = await this.prisma.usuarios.findUnique({
+      where: {
+        correo_electronico: correo,
+      },
+    });
 
-        const usuario = await this.prisma.usuarios.findUnique({
-                where: {
-                    correo_electronico: correo,
-                },
-            });
+    if (!usuario) {
+      return null;
+    }
 
-            if (!usuario) {
-                return null;
-            }
+    return UsuarioMapper.toDomain(usuario);
+  }
 
-            return UsuarioMapper.toDomain(usuario);
-        }
+  async crear(
+    usuario: Usuario,
+    lineaBase: LineaBase,
+    sesion: Sesion,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.usuarios.create({
+        data: UsuarioMapper.toPrisma(usuario) as any,
+      });
 
-        async crear(
-            usuario: Usuario,
-            lineaBase: LineaBase,
-            sesion: Sesion
-        ): Promise<void> {
+      await tx.linea_base.create({
+        data: LineaBaseMapper.toPrisma(lineaBase) as any,
+      });
 
-            await this.prisma.$transaction(async (tx) => {
+      await tx.sesiones.create({
+        data: SesionMapper.toPrisma(sesion) as any,
+      });
+    });
+  }
 
-                await tx.usuarios.create({
-                    data: UsuarioMapper.toPrisma(usuario) as any,
-                });
+  async buscarPorId(id_usuario: string): Promise<Usuario | null> {
+    const usuario = await this.prisma.usuarios.findUnique({
+      where: { id_usuario },
+    });
 
-                await tx.linea_base.create({
-                    data: LineaBaseMapper.toPrisma(lineaBase) as any,
-                });
+    if (!usuario) return null;
 
-                await tx.sesiones.create({
-                    data: SesionMapper.toPrisma(sesion) as any,
-                })
+    return UsuarioMapper.toDomain(usuario);
+  }
 
-            });
+  async actualizar(usuario: Usuario): Promise<void> {
+    await this.prisma.usuarios.update({
+      where: { id_usuario: usuario.id_usuario },
+      data: {
+        contrasena_hash: usuario.contrasenaHash,
+        fecha_actualizacion: usuario.fechaActualizacion,
+      },
+    });
+  }
 
-        }
-
-        async buscarPorId(id_usuario: string): Promise<Usuario | null> {
-            const usuario = await this.prisma.usuarios.findUnique({
-                where: { id_usuario },
-            });
-
-            if (!usuario) return null;
-
-            return UsuarioMapper.toDomain(usuario);
-        }
-
-        async actualizar(usuario: Usuario): Promise<void> {
-            await this.prisma.usuarios.update({
-                where: { id_usuario: usuario.id_usuario },
-                data: {
-                    contrasena_hash: usuario.contrasenaHash,
-                    fecha_actualizacion: usuario.fechaActualizacion,
-                },
-            });
-        }
-
-        async crearAdministrador(usuario: Usuario): Promise<void> {
-            await this.prisma.usuarios.create({
-                data: UsuarioMapper.toPrisma(usuario) as any,
-            });
-        }
+  async crearAdministrador(usuario: Usuario): Promise<void> {
+    await this.prisma.usuarios.create({
+      data: UsuarioMapper.toPrisma(usuario) as any,
+    });
+  }
 
   async buscarPorTermino(termino: string): Promise<Usuario[]> {
     const terminoLimpio = termino ? termino.trim() : '';
 
-      const usuarios = await this.prisma.usuarios.findMany({
-        where: {
-          rol: 'ESTUDIANTE', // <-- 1. Filtro estricto para traer solo estudiantes
-          ...(terminoLimpio ? {
-            OR: [
-              { correo_electronico: { contains: terminoLimpio, mode: 'insensitive' } },
-            ]
-          } : {})
-        },
-        take: 10,
-      });
+    const usuarios = await this.prisma.usuarios.findMany({
+      where: {
+        rol: 'ESTUDIANTE', // <-- 1. Filtro estricto para traer solo estudiantes
+        ...(terminoLimpio
+          ? {
+              OR: [
+                {
+                  correo_electronico: {
+                    contains: terminoLimpio,
+                    mode: 'insensitive',
+                  },
+                },
+              ],
+            }
+          : {}),
+      },
+      take: 10,
+    });
 
-      return usuarios.map((u) => UsuarioMapper.toDomain(u));
+    return usuarios.map((u) => UsuarioMapper.toDomain(u));
   }
 }

@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Post,
-  Query,
-  Req,
-  Res,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, Res, UseGuards, } from '@nestjs/common';
 import type { Request, Response } from "express";
 import { CreacionUsuarioUseCase } from "../../application/use-cases/creacion-usuario.use-case";
 import { CreacionUsuarioDtoRequest } from "../../application/dto/creacion-usuario.dto-request";
@@ -34,6 +23,8 @@ import { Roles } from '../../../../shared/presentation/decorators/roles.decorato
 import { RolesGuard } from '../../../../shared/presentation/guards/role-guard';
 import { BuscarUsuariosUseCase } from '../../application/use-cases/buscar-usuario.use-case';
 import {BuscarUsuariosQueryDto} from "../../application/dto/utils/buscador-usuario.dto-request";
+import {ObtenerContenidoVigenteUseCase} from "../../application/use-cases/obtener-contenido-vigente.use-case";
+import {InformacionConsentimientoVigenteDtoResponse} from "../../application/dto/informacion-consentimiento-vigente.dto-response"
 
 @Controller('/usuarios')
 export class UsuariosController {
@@ -44,6 +35,7 @@ export class UsuariosController {
     private readonly crearAdministrador: CreacionAdministradorUseCase,
     private readonly cookieConfig: SessionCookieConfig,
     private readonly buscarUsuarios: BuscarUsuariosUseCase,
+    private readonly obtenerContenidoVigenteUseCase: ObtenerContenidoVigenteUseCase,
   ) {}
 
   @Get('/buscar')
@@ -99,5 +91,11 @@ export class UsuariosController {
     @Body() dto: ActualizacionContrasenaDtoRequest,
   ): Promise<ActualizacionContrasenaDtoResponse> {
     return this.actualizarContrasenaUse.execute(dto);
+  }
+
+  @Get('/consetimeinto-vigente')
+  @HttpCode(HttpStatus.OK)
+  async obtenerContenidoVigente(): Promise<InformacionConsentimientoVigenteDtoResponse> {
+    return this.obtenerContenidoVigenteUseCase.execute();
   }
 }

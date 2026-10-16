@@ -78,4 +78,42 @@ export class Usuario {
             usuario.idConsentimiento,
         );
     }
+
+    static actualizarIdConsentimiento(
+        usuario: Usuario,
+        idConsentimiento: string,
+    ): Usuario {
+        return new Usuario(
+            usuario.id_usuario,
+            usuario.correo,
+            usuario.contrasenaHash,
+            usuario.rol,
+            usuario.estadoRegistro,
+            usuario.estadoCuenta,
+            usuario.fechaRegistro,
+            new Date(),
+            usuario.consentimeintoAceptado,
+            usuario.registroConsumoAceptado,
+            idConsentimiento,
+        );
+    }
+
+    static actualizarEstadoRegistro(
+        usuario: Usuario,
+        nuevoEstadoRegistro: EstadoRegistro,
+    ): Usuario {
+        return new Usuario(
+            usuario.id_usuario,
+            usuario.correo,
+            usuario.contrasenaHash,
+            usuario.rol,
+            nuevoEstadoRegistro,
+            usuario.estadoCuenta,
+            usuario.fechaRegistro,
+            new Date(),
+            usuario.consentimeintoAceptado,
+            usuario.registroConsumoAceptado,
+            usuario.idConsentimiento,
+        );
+    }
 }
