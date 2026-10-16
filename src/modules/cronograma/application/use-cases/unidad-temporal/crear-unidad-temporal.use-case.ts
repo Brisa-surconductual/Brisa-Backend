@@ -31,7 +31,7 @@ export class CreacionUnidadTemporalUseCase {
     if (!cronograma) {
       throw new CronogramaNoEncontradoException();
     }
-    if (cronograma.estado !== 'ACTIVO') {
+    if (cronograma.estado === 'ACTIVO') {
       throw new CronogramaNoActivoException();
     }
 
