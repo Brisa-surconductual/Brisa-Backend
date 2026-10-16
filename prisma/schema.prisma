@@ -112,7 +112,7 @@ model usuarios {
   estado_cuenta                                                                     estado_cuenta_enum         @default(ACTIVA)
   fecha_registro                                                                    DateTime                   @default(now()) @db.Timestamptz(6)
   fecha_actualizacion                                                               DateTime                   @default(now()) @db.Timestamptz(6)
-  consentimiendo_aceptado                                                           Boolean?
+  consentimiento_aceptado                                                           Boolean?
   registro_consumo_aceptado                                                         Boolean?
   id_consentimiento                                                                 String?                    @db.Uuid
   exportaciones                                                                     exportaciones[]

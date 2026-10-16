@@ -5,6 +5,7 @@ import { ExpirarCodigosUseCase } from './use-cases/expirar-codigos.use-case';
 import {CreacionAdministradorUseCase} from "./use-cases/creacion-adimistrador.use-case";
 import { SessionService } from './services/sesion.service';
 import {BuscarUsuariosUseCase} from "./use-cases/buscar-usuario.use-case";
+import {ObtenerContenidoVigenteUseCase} from "./use-cases/obtener-contenido-vigente.use-case";
 
 export const UsuarioAplicationProviders = [
 
@@ -14,5 +15,6 @@ export const UsuarioAplicationProviders = [
     ExpirarCodigosUseCase,
     CreacionAdministradorUseCase,
     SessionService,
-    BuscarUsuariosUseCase
+    BuscarUsuariosUseCase,
+    ObtenerContenidoVigenteUseCase
 ];

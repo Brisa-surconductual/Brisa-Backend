@@ -15,7 +15,7 @@ export class UsuarioMapper {
     estado_cuenta: $Enums.estado_cuenta_enum;
     fecha_registro: Date;
     fecha_actualizacion: Date;
-    consentimiendo_aceptado: boolean | null;
+    consentimiento_aceptado: boolean | null;
     registro_consumo_aceptado: boolean | null;
     id_consentimiento: string | null;
   }): Usuario {
@@ -24,7 +24,7 @@ export class UsuarioMapper {
 
     if (
       esEstudiante &&
-      (usuario.consentimiendo_aceptado === null ||
+      (usuario.consentimiento_aceptado === null ||
         usuario.registro_consumo_aceptado === null ||
         usuario.id_consentimiento === null)
     ) {
@@ -40,7 +40,7 @@ export class UsuarioMapper {
       usuario.estado_cuenta as unknown as EstadoCuenta,
       usuario.fecha_registro,
       usuario.fecha_actualizacion,
-      usuario.consentimiendo_aceptado ?? false,
+      usuario.consentimiento_aceptado ?? false,
       usuario.registro_consumo_aceptado ?? false,
       usuario.id_consentimiento,
     );
@@ -56,7 +56,7 @@ export class UsuarioMapper {
       estado_cuenta: usuario.estadoCuenta,
       fecha_registro: usuario.fechaRegistro,
       fecha_actualizacion: usuario.fechaActualizacion,
-      consentimiendo_aceptado: usuario.consentimeintoAceptado,
+      consentimiento_aceptado: usuario.consentimeintoAceptado,
       registro_consumo_aceptado: usuario.registroConsumoAceptado,
       id_consentimiento: usuario.idConsentimiento,
     };

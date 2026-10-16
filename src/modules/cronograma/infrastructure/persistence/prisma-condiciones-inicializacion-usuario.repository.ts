@@ -8,16 +8,14 @@ import { CondicionesInicializacionUsuarioMapper } from '../mappers/condiciones-i
 export class PrismaCondicionesInicializacionUsuarioRepository implements CondicionesInicializacionUsuarioRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async buscarPorUsuario(
-    idUsuario: string,
-  ): Promise<CondicionesInicializacionUsuario | null> {
+  async buscarPorUsuario(idUsuario: string,): Promise<CondicionesInicializacionUsuario | null> {
     const usuario = await this.prisma.usuarios.findUnique({
       where: { id_usuario: idUsuario },
       select: {
         id_usuario: true,
         rol: true,
         estado_registro: true,
-        consentimiendo_aceptado: true,
+        consentimiento_aceptado: true,
         id_consentimiento: true,
         linea_base: {
           select: { id_linea_base: true },
@@ -26,18 +24,19 @@ export class PrismaCondicionesInicializacionUsuarioRepository implements Condici
     });
 
     return usuario
-      ? CondicionesInicializacionUsuarioMapper.toDomain(usuario)
+      ? CondicionesInicializacionUsuarioMapper.toDomain({
+          ...usuario,
+          consentimiendo_aceptado: usuario.consentimiento_aceptado,
+        })
       : null;
   }
 
-  async buscarUsuariosElegiblesSinCronograma(
-    limite: number,
-  ): Promise<string[]> {
+  async buscarUsuariosElegiblesSinCronograma(limite: number,): Promise<string[]> {
     const usuarios = await this.prisma.usuarios.findMany({
       where: {
         rol: 'ESTUDIANTE',
         estado_registro: 'REGISTRO_COMPLETO',
-        consentimiendo_aceptado: true,
+        consentimiento_aceptado: true,
         id_consentimiento: { not: null },
         linea_base: { isNot: null },
         cronogramas_usuario: { is: null },
