@@ -83,6 +83,8 @@ import { ObtenerUnidadesTemporalesUseCase } from '../application/use-cases/unida
 import { ObtenerUnidadesTemporalesDtoResponse } from '../application/dto/unidadTemporal/obtener-unidades-temporales.dto-response';
 import { ConsultarPausasAdministraivasUseCase } from '../application/use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
 import { ConsultarPausasAdministrativasUsuarioDtoResponse } from '../application/dto/pausaAdministrativa/conusltar-pausas-administarivas.dto-response';
+import { ListarRecursosContenidoUseCase } from '../application/use-cases/recurso-contenido/listar-recursos-contenido.use-case';
+import { ListarRecursosContenidoDtoResponse } from '../application/dto/recursoContenido/listar-recursos-contenido.dto-response';
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -92,6 +94,7 @@ export class CronogramaController {
     private readonly actualizarContenidoUseCase: ActualizarContenidoUseCase,
     private readonly eliminarContenidoUseCase: EliminarContenidoUseCase,
     private readonly crearRecursoContenidoUseCase: CrearRecursoContenidoUseCase,
+    private readonly listarRecursosContenidoUseCase: ListarRecursosContenidoUseCase,
     private readonly solicitarUrlSubidaRecursoUseCase: SolicitarUrlSubidaRecursoUseCase,
     private readonly listarModulosDestinoUseCase: ListarModulosDestinoUseCase,
     private readonly reordenarRecursosContenidoUseCase: ReordenarRecursosContenidoUseCase,

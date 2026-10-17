@@ -10,6 +10,7 @@ dotenv.config({ path: './config/.env' });
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.enableShutdownHooks();
   app.use(cookieParser());
 
   app.useGlobalPipes(

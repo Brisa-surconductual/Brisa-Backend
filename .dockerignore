@@ -1,0 +1,15 @@
+.git
+.github
+.pnpm-store
+node_modules
+dist
+coverage
+.env
+.env.*
+**/.env
+**/.env.*
+config
+CODEX_HANDOFF.md
+docs
+*.log
+prisma/generated

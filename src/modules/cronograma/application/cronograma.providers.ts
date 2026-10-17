@@ -49,6 +49,7 @@ export const CronogramaApplicationProviders = [
   ActualizarContenidoUseCase,
   EliminarContenidoUseCase,
   CrearRecursoContenidoUseCase,
+  ListarRecursosContenidoUseCase,
   SolicitarUrlSubidaRecursoUseCase,
   ListarModulosDestinoUseCase,
   ReordenarRecursosContenidoUseCase,
