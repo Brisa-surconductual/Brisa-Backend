@@ -1,9 +1,9 @@
 // Prueba explícita sobre PostgreSQL local desechable. No usa config/.env.
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { randomUUID } = require('node:crypto');
+const { randomBytes, randomUUID } = require('node:crypto');
 const { readFileSync } = require('node:fs');
-const { resolve } = require('node:path');
+const { isAbsolute, resolve } = require('node:path');
 const { Client } = require('pg');
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
@@ -27,8 +27,26 @@ const {
 
 const root = resolve(__dirname, '../../..');
 const name = 'brisa-hu03-audit-' + randomUUID().slice(0, 8);
+const databasePassword = randomBytes(32).toString('hex');
+// Para instalaciones distintas, HU03_DOCKER_EXECUTABLE exige una ruta absoluta.
+// Nunca se busca el ejecutable en PATH.
+const dockerExecutable =
+  process.env.HU03_DOCKER_EXECUTABLE ??
+  (process.platform === 'win32'
+    ? 'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe'
+    : process.platform === 'darwin'
+      ? '/usr/local/bin/docker'
+      : '/usr/bin/docker');
+assert.ok(
+  isAbsolute(dockerExecutable),
+  'HU03_DOCKER_EXECUTABLE debe identificar un ejecutable por ruta absoluta.',
+);
 const docker = (...args) =>
-  execFileSync('docker', args, { encoding: 'utf8', timeout: 180_000 }).trim();
+  execFileSync(dockerExecutable, args, {
+    encoding: 'utf8',
+    timeout: 180_000,
+    env: { ...process.env, POSTGRES_PASSWORD: databasePassword },
+  }).trim();
 const localEndpoint = (host) =>
   /^(npipe:|unix:|tcp:\/\/(127\.0\.0\.1|localhost):)/.test(host);
 let creationRequested = false;
@@ -73,7 +91,7 @@ async function main() {
     '--env',
     'POSTGRES_DB=hu03_test',
     '--env',
-    'POSTGRES_PASSWORD=hu03-fixture-only',
+    'POSTGRES_PASSWORD',
     'postgres:17-alpine',
   );
   const port = docker(
@@ -84,7 +102,11 @@ async function main() {
   );
   assert.match(port, /^\d+$/);
   const connectionString =
-    'postgresql://postgres:hu03-fixture-only@127.0.0.1:' + port + '/hu03_test';
+    'postgresql://postgres:' +
+    databasePassword +
+    '@127.0.0.1:' +
+    port +
+    '/hu03_test';
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const candidate = new Client({
       connectionString,
@@ -271,7 +293,7 @@ main()
     }
     if (creationRequested) {
       try {
-        execFileSync('docker', ['rm', '--force', name], {
+        execFileSync(dockerExecutable, ['rm', '--force', name], {
           encoding: 'utf8',
           timeout: 10_000,
         });
