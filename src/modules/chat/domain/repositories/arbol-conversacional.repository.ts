@@ -4,6 +4,7 @@ import {
   FlujoConversacional,
   NodoConversacional,
   ReglaValidacion,
+  TipoEntradaConversacional,
   TipoNodoConversacional,
   TransicionConversacional,
 } from '../entities/arbol-conversacional.entity';
@@ -60,6 +61,10 @@ export interface DatosReglaValidacionCommand {
   mensajeError: string;
 }
 
+export interface CrearReglaValidacionCommand extends DatosReglaValidacionCommand {
+  creadoPor: string;
+}
+
 export interface CrearTransicionCommand {
   idFlujo: string;
   idNodoOrigen: string;
@@ -67,7 +72,8 @@ export interface CrearTransicionCommand {
   operadorCondicion: OperadorCondicion;
   valorCondicion: unknown;
   ordenEvaluacion: number;
-  reglaValidacion: DatosReglaValidacionCommand;
+  reglaValidacion?: DatosReglaValidacionCommand;
+  idReglaValidacion?: string;
   creadoPor: string;
 }
 
@@ -80,6 +86,7 @@ export interface ActualizarTransicionCommand {
   valorCondicion?: unknown;
   ordenEvaluacion?: number;
   reglaValidacion?: Partial<DatosReglaValidacionCommand>;
+  idReglaValidacion?: string;
   actualizadoPor: string;
 }
 
@@ -120,6 +127,20 @@ export abstract class ArbolConversacionalRepository {
   abstract obtenerArbol(idFlujo: string): Promise<ArbolConversacional | null>;
 
   abstract listarTiposNodo(): Promise<TipoNodoConversacional[]>;
+
+  abstract listarTiposEntrada(): Promise<TipoEntradaConversacional[]>;
+
+  abstract listarReglasValidacion(): Promise<ReglaValidacion[]>;
+
+  abstract buscarNodo(idNodo: string): Promise<NodoConversacional | null>;
+
+  abstract buscarTransicion(
+    idTransicion: string,
+  ): Promise<TransicionConversacional | null>;
+
+  abstract crearReglaValidacion(
+    command: CrearReglaValidacionCommand,
+  ): Promise<ReglaValidacion>;
 
   abstract crearNodo(command: CrearNodoCommand): Promise<NodoConversacional>;
 

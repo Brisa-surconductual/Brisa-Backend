@@ -47,6 +47,13 @@ export class TipoNodoConversacional {
   ) {}
 }
 
+export class TipoEntradaConversacional {
+  constructor(
+    readonly idTipoEntrada: string,
+    readonly nombre: string,
+  ) {}
+}
+
 export class NodoConversacional {
   constructor(
     readonly idNodo: string,

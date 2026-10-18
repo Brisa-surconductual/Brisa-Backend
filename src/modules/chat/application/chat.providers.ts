@@ -22,8 +22,22 @@ import {
 } from './use-cases/gestionar-arbol-personalizado.use-cases';
 
 import { ConsultarMiContenidoVigenteUseCase } from './use-cases/consultar-mi-contenido-vigente.use-case';
+import {
+  ActualizarNodoPorIdUseCase,
+  ActualizarTransicionPorIdUseCase,
+  ConsultarCatalogosChatUseCase,
+  CrearFlujoConversacionalUseCase,
+  CrearReglaValidacionUseCase,
+  CrearTransicionReutilizableUseCase,
+} from './use-cases/gestionar-chat-admin.use-cases';
 
 export const ChatApplicationProviders = [
+  ActualizarNodoPorIdUseCase,
+  ActualizarTransicionPorIdUseCase,
+  ConsultarCatalogosChatUseCase,
+  CrearFlujoConversacionalUseCase,
+  CrearReglaValidacionUseCase,
+  CrearTransicionReutilizableUseCase,
   ConsultarMiContenidoVigenteUseCase,
   CrearFlujoGrupalUseCase,
   ListarTiposNodoUseCase,
