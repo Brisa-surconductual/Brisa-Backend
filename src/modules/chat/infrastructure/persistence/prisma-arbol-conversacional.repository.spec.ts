@@ -160,7 +160,10 @@ describe('PrismaArbolConversacionalRepository (RF-25)', () => {
       .mockResolvedValueOnce({ estado: EstadoFlujoConversacional.BORRADOR })
       .mockResolvedValueOnce(flujoRow);
     tx.nodos.findMany
-      .mockResolvedValueOnce([{ id_nodo: idNodoA }, { id_nodo: idNodoB }])
+      .mockResolvedValueOnce([
+        { id_nodo: idNodoA, id_flujo: idFlujo },
+        { id_nodo: idNodoB, id_flujo: idFlujo },
+      ])
       .mockResolvedValueOnce([nodoRow(idNodoA, true), nodoRow(idNodoB)]);
     tx.reglas_nodos.findMany.mockResolvedValue([]);
     tx.reglas_validaciones.create.mockResolvedValue(validacionRow);
@@ -223,7 +226,10 @@ describe('PrismaArbolConversacionalRepository (RF-25)', () => {
       .mockResolvedValueOnce({ estado: EstadoFlujoConversacional.BORRADOR })
       .mockResolvedValueOnce(flujoRow);
     tx.nodos.findMany
-      .mockResolvedValueOnce([{ id_nodo: idNodoA }, { id_nodo: idNodoB }])
+      .mockResolvedValueOnce([
+        { id_nodo: idNodoA, id_flujo: idFlujo },
+        { id_nodo: idNodoB, id_flujo: idFlujo },
+      ])
       .mockResolvedValueOnce([nodoRow(idNodoA, true), nodoRow(idNodoB)]);
     tx.reglas_nodos.findMany.mockResolvedValue([
       transicionRow(idNodoB, idNodoA),

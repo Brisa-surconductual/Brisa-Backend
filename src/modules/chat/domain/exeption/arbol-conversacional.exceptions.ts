@@ -15,9 +15,30 @@ export class FlujoConversacionalNoEncontradoException extends NotFoundException 
 
 export class FlujoConversacionalNoEditableException extends ConflictException {
   constructor() {
-    super(
-      'Solo se pueden modificar flujos conversacionales en estado BORRADOR.',
-    );
+    super({
+      statusCode: 409,
+      error: 'Conflict',
+      codigo: 'FLUJO_NO_EDITABLE',
+      message:
+        'Solo se pueden modificar flujos conversacionales en estado BORRADOR.',
+    });
+  }
+}
+
+export class NodoFueraDeFlujoException extends UnprocessableEntityException {
+  constructor() {
+    super({
+      statusCode: 422,
+      error: 'Unprocessable Entity',
+      codigo: 'NODO_FUERA_DE_FLUJO',
+      message: 'Los nodos de la transición deben pertenecer al flujo indicado.',
+    });
+  }
+}
+
+export class ReglaValidacionNoEncontradaException extends NotFoundException {
+  constructor() {
+    super('La regla de validación indicada no existe.');
   }
 }
 
