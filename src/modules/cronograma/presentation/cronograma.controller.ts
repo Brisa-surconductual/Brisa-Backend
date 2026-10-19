@@ -1,17 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards, } from '@nestjs/common';
 import { CreacionUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/crear-unidad-temporal.use-case';
 import { UnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-request';
 import { UnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-response';
@@ -83,8 +70,6 @@ import { ObtenerUnidadesTemporalesUseCase } from '../application/use-cases/unida
 import { ObtenerUnidadesTemporalesDtoResponse } from '../application/dto/unidadTemporal/obtener-unidades-temporales.dto-response';
 import { ConsultarPausasAdministraivasUseCase } from '../application/use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
 import { ConsultarPausasAdministrativasUsuarioDtoResponse } from '../application/dto/pausaAdministrativa/conusltar-pausas-administarivas.dto-response';
-import { ListarRecursosContenidoUseCase } from '../application/use-cases/recurso-contenido/listar-recursos-contenido.use-case';
-import { ListarRecursosContenidoDtoResponse } from '../application/dto/recursoContenido/listar-recursos-contenido.dto-response';
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -98,7 +83,6 @@ export class CronogramaController {
     private readonly solicitarUrlSubidaRecursoUseCase: SolicitarUrlSubidaRecursoUseCase,
     private readonly listarModulosDestinoUseCase: ListarModulosDestinoUseCase,
     private readonly reordenarRecursosContenidoUseCase: ReordenarRecursosContenidoUseCase,
-    private readonly listarRecursosContenidoUseCase: ListarRecursosContenidoUseCase,
     private readonly actualizarRecursoContenidoUseCase: ActualizarRecursoContenidoUseCase,
     private readonly eliminarRecursoContenidoUseCase: EliminarRecursoContenidoUseCase,
     private readonly asociarContenidoUnidadTemporalUseCase: AsociarContenidoUnidadTemporalUseCase,
