@@ -6,6 +6,43 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import type { DiagnosticoArbol } from '../entities/arbol-conversacional.entity';
+
+export class EstadoFlujoInvalidoException extends ConflictException {
+  constructor() {
+    super({
+      statusCode: 409,
+      error: 'Conflict',
+      codigo: 'ESTADO_INVALIDO',
+      message: 'El estado actual del flujo no permite esta operación.',
+    });
+  }
+}
+
+export class GrafoInvalidoException extends UnprocessableEntityException {
+  constructor(detalles: DiagnosticoArbol) {
+    super({
+      statusCode: 422,
+      error: 'Unprocessable Entity',
+      codigo: 'GRAFO_INVALIDO',
+      message:
+        'El árbol no cumple las condiciones de integridad para publicarse.',
+      detalles,
+    });
+  }
+}
+
+export class PublicadoPorPerfilExistenteException extends ConflictException {
+  constructor(idFlujoPublicado: string) {
+    super({
+      statusCode: 409,
+      error: 'Conflict',
+      codigo: 'YA_EXISTE_PUBLICADO',
+      message: 'Ya existe un árbol publicado para esa combinación clínica.',
+      detalles: { id_flujo_publicado: idFlujoPublicado },
+    });
+  }
+}
 
 export class FlujoConversacionalNoEncontradoException extends NotFoundException {
   constructor() {
@@ -15,9 +52,30 @@ export class FlujoConversacionalNoEncontradoException extends NotFoundException 
 
 export class FlujoConversacionalNoEditableException extends ConflictException {
   constructor() {
-    super(
-      'Solo se pueden modificar flujos conversacionales en estado BORRADOR.',
-    );
+    super({
+      statusCode: 409,
+      error: 'Conflict',
+      codigo: 'FLUJO_NO_EDITABLE',
+      message:
+        'Solo se pueden modificar flujos conversacionales en estado BORRADOR.',
+    });
+  }
+}
+
+export class NodoFueraDeFlujoException extends UnprocessableEntityException {
+  constructor() {
+    super({
+      statusCode: 422,
+      error: 'Unprocessable Entity',
+      codigo: 'NODO_FUERA_DE_FLUJO',
+      message: 'Los nodos de la transición deben pertenecer al flujo indicado.',
+    });
+  }
+}
+
+export class ReglaValidacionNoEncontradaException extends NotFoundException {
+  constructor() {
+    super('La regla de validación indicada no existe.');
   }
 }
 

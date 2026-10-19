@@ -47,6 +47,13 @@ export class TipoNodoConversacional {
   ) {}
 }
 
+export class TipoEntradaConversacional {
+  constructor(
+    readonly idTipoEntrada: string,
+    readonly nombre: string,
+  ) {}
+}
+
 export class NodoConversacional {
   constructor(
     readonly idNodo: string,
@@ -159,6 +166,12 @@ export interface ResultadoValidacionArbol {
   totalTransiciones: number;
 }
 
+export interface DiagnosticoArbol {
+  nodos_huerfanos: string[];
+  ciclos: string[][];
+  sin_nodo_inicial: boolean;
+}
+
 export class ArbolConversacional {
   constructor(
     readonly flujo: FlujoConversacional,
@@ -167,16 +180,29 @@ export class ArbolConversacional {
   ) {}
 
   validarEstructura(): ResultadoValidacionArbol {
-    const nodosIniciales = this.nodos.filter((nodo) => nodo.esNodoInicial);
-    if (nodosIniciales.length !== 1) {
+    const diagnostico = this.diagnosticarEstructura();
+    if (diagnostico.sin_nodo_inicial) {
       throw new NodoInicialInexistenteException();
     }
+    if (diagnostico.ciclos.length > 0) {
+      throw new CicloConversacionalNoPermitidoException();
+    }
+    if (diagnostico.nodos_huerfanos.length > 0) {
+      throw new NodosHuerfanosException(diagnostico.nodos_huerfanos.length);
+    }
+    return {
+      valido: true,
+      totalNodos: this.nodos.length,
+      totalTransiciones: this.transiciones.length,
+    };
+  }
 
-    this.validarAusenciaCiclos();
-
+  diagnosticarEstructura(): DiagnosticoArbol {
+    const nodosIniciales = this.nodos.filter((nodo) => nodo.esNodoInicial);
     const adyacencias = this.construirAdyacencias();
     const alcanzables = new Set<string>();
-    const pendientes = [nodosIniciales[0].idNodo];
+    const pendientes =
+      nodosIniciales.length === 1 ? [nodosIniciales[0].idNodo] : [];
 
     while (pendientes.length > 0) {
       const actual = pendientes.shift();
@@ -188,37 +214,44 @@ export class ArbolConversacional {
       }
     }
 
-    const cantidadHuerfanos = this.nodos.filter(
-      (nodo) => !alcanzables.has(nodo.idNodo),
-    ).length;
-    if (cantidadHuerfanos > 0) {
-      throw new NodosHuerfanosException(cantidadHuerfanos);
-    }
-
     return {
-      valido: true,
-      totalNodos: this.nodos.length,
-      totalTransiciones: this.transiciones.length,
+      nodos_huerfanos: this.nodos
+        .filter((nodo) => !alcanzables.has(nodo.idNodo))
+        .map((nodo) => nodo.idNodo),
+      ciclos: this.detectarCiclos(),
+      sin_nodo_inicial: nodosIniciales.length !== 1,
     };
   }
 
   validarAusenciaCiclos(): void {
+    if (this.detectarCiclos().length > 0) {
+      throw new CicloConversacionalNoPermitidoException();
+    }
+  }
+
+  private detectarCiclos(): string[][] {
     const adyacencias = this.construirAdyacencias();
     const estado = new Map<string, 'VISITANDO' | 'VISITADO'>();
+    const camino: string[] = [];
+    const ciclos: string[][] = [];
 
     const visitar = (idNodo: string): void => {
       const estadoActual = estado.get(idNodo);
       if (estadoActual === 'VISITANDO') {
-        throw new CicloConversacionalNoPermitidoException();
+        ciclos.push([...camino.slice(camino.indexOf(idNodo)), idNodo]);
+        return;
       }
       if (estadoActual === 'VISITADO') return;
 
       estado.set(idNodo, 'VISITANDO');
+      camino.push(idNodo);
       for (const destino of adyacencias.get(idNodo) ?? []) visitar(destino);
+      camino.pop();
       estado.set(idNodo, 'VISITADO');
     };
 
     for (const nodo of this.nodos) visitar(nodo.idNodo);
+    return ciclos;
   }
 
   private construirAdyacencias(): Map<string, string[]> {

@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -14,6 +14,7 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import {
@@ -22,12 +23,15 @@ import {
 } from '../../domain/enums/arbol-conversacional.enums';
 
 export class CrearFlujoGrupalDtoRequest {
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @IsNotEmpty()
   @MaxLength(150)
   nombre!: string;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsInt()
   @Min(1)
   version: number = 1;
@@ -41,7 +45,7 @@ export class CrearNodoConversacionalDtoRequest {
   @IsNotEmptyObject()
   contenido!: Record<string, unknown>;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsBoolean()
   es_nodo_inicial: boolean = false;
 
@@ -56,16 +60,16 @@ export class CrearNodoConversacionalDtoRequest {
 }
 
 export class ActualizarNodoConversacionalDtoRequest {
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsUUID()
   id_tipo_nodo?: string;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsObject()
   @IsNotEmptyObject()
   contenido?: Record<string, unknown>;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsBoolean()
   es_nodo_inicial?: boolean;
 
@@ -83,7 +87,7 @@ export class ReglaValidacionDtoRequest {
   @IsEnum(TipoDatoValidacion)
   tipo_dato!: TipoDatoValidacion;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsBoolean()
   obligatorio: boolean = true;
 
@@ -99,22 +103,25 @@ export class ReglaValidacionDtoRequest {
   @IsString()
   formato_regex?: string;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsArray()
   @IsString({ each: true })
   valores_permitidos: string[] = [];
 
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @IsNotEmpty()
   mensaje_error!: string;
 }
 
 export class ActualizarReglaValidacionDtoRequest {
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsEnum(TipoDatoValidacion)
   tipo_dato?: TipoDatoValidacion;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsBoolean()
   obligatorio?: boolean;
 
@@ -130,12 +137,12 @@ export class ActualizarReglaValidacionDtoRequest {
   @IsString()
   formato_regex?: string | null;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsArray()
   @IsString({ each: true })
   valores_permitidos?: string[];
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsString()
   @IsNotEmpty()
   mensaje_error?: string;
@@ -160,32 +167,36 @@ export class CrearTransicionConversacionalDtoRequest {
 
   @ValidateNested()
   @IsDefined()
+  @IsObject()
   @Type(() => ReglaValidacionDtoRequest)
   regla_validacion!: ReglaValidacionDtoRequest;
 }
 
 export class ActualizarTransicionConversacionalDtoRequest {
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsUUID()
   id_nodo_origen?: string;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsUUID()
   id_nodo_destino?: string;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsEnum(OperadorCondicion)
   operador_condicion?: OperadorCondicion;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
+  @IsDefined()
   valor_condicion?: unknown;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsInt()
   @Min(1)
   orden_evaluacion?: number;
 
-  @IsOptional()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
+  @IsObject()
+  @IsNotEmptyObject()
   @ValidateNested()
   @Type(() => ActualizarReglaValidacionDtoRequest)
   regla_validacion?: ActualizarReglaValidacionDtoRequest;
