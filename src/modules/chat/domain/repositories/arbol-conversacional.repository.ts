@@ -9,6 +9,8 @@ import {
   TransicionConversacional,
 } from '../entities/arbol-conversacional.entity';
 import {
+  EstadoFlujoConversacional,
+  ModalidadConversacional,
   OperadorCondicion,
   TipoCravingClinico,
   TipoDependenciaClinica,
@@ -17,6 +19,27 @@ import {
 export interface PerfilClinicoArbol {
   tipoDependencia: TipoDependenciaClinica;
   tipoCraving: TipoCravingClinico;
+}
+
+export interface ConsultaFlujos {
+  modalidad?: ModalidadConversacional;
+  tipoDependencia?: TipoDependenciaClinica;
+  tipoCraving?: TipoCravingClinico;
+  estado?: EstadoFlujoConversacional;
+  page: number;
+  pageSize: number;
+}
+
+export interface PaginaFlujos {
+  items: FlujoConversacional[];
+  total: number;
+}
+
+export interface VersionClonada {
+  flujo: FlujoConversacional;
+  idFlujoOrigen: string;
+  nodosCopiados: number;
+  transicionesCopiadas: number;
 }
 
 export interface CrearFlujoPersonalizadoCommand extends PerfilClinicoArbol {
@@ -91,6 +114,23 @@ export interface ActualizarTransicionCommand {
 }
 
 export abstract class ArbolConversacionalRepository {
+  abstract listarFlujos(consulta: ConsultaFlujos): Promise<PaginaFlujos>;
+
+  abstract clonarVersion(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<VersionClonada>;
+
+  abstract publicarAdministrativo(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional>;
+
+  abstract archivarAdministrativo(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional>;
+
   abstract crearFlujoGrupal(
     command: CrearFlujoGrupalCommand,
   ): Promise<FlujoConversacional>;

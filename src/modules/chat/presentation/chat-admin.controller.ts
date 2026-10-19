@@ -8,10 +8,25 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { Roles } from '../../../shared/presentation/decorators/roles.decorator';
+import { ListarFlujosDtoRequest } from '../application/dto/gestion-flujos.dto-request';
+import type {
+  ListadoFlujosDtoResponse,
+  VersionClonadaDtoResponse,
+  FlujoPublicadoDtoResponse,
+  FlujoArchivadoDtoResponse,
+} from '../application/dto/gestion-flujos.dto-response';
+import {
+  ArchivarFlujoUseCase,
+  ClonarVersionFlujoUseCase,
+  ListarFlujosUseCase,
+  PublicarFlujoUseCase,
+} from '../application/use-cases/gestionar-flujos.use-cases';
+import { CuerpoVacioPipe } from './pipes/cuerpo-vacio.pipe';
 import { RolesGuard } from '../../../shared/presentation/guards/role-guard';
 import { AlcanceSesion } from '../../usuarios/domain/enums/alcance-sesion.enum';
 import { Rol } from '../../usuarios/domain/enums/rol.enum';
@@ -68,7 +83,66 @@ export class ChatAdminController {
     private readonly actualizarTransicion: ActualizarTransicionPorIdUseCase,
     private readonly consultarCatalogos: ConsultarCatalogosChatUseCase,
     private readonly crearReglaValidacion: CrearReglaValidacionUseCase,
+    private readonly listarFlujos: ListarFlujosUseCase,
+    private readonly clonarVersion: ClonarVersionFlujoUseCase,
+    private readonly publicarFlujo: PublicarFlujoUseCase,
+    private readonly archivarFlujo: ArchivarFlujoUseCase,
   ) {}
+
+  @Get('/flujos')
+  @Header('Cache-Control', 'no-store')
+  listar(
+    @Query() dto: ListarFlujosDtoRequest,
+  ): Promise<ListadoFlujosDtoResponse> {
+    return this.listarFlujos.execute(dto);
+  }
+
+  @Post('/flujos/:id_flujo/clonar-version')
+  @UseGuards(CsrfSessionGuard)
+  async clonar(
+    @Body(CuerpoVacioPipe) _body: unknown,
+    @Param('id_flujo', new ParseUUIDPipe()) idFlujo: string,
+    @Req() request: AuthenticatedSessionRequest,
+  ): Promise<RespuestaChatAdmin<VersionClonadaDtoResponse>> {
+    return {
+      data: await this.clonarVersion.execute(
+        idFlujo,
+        request.autenticacion.usuario.id_usuario,
+      ),
+    };
+  }
+
+  @Post('/flujos/:id_flujo/publicar')
+  @HttpCode(200)
+  @UseGuards(CsrfSessionGuard)
+  async publicar(
+    @Body(CuerpoVacioPipe) _body: unknown,
+    @Param('id_flujo', new ParseUUIDPipe()) idFlujo: string,
+    @Req() request: AuthenticatedSessionRequest,
+  ): Promise<RespuestaChatAdmin<FlujoPublicadoDtoResponse>> {
+    return {
+      data: await this.publicarFlujo.execute(
+        idFlujo,
+        request.autenticacion.usuario.id_usuario,
+      ),
+    };
+  }
+
+  @Post('/flujos/:id_flujo/archivar')
+  @HttpCode(200)
+  @UseGuards(CsrfSessionGuard)
+  async archivar(
+    @Body(CuerpoVacioPipe) _body: unknown,
+    @Param('id_flujo', new ParseUUIDPipe()) idFlujo: string,
+    @Req() request: AuthenticatedSessionRequest,
+  ): Promise<RespuestaChatAdmin<FlujoArchivadoDtoResponse>> {
+    return {
+      data: await this.archivarFlujo.execute(
+        idFlujo,
+        request.autenticacion.usuario.id_usuario,
+      ),
+    };
+  }
 
   @Post('/flujos')
   @UseGuards(CsrfSessionGuard)
