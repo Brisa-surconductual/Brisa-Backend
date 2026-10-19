@@ -90,10 +90,15 @@ describe('Casos de uso del árbol conversacional (RF-25)', () => {
     fecha,
   );
   const repository: jest.Mocked<ArbolConversacionalRepository> = {
+    listarFlujos: jest.fn(),
+    clonarVersion: jest.fn(),
+    publicarAdministrativo: jest.fn(),
+    archivarAdministrativo: jest.fn(),
     crearFlujoGrupal: jest.fn(),
     crearFlujoPersonalizado: jest.fn(),
     clonarVersionPersonalizada: jest.fn(),
     listarFlujosPersonalizados: jest.fn(),
+    buscarPublicadoGrupal: jest.fn(),
     buscarPublicadoPersonalizado: jest.fn(),
     listarAuditoriaArbol: jest.fn(),
     publicarPersonalizado: jest.fn(),

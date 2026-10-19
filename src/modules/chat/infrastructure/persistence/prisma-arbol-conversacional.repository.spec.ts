@@ -5,6 +5,7 @@ import {
 } from '../../domain/exeption/arbol-conversacional.exceptions';
 import {
   EstadoFlujoConversacional,
+  ModalidadConversacional,
   OperadorCondicion,
   TipoDatoValidacion,
 } from '../../domain/enums/arbol-conversacional.enums';
@@ -67,6 +68,7 @@ describe('PrismaArbolConversacionalRepository (RF-25)', () => {
   const tx = {
     flujo_conversacion: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
     },
@@ -106,9 +108,79 @@ describe('PrismaArbolConversacionalRepository (RF-25)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    tx.flujo_conversacion.findFirst.mockResolvedValue(null);
     tx.flujo_conversacion.findUnique.mockResolvedValue({
       estado: EstadoFlujoConversacional.BORRADOR,
     });
+  });
+
+  it('busca exclusivamente el flujo grupal publicado y devuelve null si no existe', async () => {
+    await expect(repository.buscarPublicadoGrupal()).resolves.toBeNull();
+    expect(tx.flujo_conversacion.findFirst).toHaveBeenCalledWith({
+      where: { modalidad: 'GRUPAL', estado: 'PUBLICADO' },
+    });
+    expect(tx.auditoria_arboles.create).not.toHaveBeenCalled();
+  });
+
+  it('devuelve el identificador y la versión del grupal publicado con sus datos de dominio', async () => {
+    tx.flujo_conversacion.findFirst.mockResolvedValue({
+      ...flujoRow,
+      estado: 'PUBLICADO',
+      version: 3,
+      fecha_publicacion: fecha,
+      fecha_archivado: null,
+      tipo_dependencia: null,
+      tipo_craving: null,
+    });
+
+    const publicado = await repository.buscarPublicadoGrupal();
+
+    expect(publicado).toMatchObject({
+      idFlujo,
+      version: 3,
+      modalidad: ModalidadConversacional.GRUPAL,
+      estado: EstadoFlujoConversacional.PUBLICADO,
+      fechaPublicacion: fecha,
+      tipoDependencia: null,
+      tipoCraving: null,
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(tx.auditoria_arboles.create).not.toHaveBeenCalled();
+  });
+
+  it('permite cargar el grupal publicado y recuperar su nodo inicial sin cambiar sus referencias', async () => {
+    const publicadoRow = { ...flujoRow, estado: 'PUBLICADO', version: 3 };
+    tx.flujo_conversacion.findFirst.mockResolvedValue(publicadoRow);
+    tx.flujo_conversacion.findUnique.mockResolvedValue(publicadoRow);
+    tx.nodos.findMany.mockResolvedValue([
+      nodoRow(idNodoA, true),
+      nodoRow(idNodoB),
+    ]);
+    tx.reglas_nodos.findMany.mockResolvedValue([
+      transicionRow(idNodoA, idNodoB),
+    ]);
+
+    const publicado = await repository.buscarPublicadoGrupal();
+    expect(publicado).not.toBeNull();
+    const arbol = await repository.obtenerArbol(publicado!.idFlujo);
+
+    expect(arbol?.flujo.idFlujo).toBe(idFlujo);
+    expect(arbol?.flujo.version).toBe(3);
+    expect(arbol?.nodos.find((nodo) => nodo.esNodoInicial)?.idNodo).toBe(
+      idNodoA,
+    );
+    expect(arbol?.transiciones[0].idNodoDestino).toBe(idNodoB);
+    expect(tx.nodos.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id_flujo: idFlujo } }),
+    );
+    expect(tx.auditoria_arboles.create).not.toHaveBeenCalled();
+  });
+
+  it('propaga los errores de consulta sin confundirlos con la ausencia de un grupal publicado', async () => {
+    const error = new Error('Consulta no disponible');
+    tx.flujo_conversacion.findFirst.mockRejectedValueOnce(error);
+
+    await expect(repository.buscarPublicadoGrupal()).rejects.toBe(error);
   });
 
   it('crea un nodo válido dentro de una transacción', async () => {
@@ -127,6 +199,14 @@ describe('PrismaArbolConversacionalRepository (RF-25)', () => {
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(resultado.idNodo).toBe(idNodoA);
+    expect(tx.auditoria_arboles.create).toHaveBeenCalledWith({
+      data: {
+        id_flujo: idFlujo,
+        id_actor: idAdministrador,
+        accion: 'CREAR_NODO',
+        id_objeto: idNodoA,
+      },
+    });
     const llamadasCrearNodo = tx.nodos.create.mock.calls as unknown as Array<
       [{ data: { id_flujo: string } }]
     >;
@@ -192,6 +272,14 @@ describe('PrismaArbolConversacionalRepository (RF-25)', () => {
     expect(tx.reglas_validaciones.create).toHaveBeenCalledTimes(1);
     expect(tx.reglas_nodos.create).toHaveBeenCalledTimes(1);
     expect(resultado.idNodoDestino).toBe(idNodoB);
+    expect(tx.auditoria_arboles.create).toHaveBeenCalledWith({
+      data: {
+        id_flujo: idFlujo,
+        id_actor: idAdministrador,
+        accion: 'CREAR_TRANSICION',
+        id_objeto: transicionRow(idNodoA, idNodoB).id_regla,
+      },
+    });
   });
 
   it('no persiste parcialmente si el nodo destino no pertenece al flujo', async () => {

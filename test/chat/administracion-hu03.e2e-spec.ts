@@ -20,8 +20,17 @@ import {
   TipoEntradaConversacional,
   TipoNodoConversacional,
 } from '../../src/modules/chat/domain/entities/arbol-conversacional.entity';
-import { TipoDatoValidacion } from '../../src/modules/chat/domain/enums/arbol-conversacional.enums';
-import { NodoFueraDeFlujoException } from '../../src/modules/chat/domain/exeption/arbol-conversacional.exceptions';
+import {
+  EstadoFlujoConversacional,
+  TipoDatoValidacion,
+} from '../../src/modules/chat/domain/enums/arbol-conversacional.enums';
+import {
+  EstadoFlujoInvalidoException,
+  FlujoConversacionalNoEncontradoException,
+  GrafoInvalidoException,
+  NodoFueraDeFlujoException,
+  PublicadoPorPerfilExistenteException,
+} from '../../src/modules/chat/domain/exeption/arbol-conversacional.exceptions';
 import { ArbolConversacionalRepository } from '../../src/modules/chat/domain/repositories/arbol-conversacional.repository';
 import { S3_CLIENT } from '../../src/modules/cronograma/infrastructure/storage/s3-client.provider';
 import { EmailService } from '../../src/modules/usuarios/application/ports/email';
@@ -37,7 +46,7 @@ import { Rol } from '../../src/modules/usuarios/domain/enums/rol.enum';
 import { SesionRepository } from '../../src/modules/usuarios/domain/repositories/sesion.repository';
 import { UsuarioRepository } from '../../src/modules/usuarios/domain/repositories/user.repository';
 import { CorreoElectronico } from '../../src/modules/usuarios/domain/value-objects/correo_electronico.vo';
-import { arbolDominio, ids } from './fixtures/arbol-hu03.fixture';
+import { arbolDominio, fecha, ids } from './fixtures/arbol-hu03.fixture';
 
 jest.setTimeout(30_000);
 
@@ -46,10 +55,15 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     createHash('sha256').update(valor).digest('hex');
   const arbol = arbolDominio();
   const repo = {
+    listarFlujos: jest.fn(),
+    clonarVersion: jest.fn(),
+    publicarAdministrativo: jest.fn(),
+    archivarAdministrativo: jest.fn(),
     crearFlujoGrupal: jest.fn(),
     crearFlujoPersonalizado: jest.fn(),
     clonarVersionPersonalizada: jest.fn(),
     listarFlujosPersonalizados: jest.fn(),
+    buscarPublicadoGrupal: jest.fn(),
     buscarPublicadoPersonalizado: jest.fn(),
     listarAuditoriaArbol: jest.fn(),
     publicarPersonalizado: jest.fn(),
@@ -83,6 +97,10 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     ruta: string;
     cuerpo?: Record<string, unknown>;
   }> = [
+    { metodo: 'get', ruta: '/flujos' },
+    { metodo: 'post', ruta: `/flujos/${ids.flujo}/clonar-version` },
+    { metodo: 'post', ruta: `/flujos/${ids.flujo}/publicar` },
+    { metodo: 'post', ruta: `/flujos/${ids.flujo}/archivar` },
     { metodo: 'post', ruta: '/flujos', cuerpo: bodyFlujo },
     { metodo: 'get', ruta: `/flujos/${ids.flujo}` },
     { metodo: 'post', ruta: `/flujos/${ids.flujo}/nodos`, cuerpo: bodyNodo },
@@ -189,6 +207,23 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    repo.listarFlujos.mockResolvedValue({ items: [arbol.flujo], total: 1 });
+    repo.clonarVersion.mockResolvedValue({
+      flujo: { ...arbol.flujo, idFlujo: ids.otroFlujo, version: 2 },
+      idFlujoOrigen: ids.flujo,
+      nodosCopiados: 2,
+      transicionesCopiadas: 1,
+    });
+    repo.publicarAdministrativo.mockResolvedValue({
+      ...arbol.flujo,
+      estado: EstadoFlujoConversacional.PUBLICADO,
+      fechaPublicacion: fecha,
+    });
+    repo.archivarAdministrativo.mockResolvedValue({
+      ...arbol.flujo,
+      estado: EstadoFlujoConversacional.ARCHIVADO,
+      fechaArchivado: fecha,
+    });
     repo.crearFlujoGrupal.mockResolvedValue(arbol.flujo);
     repo.crearFlujoPersonalizado.mockResolvedValue(arbol.flujo);
     repo.obtenerArbol.mockResolvedValue(arbol);
@@ -292,6 +327,24 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     { nombre: 'Inicio' },
     { nombre: 'Inicio', modalidad: 'OTRA' },
     { nombre: 'Inicio', modalidad: 'PERSONALIZADA' },
+    {
+      nombre: 'Inicio',
+      modalidad: 'PERSONALIZADA',
+      tipo_dependencia: 'TOLERANCIA',
+    },
+    { nombre: 'Inicio', modalidad: 'PERSONALIZADA', tipo_craving: 'NEGATIVO' },
+    {
+      nombre: 'Inicio',
+      modalidad: 'PERSONALIZADA',
+      tipo_dependencia: null,
+      tipo_craving: 'NEGATIVO',
+    },
+    {
+      nombre: 'Inicio',
+      modalidad: 'PERSONALIZADA',
+      tipo_dependencia: 'TOLERANCIA',
+      tipo_craving: null,
+    },
     { ...bodyFlujo, tipo_dependencia: 'TOLERANCIA', tipo_craving: 'NEGATIVO' },
     { ...bodyFlujo, creado_por: ids.otroFlujo },
     { ...bodyFlujo, version: 99 },
@@ -705,6 +758,228 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       .delete(`${base}/flujos/${ids.flujo}`)
       .set('Cookie', 'brisa_session=admin')
       .expect(404);
+  });
+
+  describe('HU-05 / RF-25C: contratos generales de gestión de flujos', () => {
+    it('05-A entrega items, metadatos predeterminados y fechas de ciclo de vida', async () => {
+      const respuesta = await admin('get', '/flujos').expect(200);
+      expect(respuesta.body).toMatchObject({
+        data: {
+          items: [
+            {
+              id_flujo: ids.flujo,
+              modalidad: 'GRUPAL',
+              fecha_publicacion: null,
+              fecha_archivado: null,
+            },
+          ],
+        },
+        meta: { page: 1, page_size: 20, total: 1 },
+      });
+      expect(repo.listarFlujos).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1, pageSize: 20 }),
+      );
+      expect(respuesta.headers['cache-control']).toBe('no-store');
+    });
+
+    it('05-A mapea los filtros combinados y la paginación', async () => {
+      await admin('get', '/flujos')
+        .query({
+          modalidad: 'PERSONALIZADA',
+          tipo_dependencia: 'TOLERANCIA',
+          tipo_craving: 'NEGATIVO',
+          estado: 'ARCHIVADO',
+          page: 2,
+          page_size: 100,
+        })
+        .expect(200);
+      expect(repo.listarFlujos).toHaveBeenCalledWith({
+        modalidad: 'PERSONALIZADA',
+        tipoDependencia: 'TOLERANCIA',
+        tipoCraving: 'NEGATIVO',
+        estado: 'ARCHIVADO',
+        page: 2,
+        pageSize: 100,
+      });
+    });
+
+    it.each([
+      { modalidad: 'OTRA' },
+      { tipo_dependencia: 'BAJA' },
+      { tipo_craving: 'OTRO' },
+      { estado: 'OTRO' },
+      { page: '0' },
+      { page: '-1' },
+      { page: '1.5' },
+      { page: '1e2' },
+      { page: 'texto' },
+      { page: '' },
+      { page: '9007199254740992' },
+      { page: '9007199254740991', page_size: '100' },
+      { page_size: '0' },
+      { page_size: '101' },
+      { page_size: '2.5' },
+      { page_size: ['10', '20'] },
+      { filtro_ajeno: 'x' },
+    ])('05-A rechaza filtros/paginación inválidos: %j', async (query) => {
+      await admin('get', '/flujos').query(query).expect(400);
+      expect(repo.listarFlujos).not.toHaveBeenCalled();
+    });
+
+    it('05-A conserva total filtrado aunque la página esté vacía', async () => {
+      repo.listarFlujos.mockResolvedValueOnce({ items: [], total: 8 });
+      const respuesta = await admin('get', '/flujos')
+        .query({ page: 5 })
+        .expect(200);
+      expect(respuesta.body).toEqual({
+        data: { items: [] },
+        meta: { page: 5, page_size: 20, total: 8 },
+      });
+    });
+
+    it('05-B devuelve nuevo UUID, origen, versión y cantidades con actor de sesión', async () => {
+      const respuesta = await admin(
+        'post',
+        `/flujos/${ids.flujo}/clonar-version`,
+      )
+        .send({})
+        .expect(201);
+      expect(respuesta.body).toEqual({
+        data: {
+          id_flujo: ids.otroFlujo,
+          id_flujo_origen: ids.flujo,
+          version: 2,
+          estado: 'BORRADOR',
+          nodos_copiados: 2,
+          transiciones_copiadas: 1,
+        },
+      });
+      expect(repo.clonarVersion).toHaveBeenCalledWith(ids.flujo, ids.actor);
+    });
+
+    it('05-C entrega únicamente los campos de publicación documentados', async () => {
+      const respuesta = await admin(
+        'post',
+        `/flujos/${ids.flujo}/publicar`,
+      ).expect(200);
+      expect(respuesta.body).toEqual({
+        data: {
+          id_flujo: ids.flujo,
+          estado: 'PUBLICADO',
+          version: 1,
+          fecha_publicacion: fecha.toISOString(),
+        },
+      });
+      expect(repo.publicarAdministrativo).toHaveBeenCalledWith(
+        ids.flujo,
+        ids.actor,
+      );
+    });
+
+    it('05-C devuelve 409 y el identificador del publicado previo', async () => {
+      repo.publicarAdministrativo.mockRejectedValueOnce(
+        new PublicadoPorPerfilExistenteException(ids.otroFlujo),
+      );
+      const respuesta = await admin(
+        'post',
+        `/flujos/${ids.flujo}/publicar`,
+      ).expect(409);
+      expect(respuesta.body).toMatchObject({
+        codigo: 'YA_EXISTE_PUBLICADO',
+        detalles: { id_flujo_publicado: ids.otroFlujo },
+      });
+    });
+
+    it('05-C conserva los detalles estructurados del grafo inválido', async () => {
+      const detalles = {
+        nodos_huerfanos: [ids.destino],
+        ciclos: [[ids.origen, ids.origen]],
+        sin_nodo_inicial: false,
+      };
+      repo.publicarAdministrativo.mockRejectedValueOnce(
+        new GrafoInvalidoException(detalles),
+      );
+      const respuesta = await admin(
+        'post',
+        `/flujos/${ids.flujo}/publicar`,
+      ).expect(422);
+      expect(respuesta.body).toMatchObject({
+        codigo: 'GRAFO_INVALIDO',
+        detalles,
+      });
+    });
+
+    it('05-D devuelve el estado y fecha de archivado con actor de sesión', async () => {
+      const respuesta = await admin(
+        'post',
+        `/flujos/${ids.flujo}/archivar`,
+      ).expect(200);
+      expect(respuesta.body).toEqual({
+        data: {
+          id_flujo: ids.flujo,
+          estado: 'ARCHIVADO',
+          fecha_archivado: fecha.toISOString(),
+        },
+      });
+      expect(repo.archivarAdministrativo).toHaveBeenCalledWith(
+        ids.flujo,
+        ids.actor,
+      );
+    });
+
+    it.each(['clonar-version', 'publicar', 'archivar'])(
+      '%s rechaza UUID inválido, estado inválido e inexistencia',
+      async (accion) => {
+        const operacion =
+          accion === 'clonar-version'
+            ? repo.clonarVersion
+            : accion === 'publicar'
+              ? repo.publicarAdministrativo
+              : repo.archivarAdministrativo;
+        await admin('post', `/flujos/no-uuid/${accion}`).expect(400);
+        expect(operacion).not.toHaveBeenCalled();
+        operacion.mockRejectedValueOnce(new EstadoFlujoInvalidoException());
+        const respuesta = await admin(
+          'post',
+          `/flujos/${ids.flujo}/${accion}`,
+        ).expect(409);
+        expect(respuesta.body).toHaveProperty('codigo', 'ESTADO_INVALIDO');
+        operacion.mockRejectedValueOnce(
+          new FlujoConversacionalNoEncontradoException(),
+        );
+        await admin('post', `/flujos/${ids.flujo}/${accion}`).expect(404);
+      },
+    );
+
+    it.each(['clonar-version', 'publicar', 'archivar'])(
+      '%s rechaza campos en el body y arreglos',
+      async (accion) => {
+        await admin('post', `/flujos/${ids.flujo}/${accion}`)
+          .send({ creado_por: ids.otroFlujo })
+          .expect(400);
+        await admin('post', `/flujos/${ids.flujo}/${accion}`)
+          .send([])
+          .expect(400);
+      },
+    );
+
+    it.each(['clonar-version', 'publicar', 'archivar'])(
+      '%s sanitiza errores inesperados de base de datos',
+      async (accion) => {
+        const operacion =
+          accion === 'clonar-version'
+            ? repo.clonarVersion
+            : accion === 'publicar'
+              ? repo.publicarAdministrativo
+              : repo.archivarAdministrativo;
+        operacion.mockRejectedValueOnce(new Error('conexion-privada-simulada'));
+        const respuesta = await admin(
+          'post',
+          `/flujos/${ids.flujo}/${accion}`,
+        ).expect(500);
+        expect(respuesta.text).not.toContain('conexion-privada-simulada');
+      },
+    );
   });
 
   it('publica el contrato backend sin prefijo /api', async () => {
