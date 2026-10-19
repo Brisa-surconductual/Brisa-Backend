@@ -4,10 +4,13 @@ import {
   FlujoConversacional,
   NodoConversacional,
   ReglaValidacion,
+  TipoEntradaConversacional,
   TipoNodoConversacional,
   TransicionConversacional,
 } from '../entities/arbol-conversacional.entity';
 import {
+  EstadoFlujoConversacional,
+  ModalidadConversacional,
   OperadorCondicion,
   TipoCravingClinico,
   TipoDependenciaClinica,
@@ -16,6 +19,27 @@ import {
 export interface PerfilClinicoArbol {
   tipoDependencia: TipoDependenciaClinica;
   tipoCraving: TipoCravingClinico;
+}
+
+export interface ConsultaFlujos {
+  modalidad?: ModalidadConversacional;
+  tipoDependencia?: TipoDependenciaClinica;
+  tipoCraving?: TipoCravingClinico;
+  estado?: EstadoFlujoConversacional;
+  page: number;
+  pageSize: number;
+}
+
+export interface PaginaFlujos {
+  items: FlujoConversacional[];
+  total: number;
+}
+
+export interface VersionClonada {
+  flujo: FlujoConversacional;
+  idFlujoOrigen: string;
+  nodosCopiados: number;
+  transicionesCopiadas: number;
 }
 
 export interface CrearFlujoPersonalizadoCommand extends PerfilClinicoArbol {
@@ -60,6 +84,10 @@ export interface DatosReglaValidacionCommand {
   mensajeError: string;
 }
 
+export interface CrearReglaValidacionCommand extends DatosReglaValidacionCommand {
+  creadoPor: string;
+}
+
 export interface CrearTransicionCommand {
   idFlujo: string;
   idNodoOrigen: string;
@@ -67,7 +95,8 @@ export interface CrearTransicionCommand {
   operadorCondicion: OperadorCondicion;
   valorCondicion: unknown;
   ordenEvaluacion: number;
-  reglaValidacion: DatosReglaValidacionCommand;
+  reglaValidacion?: DatosReglaValidacionCommand;
+  idReglaValidacion?: string;
   creadoPor: string;
 }
 
@@ -80,10 +109,28 @@ export interface ActualizarTransicionCommand {
   valorCondicion?: unknown;
   ordenEvaluacion?: number;
   reglaValidacion?: Partial<DatosReglaValidacionCommand>;
+  idReglaValidacion?: string;
   actualizadoPor: string;
 }
 
 export abstract class ArbolConversacionalRepository {
+  abstract listarFlujos(consulta: ConsultaFlujos): Promise<PaginaFlujos>;
+
+  abstract clonarVersion(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<VersionClonada>;
+
+  abstract publicarAdministrativo(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional>;
+
+  abstract archivarAdministrativo(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional>;
+
   abstract crearFlujoGrupal(
     command: CrearFlujoGrupalCommand,
   ): Promise<FlujoConversacional>;
@@ -98,6 +145,8 @@ export abstract class ArbolConversacionalRepository {
   ): Promise<FlujoConversacional>;
 
   abstract listarFlujosPersonalizados(): Promise<FlujoConversacional[]>;
+
+  abstract buscarPublicadoGrupal(): Promise<FlujoConversacional | null>;
 
   abstract buscarPublicadoPersonalizado(
     perfil: PerfilClinicoArbol,
@@ -120,6 +169,20 @@ export abstract class ArbolConversacionalRepository {
   abstract obtenerArbol(idFlujo: string): Promise<ArbolConversacional | null>;
 
   abstract listarTiposNodo(): Promise<TipoNodoConversacional[]>;
+
+  abstract listarTiposEntrada(): Promise<TipoEntradaConversacional[]>;
+
+  abstract listarReglasValidacion(): Promise<ReglaValidacion[]>;
+
+  abstract buscarNodo(idNodo: string): Promise<NodoConversacional | null>;
+
+  abstract buscarTransicion(
+    idTransicion: string,
+  ): Promise<TransicionConversacional | null>;
+
+  abstract crearReglaValidacion(
+    command: CrearReglaValidacionCommand,
+  ): Promise<ReglaValidacion>;
 
   abstract crearNodo(command: CrearNodoCommand): Promise<NodoConversacional>;
 

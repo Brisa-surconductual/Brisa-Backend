@@ -413,12 +413,12 @@ model flujo_conversacion {
 
 model auditoria_arboles {
   id_auditoria       BigInt             @id @default(autoincrement())
-  id_flujo           String             @db.Uuid
+  id_flujo           String?            @db.Uuid
   id_actor           String             @db.Uuid
   accion             String             @db.VarChar(40)
   id_objeto          String?            @db.Uuid
   fecha_operacion    DateTime           @default(now()) @db.Timestamptz(6)
-  flujo_conversacion flujo_conversacion @relation(fields: [id_flujo], references: [id_flujo], onDelete: Restrict, onUpdate: NoAction, map: "fk_auditoria_arbol_flujo")
+  flujo_conversacion flujo_conversacion? @relation(fields: [id_flujo], references: [id_flujo], onDelete: Restrict, onUpdate: NoAction, map: "fk_auditoria_arbol_flujo")
   usuarios           usuarios           @relation(fields: [id_actor], references: [id_usuario], onDelete: Restrict, onUpdate: NoAction, map: "fk_auditoria_arbol_actor")
 
   @@index([id_flujo, fecha_operacion], map: "ix_auditoria_arbol_flujo_fecha")

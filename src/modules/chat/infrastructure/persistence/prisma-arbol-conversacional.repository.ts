@@ -7,6 +7,7 @@ import {
   FlujoConversacional,
   NodoConversacional,
   ReglaValidacion,
+  TipoEntradaConversacional,
   TipoNodoConversacional,
   TransicionConversacional,
 } from '../../domain/entities/arbol-conversacional.entity';
@@ -20,6 +21,9 @@ import {
 } from '../../domain/enums/arbol-conversacional.enums';
 import {
   ContenidoCronogramaNoEncontradoException,
+  EstadoFlujoInvalidoException,
+  GrafoInvalidoException,
+  PublicadoPorPerfilExistenteException,
   FlujoConversacionalNoEditableException,
   FlujoConversacionalNoEncontradoException,
   FlujoGrupalPublicadoExistenteException,
@@ -31,9 +35,12 @@ import {
   NodoConversacionalNoEncontradoException,
   NodoDestinoNoEncontradoException,
   NodoInicialDuplicadoException,
+  NodoFueraDeFlujoException,
   NodoOrigenNoEncontradoException,
   OrdenTransicionDuplicadoException,
   PerfilClinicoArbolInvalidoException,
+  ReglaValidacionInvalidaException,
+  ReglaValidacionNoEncontradaException,
   TipoNodoNoEncontradoException,
   TransicionConversacionalNoEncontradaException,
   VersionPersonalizadaDuplicadaException,
@@ -43,12 +50,16 @@ import {
   ActualizarNodoCommand,
   ActualizarTransicionCommand,
   ArbolConversacionalRepository,
+  ConsultaFlujos,
   CrearFlujoGrupalCommand,
   CrearFlujoPersonalizadoCommand,
   CrearNodoCommand,
+  CrearReglaValidacionCommand,
   CrearTransicionCommand,
   DatosReglaValidacionCommand,
   PerfilClinicoArbol,
+  PaginaFlujos,
+  VersionClonada,
 } from '../../domain/repositories/arbol-conversacional.repository';
 
 type ClienteArbol = Pick<
@@ -167,26 +178,47 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     idFlujo: string,
     idActor: string,
   ): Promise<FlujoConversacional> {
+    return (await this.clonarArbol(idFlujo, idActor, false)).flujo;
+  }
+
+  clonarVersion(idFlujo: string, idActor: string): Promise<VersionClonada> {
+    return this.clonarArbol(idFlujo, idActor, true);
+  }
+
+  private async clonarArbol(
+    idFlujo: string,
+    idActor: string,
+    contratoAdministrativo: boolean,
+  ): Promise<VersionClonada> {
     try {
       return await this.ejecutarTransaccion(async (tx) => {
         const origen = await this.cargarArbol(tx, idFlujo);
         if (
           origen === null ||
-          origen.flujo.modalidad !== ModalidadConversacional.PERSONALIZADA
+          (!contratoAdministrativo &&
+            origen.flujo.modalidad !== ModalidadConversacional.PERSONALIZADA)
         ) {
+          if (contratoAdministrativo)
+            throw new FlujoConversacionalNoEncontradoException();
           throw new FlujoPersonalizadoNoEncontradoException();
         }
         if (origen.flujo.estado === EstadoFlujoConversacional.BORRADOR) {
+          if (contratoAdministrativo) throw new EstadoFlujoInvalidoException();
           throw new VersionPersonalizadaNoClonableException();
         }
-        const perfil = this.perfilDeFlujo(origen.flujo);
-        const version = await this.siguienteVersion(tx, perfil);
+        const perfil =
+          origen.flujo.modalidad === ModalidadConversacional.PERSONALIZADA
+            ? this.perfilDeFlujo(origen.flujo)
+            : null;
+        const version = contratoAdministrativo
+          ? origen.flujo.version + 1
+          : await this.siguienteVersion(tx, perfil!);
         const nuevo = await tx.flujo_conversacion.create({
           data: {
             nombre: origen.flujo.nombre,
-            modalidad: ModalidadConversacional.PERSONALIZADA,
-            tipo_dependencia: perfil.tipoDependencia,
-            tipo_craving: perfil.tipoCraving,
+            modalidad: origen.flujo.modalidad,
+            tipo_dependencia: perfil?.tipoDependencia ?? null,
+            tipo_craving: perfil?.tipoCraving ?? null,
             estado: EstadoFlujoConversacional.BORRADOR,
             version,
             creado_por: idActor,
@@ -209,17 +241,21 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
         }
         for (const transicion of origen.transiciones) {
           const regla = transicion.reglaValidacion;
-          const validacion = await tx.reglas_validaciones.create({
-            data: this.datosCrearRegla({
-              tipoDato: regla.tipoDato,
-              obligatorio: regla.obligatorio,
-              valorMin: regla.valorMin,
-              valorMax: regla.valorMax,
-              formatoRegex: regla.formatoRegex,
-              valoresPermitidos: regla.valoresPermitidos,
-              mensajeError: regla.mensajeError,
-            }),
-          });
+          let idValidacion = regla.idReglaValidacion;
+          if (!contratoAdministrativo) {
+            const validacion = await tx.reglas_validaciones.create({
+              data: this.datosCrearRegla({
+                tipoDato: regla.tipoDato,
+                obligatorio: regla.obligatorio,
+                valorMin: regla.valorMin,
+                valorMax: regla.valorMax,
+                formatoRegex: regla.formatoRegex,
+                valoresPermitidos: regla.valoresPermitidos,
+                mensajeError: regla.mensajeError,
+              }),
+            });
+            idValidacion = validacion.id_regla_validacion;
+          }
           const origenNuevo = idsNuevos.get(transicion.idNodoOrigen);
           const destinoNuevo = idsNuevos.get(transicion.idNodoDestino);
           if (origenNuevo === undefined || destinoNuevo === undefined) {
@@ -230,7 +266,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
               id_flujo: nuevo.id_flujo,
               id_nodo_origen: origenNuevo,
               id_nodo_destino: destinoNuevo,
-              id_regla_validacion: validacion.id_regla_validacion,
+              id_regla_validacion: idValidacion,
               operador_condicion: transicion.operadorCondicion,
               valor_condicion: this.aJsonEntrada(transicion.valorCondicion),
               orden_evaluacion: transicion.ordenEvaluacion,
@@ -244,11 +280,150 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           'CLONAR_VERSION',
           idFlujo,
         );
-        return this.mapearFlujo(nuevo);
+        return {
+          flujo: this.mapearFlujo(nuevo),
+          idFlujoOrigen: idFlujo,
+          nodosCopiados: origen.nodos.length,
+          transicionesCopiadas: origen.transiciones.length,
+        };
       });
     } catch (error: unknown) {
       this.traducirErrorVersion(error);
     }
+  }
+
+  async listarFlujos(consulta: ConsultaFlujos): Promise<PaginaFlujos> {
+    const where: Prisma.flujo_conversacionWhereInput = {
+      modalidad: consulta.modalidad,
+      tipo_dependencia: consulta.tipoDependencia,
+      tipo_craving: consulta.tipoCraving,
+      estado: consulta.estado,
+    };
+    return this.ejecutarTransaccion(async (tx) => {
+      const [items, total] = await Promise.all([
+        tx.flujo_conversacion.findMany({
+          where,
+          orderBy: [{ fecha_creacion: 'desc' }, { id_flujo: 'asc' }],
+          skip: (consulta.page - 1) * consulta.pageSize,
+          take: consulta.pageSize,
+        }),
+        tx.flujo_conversacion.count({ where }),
+      ]);
+      return { items: items.map((flujo) => this.mapearFlujo(flujo)), total };
+    });
+  }
+
+  async publicarAdministrativo(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional> {
+    let perfil: PerfilClinicoArbol | undefined;
+    let modalidad: ModalidadConversacional | undefined;
+    try {
+      return await this.ejecutarTransaccion(async (tx) => {
+        const arbol = await this.cargarArbol(tx, idFlujo);
+        if (arbol === null)
+          throw new FlujoConversacionalNoEncontradoException();
+        modalidad = arbol.flujo.modalidad;
+        if (arbol.flujo.estado !== EstadoFlujoConversacional.BORRADOR) {
+          throw new EstadoFlujoInvalidoException();
+        }
+        const detalles = arbol.diagnosticarEstructura();
+        if (
+          detalles.sin_nodo_inicial ||
+          detalles.nodos_huerfanos.length > 0 ||
+          detalles.ciclos.length > 0
+        ) {
+          throw new GrafoInvalidoException(detalles);
+        }
+        if (modalidad === ModalidadConversacional.PERSONALIZADA) {
+          perfil = this.perfilDeFlujo(arbol.flujo);
+          const publicado = await tx.flujo_conversacion.findFirst({
+            where: this.filtroPublicado(perfil),
+            select: { id_flujo: true },
+          });
+          if (publicado !== null)
+            throw new PublicadoPorPerfilExistenteException(publicado.id_flujo);
+        }
+        const flujo = await tx.flujo_conversacion.update({
+          where: { id_flujo: idFlujo },
+          data: {
+            estado: EstadoFlujoConversacional.PUBLICADO,
+            fecha_publicacion: new Date(),
+          },
+        });
+        await this.auditar(tx, idFlujo, idActor, 'PUBLICAR');
+        return this.mapearFlujo(flujo);
+      });
+    } catch (error: unknown) {
+      const detalle = this.obtenerDetalle(error);
+      const conflictoIndice =
+        this.esErrorPrisma(error, 'P2002') &&
+        (detalle.includes('uq_flujo_publicado_personalizada') ||
+          ['modalidad', 'tipo_dependencia', 'tipo_craving'].every((campo) =>
+            detalle.includes(campo),
+          ));
+      if (
+        perfil !== undefined &&
+        (conflictoIndice || this.esErrorPrisma(error, 'P2034'))
+      ) {
+        // La transacción fallida ya terminó: consultar al ganador en una instantánea nueva.
+        const publicado = await this.prisma.flujo_conversacion.findFirst({
+          where: this.filtroPublicado(perfil),
+          select: { id_flujo: true },
+        });
+        if (publicado !== null)
+          throw new PublicadoPorPerfilExistenteException(publicado.id_flujo);
+      }
+      if (
+        modalidad === ModalidadConversacional.GRUPAL &&
+        this.esErrorPrisma(error, 'P2002') &&
+        (detalle.includes('uq_flujo_publicado_grupal') ||
+          (detalle.includes('modalidad') &&
+            !detalle.includes('tipo_dependencia')))
+      ) {
+        throw new FlujoGrupalPublicadoExistenteException();
+      }
+      throw error;
+    }
+  }
+
+  async archivarAdministrativo(
+    idFlujo: string,
+    idActor: string,
+  ): Promise<FlujoConversacional> {
+    return this.ejecutarTransaccion(async (tx) => {
+      const flujo = await tx.flujo_conversacion.findUnique({
+        where: { id_flujo: idFlujo },
+      });
+      if (flujo === null) throw new FlujoConversacionalNoEncontradoException();
+      if (
+        String(flujo.estado) !== String(EstadoFlujoConversacional.BORRADOR) &&
+        String(flujo.estado) !== String(EstadoFlujoConversacional.PUBLICADO)
+      ) {
+        throw new EstadoFlujoInvalidoException();
+      }
+      const archivado = await tx.flujo_conversacion.update({
+        where: { id_flujo: idFlujo },
+        data: {
+          estado: EstadoFlujoConversacional.ARCHIVADO,
+          fecha_archivado: new Date(),
+        },
+      });
+      await this.auditar(tx, idFlujo, idActor, 'ARCHIVAR');
+      return this.mapearFlujo(archivado);
+    });
+  }
+
+  private filtroPublicado(
+    perfil: PerfilClinicoArbol,
+  ): Prisma.flujo_conversacionWhereInput {
+    return {
+      modalidad: ModalidadConversacional.PERSONALIZADA,
+      tipo_dependencia: perfil.tipoDependencia,
+      tipo_craving: perfil.tipoCraving,
+      estado: EstadoFlujoConversacional.PUBLICADO,
+    };
   }
 
   async listarFlujosPersonalizados(): Promise<FlujoConversacional[]> {
@@ -261,6 +436,16 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       ],
     });
     return flujos.map((flujo) => this.mapearFlujo(flujo));
+  }
+
+  async buscarPublicadoGrupal(): Promise<FlujoConversacional | null> {
+    const flujo = await this.prisma.flujo_conversacion.findFirst({
+      where: {
+        modalidad: ModalidadConversacional.GRUPAL,
+        estado: EstadoFlujoConversacional.PUBLICADO,
+      },
+    });
+    return flujo === null ? null : this.mapearFlujo(flujo);
   }
 
   async buscarPublicadoPersonalizado(
@@ -291,26 +476,15 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     ) {
       throw new FlujoPersonalizadoNoEncontradoException();
     }
-    const registros = await this.prisma.$queryRaw<
-      Array<{
-        id_auditoria: string;
-        id_flujo: string;
-        id_actor: string;
-        accion: string;
-        id_objeto: string | null;
-        fecha_operacion: Date;
-      }>
-    >(
-      Prisma.sql`SELECT id_auditoria, id_flujo, id_actor, accion, id_objeto, fecha_operacion
-                 FROM auditoria_arboles
-                 WHERE id_flujo = ${idFlujo}
-                 ORDER BY id_auditoria ASC`,
-    );
+    const registros = await this.prisma.auditoria_arboles.findMany({
+      where: { id_flujo: idFlujo },
+      orderBy: { id_auditoria: 'asc' },
+    });
     return registros.map(
       (registro) =>
         new AuditoriaArbolConversacional(
           BigInt(registro.id_auditoria),
-          registro.id_flujo,
+          idFlujo,
           registro.id_actor,
           registro.accion,
           registro.id_objeto,
@@ -420,6 +594,60 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     );
   }
 
+  async listarTiposEntrada(): Promise<TipoEntradaConversacional[]> {
+    const tipos = await this.prisma.tipo_entrada.findMany({
+      orderBy: { nombre: 'asc' },
+    });
+    return tipos.map(
+      (tipo) =>
+        new TipoEntradaConversacional(tipo.id_tipo_entrada, tipo.nombre),
+    );
+  }
+
+  async listarReglasValidacion(): Promise<ReglaValidacion[]> {
+    const reglas = await this.prisma.reglas_validaciones.findMany({
+      orderBy: { id_regla_validacion: 'asc' },
+    });
+    return reglas.map((regla) => this.mapearRegla(regla));
+  }
+
+  async buscarNodo(idNodo: string): Promise<NodoConversacional | null> {
+    const nodo = await this.prisma.nodos.findUnique({
+      where: { id_nodo: idNodo },
+      include: { tipo_nodo: { select: { nombre: true } } },
+    });
+    return nodo === null ? null : this.mapearNodo(nodo);
+  }
+
+  async buscarTransicion(
+    idTransicion: string,
+  ): Promise<TransicionConversacional | null> {
+    const transicion = await this.prisma.reglas_nodos.findUnique({
+      where: { id_regla: idTransicion },
+      include: { reglas_validaciones: true },
+    });
+    return transicion === null ? null : this.mapearTransicion(transicion);
+  }
+
+  async crearReglaValidacion(
+    command: CrearReglaValidacionCommand,
+  ): Promise<ReglaValidacion> {
+    this.crearReglaDominio('validacion-previa', command);
+    return this.ejecutarTransaccion(async (tx) => {
+      const regla = await tx.reglas_validaciones.create({
+        data: this.datosCrearRegla(command),
+      });
+      await this.auditar(
+        tx,
+        null,
+        command.creadoPor,
+        'CREAR_REGLA_VALIDACION',
+        regla.id_regla_validacion,
+      );
+      return this.mapearRegla(regla);
+    });
+  }
+
   async crearNodo(command: CrearNodoCommand): Promise<NodoConversacional> {
     try {
       return await this.ejecutarTransaccion(async (tx) => {
@@ -514,10 +742,21 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           command.idNodoDestino,
         );
 
-        const regla = this.crearReglaDominio(
-          'regla-validacion-temporal',
-          command.reglaValidacion,
-        );
+        if (
+          (command.idReglaValidacion === undefined) ===
+          (command.reglaValidacion === undefined)
+        ) {
+          throw new ReglaValidacionInvalidaException(
+            'Debe indicar una regla existente o una regla embebida, exclusivamente.',
+          );
+        }
+        const regla =
+          command.idReglaValidacion !== undefined
+            ? await this.cargarRegla(tx, command.idReglaValidacion)
+            : this.crearReglaDominio(
+                'regla-validacion-temporal',
+                command.reglaValidacion!,
+              );
         const arbol = await this.cargarArbol(tx, command.idFlujo);
         if (arbol === null)
           throw new FlujoConversacionalNoEncontradoException();
@@ -536,15 +775,19 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           ),
         ]).validarAusenciaCiclos();
 
-        const validacion = await tx.reglas_validaciones.create({
-          data: this.datosCrearRegla(command.reglaValidacion),
-        });
+        const idReglaValidacion =
+          command.idReglaValidacion ??
+          (
+            await tx.reglas_validaciones.create({
+              data: this.datosCrearRegla(command.reglaValidacion!),
+            })
+          ).id_regla_validacion;
         const transicion = await tx.reglas_nodos.create({
           data: {
             id_flujo: command.idFlujo,
             id_nodo_origen: command.idNodoOrigen,
             id_nodo_destino: command.idNodoDestino,
-            id_regla_validacion: validacion.id_regla_validacion,
+            id_regla_validacion: idReglaValidacion,
             operador_condicion: command.operadorCondicion,
             valor_condicion: this.aJsonEntrada(command.valorCondicion),
             orden_evaluacion: command.ordenEvaluacion,
@@ -613,10 +856,15 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
             cambios?.valoresPermitidos ?? actual.valores_permitidos ?? [],
           mensajeError: cambios?.mensajeError ?? actual.mensaje_error,
         };
-        const reglaDominio = this.crearReglaDominio(
-          actual.id_regla_validacion,
-          datosRegla,
-        );
+        if (command.idReglaValidacion !== undefined && cambios !== undefined) {
+          throw new ReglaValidacionInvalidaException(
+            'No se puede sustituir una regla y editar su definición simultáneamente.',
+          );
+        }
+        const reglaDominio =
+          command.idReglaValidacion === undefined
+            ? this.crearReglaDominio(actual.id_regla_validacion, datosRegla)
+            : await this.cargarRegla(tx, command.idReglaValidacion);
 
         const arbol = await this.cargarArbol(tx, command.idFlujo);
         if (arbol === null)
@@ -645,13 +893,27 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           ),
         ).validarAusenciaCiclos();
 
-        await tx.reglas_validaciones.update({
-          where: { id_regla_validacion: actual.id_regla_validacion },
-          data: this.datosActualizarRegla(datosRegla),
-        });
+        let idReglaValidacion = command.idReglaValidacion;
+        if (cambios !== undefined) {
+          const usos = await tx.reglas_nodos.count({
+            where: { id_regla_validacion: actual.id_regla_validacion },
+          });
+          if (usos > 1) {
+            const copia = await tx.reglas_validaciones.create({
+              data: this.datosCrearRegla(datosRegla),
+            });
+            idReglaValidacion = copia.id_regla_validacion;
+          } else {
+            await tx.reglas_validaciones.update({
+              where: { id_regla_validacion: actual.id_regla_validacion },
+              data: this.datosActualizarRegla(datosRegla),
+            });
+          }
+        }
         const transicion = await tx.reglas_nodos.update({
           where: { id_regla: command.idTransicion },
           data: {
+            id_regla_validacion: idReglaValidacion,
             id_nodo_origen: command.idNodoOrigen,
             id_nodo_destino: command.idNodoDestino,
             operador_condicion: command.operadorCondicion,
@@ -772,12 +1034,26 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     idDestino: string,
   ): Promise<void> {
     const nodos = await cliente.nodos.findMany({
-      where: { id_nodo: { in: [idOrigen, idDestino] }, id_flujo: idFlujo },
-      select: { id_nodo: true },
+      where: { id_nodo: { in: [idOrigen, idDestino] } },
+      select: { id_nodo: true, id_flujo: true },
     });
     const ids = new Set(nodos.map((nodo) => nodo.id_nodo));
     if (!ids.has(idOrigen)) throw new NodoOrigenNoEncontradoException();
     if (!ids.has(idDestino)) throw new NodoDestinoNoEncontradoException();
+    if (nodos.some((nodo) => nodo.id_flujo !== idFlujo)) {
+      throw new NodoFueraDeFlujoException();
+    }
+  }
+
+  private async cargarRegla(
+    cliente: ClienteArbol,
+    idRegla: string,
+  ): Promise<ReglaValidacion> {
+    const regla = await cliente.reglas_validaciones.findUnique({
+      where: { id_regla_validacion: idRegla },
+    });
+    if (regla === null) throw new ReglaValidacionNoEncontradaException();
+    return this.mapearRegla(regla);
   }
 
   private crearReglaDominio(
@@ -852,16 +1128,19 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
 
   private async auditar(
     tx: Prisma.TransactionClient,
-    idFlujo: string,
+    idFlujo: string | null,
     idActor: string,
     accion: string,
     idObjeto: string | null = null,
   ): Promise<void> {
-    await tx.$executeRaw(
-      Prisma.sql`INSERT INTO auditoria_arboles
-        (id_flujo, id_actor, accion, id_objeto)
-        VALUES (${idFlujo}, ${idActor}, ${accion}, ${idObjeto})`,
-    );
+    await tx.auditoria_arboles.create({
+      data: {
+        id_flujo: idFlujo,
+        id_actor: idActor,
+        accion,
+        id_objeto: idObjeto,
+      },
+    });
   }
 
   private traducirErrorVersion(error: unknown): never {
@@ -915,7 +1194,6 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
   private mapearTransicion(
     transicion: TransicionRow,
   ): TransicionConversacional {
-    const validacion = transicion.reglas_validaciones;
     return new TransicionConversacional(
       transicion.id_regla,
       transicion.id_flujo,
@@ -924,17 +1202,23 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       transicion.operador_condicion as OperadorCondicion,
       transicion.valor_condicion,
       transicion.orden_evaluacion,
-      new ReglaValidacion(
-        validacion.id_regla_validacion,
-        validacion.tipo_dato as TipoDatoValidacion,
-        validacion.obligatorio,
-        this.decimalANumero(validacion.valor_min),
-        this.decimalANumero(validacion.valor_max),
-        validacion.formato_regex,
-        validacion.valores_permitidos ?? [],
-        validacion.mensaje_error,
-      ),
+      this.mapearRegla(transicion.reglas_validaciones),
       transicion.fecha_creacion,
+    );
+  }
+
+  private mapearRegla(
+    validacion: TransicionRow['reglas_validaciones'],
+  ): ReglaValidacion {
+    return new ReglaValidacion(
+      validacion.id_regla_validacion,
+      validacion.tipo_dato as TipoDatoValidacion,
+      validacion.obligatorio,
+      this.decimalANumero(validacion.valor_min),
+      this.decimalANumero(validacion.valor_max),
+      validacion.formato_regex,
+      validacion.valores_permitidos ?? [],
+      validacion.mensaje_error,
     );
   }
 
@@ -950,6 +1234,9 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
 
   private traducirErrorNodo(error: unknown): never {
     if (error instanceof HttpException) throw error;
+    if (this.esErrorPrisma(error, 'P2025')) {
+      throw new NodoConversacionalNoEncontradoException();
+    }
     const detalle = this.obtenerDetalle(error);
     if (this.esErrorPrisma(error, 'P2002')) {
       if (detalle.includes('uq_nodo_inicial_por_flujo')) {
@@ -977,11 +1264,20 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
 
   private traducirErrorTransicion(error: unknown): never {
     if (error instanceof HttpException) throw error;
+    if (this.esErrorPrisma(error, 'P2025')) {
+      throw new TransicionConversacionalNoEncontradaException();
+    }
     if (this.esErrorPrisma(error, 'P2002')) {
       throw new OrdenTransicionDuplicadoException();
     }
     const detalle = this.obtenerDetalle(error);
     if (this.esErrorPrisma(error, 'P2003')) {
+      if (
+        detalle.includes('fk_regla_validacion') ||
+        detalle.includes('id_regla_validacion')
+      ) {
+        throw new ReglaValidacionNoEncontradaException();
+      }
       if (detalle.includes('destino'))
         throw new NodoDestinoNoEncontradoException();
       if (detalle.includes('origen'))
