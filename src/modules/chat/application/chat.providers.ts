@@ -1,3 +1,5 @@
+import { ConsultarMiContenidoVigenteUseCase } from './use-cases/consultar-mi-contenido-vigente.use-case';
+import { DeterminarContextoConversacionalUseCase } from './use-cases/determinar-contexto-conversacional.use-case';
 import {
   ActualizarNodoConversacionalUseCase,
   ActualizarTransicionConversacionalUseCase,
@@ -21,10 +23,9 @@ import {
   RechazarEliminacionArbolPersonalizadoUseCase,
 } from './use-cases/gestionar-arbol-personalizado.use-cases';
 
-import { ConsultarMiContenidoVigenteUseCase } from './use-cases/consultar-mi-contenido-vigente.use-case';
-
 export const ChatApplicationProviders = [
   ConsultarMiContenidoVigenteUseCase,
+  DeterminarContextoConversacionalUseCase,
   CrearFlujoGrupalUseCase,
   ListarTiposNodoUseCase,
   ConsultarArbolConversacionalUseCase,
