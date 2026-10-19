@@ -146,6 +146,8 @@ export abstract class ArbolConversacionalRepository {
 
   abstract listarFlujosPersonalizados(): Promise<FlujoConversacional[]>;
 
+  abstract buscarPublicadoGrupal(): Promise<FlujoConversacional | null>;
+
   abstract buscarPublicadoPersonalizado(
     perfil: PerfilClinicoArbol,
   ): Promise<FlujoConversacional | null>;

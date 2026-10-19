@@ -63,6 +63,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     crearFlujoPersonalizado: jest.fn(),
     clonarVersionPersonalizada: jest.fn(),
     listarFlujosPersonalizados: jest.fn(),
+    buscarPublicadoGrupal: jest.fn(),
     buscarPublicadoPersonalizado: jest.fn(),
     listarAuditoriaArbol: jest.fn(),
     publicarPersonalizado: jest.fn(),

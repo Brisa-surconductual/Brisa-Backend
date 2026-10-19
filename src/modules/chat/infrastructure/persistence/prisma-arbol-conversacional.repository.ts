@@ -438,6 +438,16 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     return flujos.map((flujo) => this.mapearFlujo(flujo));
   }
 
+  async buscarPublicadoGrupal(): Promise<FlujoConversacional | null> {
+    const flujo = await this.prisma.flujo_conversacion.findFirst({
+      where: {
+        modalidad: ModalidadConversacional.GRUPAL,
+        estado: EstadoFlujoConversacional.PUBLICADO,
+      },
+    });
+    return flujo === null ? null : this.mapearFlujo(flujo);
+  }
+
   async buscarPublicadoPersonalizado(
     perfil: PerfilClinicoArbol,
   ): Promise<FlujoConversacional | null> {
