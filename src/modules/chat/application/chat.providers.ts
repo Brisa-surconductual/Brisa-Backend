@@ -37,6 +37,7 @@ import {
   CrearReglaValidacionUseCase,
   CrearTransicionReutilizableUseCase,
 } from './use-cases/gestionar-chat-admin.use-cases';
+import { IniciarOReanudarSesionUseCase } from './use-cases/iniciar-o-reanudar-sesion.use-case';
 
 export const ChatApplicationProviders = [
   ArchivarFlujoUseCase,
@@ -51,6 +52,7 @@ export const ChatApplicationProviders = [
   CrearTransicionReutilizableUseCase,
   ConsultarMiContenidoVigenteUseCase,
   DeterminarContextoConversacionalUseCase,
+  IniciarOReanudarSesionUseCase,
   CrearFlujoGrupalUseCase,
   ListarTiposNodoUseCase,
   ConsultarArbolConversacionalUseCase,
