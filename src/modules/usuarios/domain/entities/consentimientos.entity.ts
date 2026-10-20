@@ -10,6 +10,7 @@ export class Consentimiento {
         readonly motivoInvalidacion: string,
         readonly urlContenido: string,
         readonly titulo: string,
+        readonly fechaInvalidacion?: Date | null
 
     ) {}
 
@@ -42,6 +43,12 @@ export class Consentimiento {
 
     getVigente(): boolean {
         return this.vigente;
+    }
+
+    validarVigencia(): void {
+        if (!this.vigente) {
+            throw new Error("El consentimiento no es vigente");
+        }
     }
 
 

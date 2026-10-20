@@ -36,6 +36,7 @@
   - [7. Ejecutar el proyecto](#7-ejecutar-el-proyecto)
 - [Recursos multimedia con S3](#recursos-multimedia-con-s3)
 - [Autenticación de módulos internos](#autenticación-de-módulos-internos)
+- [Contenido vigente para React desde Chat](#contenido-vigente-para-react-desde-chat)
 - [Flujo de trabajo con Prisma](#flujo-de-trabajo-con-prisma)
 - [Arquitectura](#arquitectura)
 - [Organización del proyecto](#organización-del-proyecto)
@@ -221,11 +222,58 @@ realiza en una única transacción para conservar la unicidad de `orden_bloque`.
 Para texto no se solicita URL: se usa directamente `POST /cronograma/recursos`
 con `tipo_recurso: "TEXTO"` y `texto_contenido`.
 
-El usuario o rol IAM de la aplicación necesita solamente `s3:PutObject` y
-`s3:GetObject` (requerido por `HeadObject`) sobre
+Para gestionar los recursos existentes se exponen:
+
+- `GET /cronograma/contenidos/:id_contenido/recursos`: detalle completo ordenado
+  por bloque, incluidos texto, metadatos y `id_modulos`; devuelve `[]` si el
+  contenido existe pero no tiene recursos y `404` si el contenido no existe.
+- `PATCH /cronograma/recursos/:id_recurso`: modifica `texto_contenido` para TEXTO;
+  para multimedia admite `texto_alternativo` y `duracion_segundos` (ambos
+  aceptan `null` para vaciarlos). `id_modulos` reemplaza todos los destinos y debe
+  incluir al menos un módulo activo. Para sustituir un archivo, solicita otra
+  URL, sube el objeto y envía juntos `clave_almacenamiento`, `mime_type` y
+  `tamano_bytes`; el backend contrasta sus metadatos con S3. Devuelve el detalle.
+- `DELETE /cronograma/recursos/:id_recurso`: devuelve `204`, elimina los destinos
+  por cascada y compacta el orden de los bloques restantes en la misma transacción.
+
+Estas rutas requieren sesión completa y rol ADMINISTRATIVO; PATCH y DELETE
+requieren además el encabezado CSRF usado por el resto de operaciones. Los campos
+`id_contenido`, `tipo_recurso` y `orden_bloque` no se modifican con PATCH; un
+cuerpo vacío, campos ajenos al contrato o combinaciones inválidas devuelven `400`.
+El recurso inexistente devuelve `404`. La creación, edición, eliminación y
+reordenamiento de recursos de un contenido asociado a un cronograma ACTIVO
+devuelven `403`. La BD protege también las asociaciones de módulos y serializa
+estos cambios contra activaciones y asociaciones concurrentes. Los conflictos de
+orden, clave de archivo y concurrencia devuelven `409`.
+
+La migración `20261006120000_gestion_recursos_contenido` incorpora un índice único
+por clave y la cola `cronograma.limpieza_objetos_recurso`. Sus triggers registran
+la limpieza al reemplazar/eliminar un archivo, también al borrar el contenido
+por cascada. Cada cinco minutos un proceso reclama hasta 20 tareas, elimina
+únicamente claves del contenido y prefijo configurados, y reintenta los fallos
+con espera progresiva. La limpieza comienza después de 65 minutos para dejar
+expirar las URLs PUT anteriores (máximo 60 minutos). Un fallo de AWS no invalida
+la transacción de eliminación. Una clave retirada no puede volver a asociarse;
+el worker tampoco elimina objetos que aún estén referenciados. La cola conserva
+el estado de las tareas para inspección y recuperación.
+
+El usuario o rol IAM de la aplicación necesita `s3:PutObject`,
+`s3:GetObject` (requerido por `HeadObject`) y `s3:DeleteObject` sobre
 `arn:aws:s3:::<bucket>/cronograma/recursos/*`. En despliegue se recomienda un rol
 IAM; las variables `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY` pueden omitirse
 cuando el entorno ya proporciona credenciales mediante dicho rol.
+
+Pruebas de integración HTTP: `pnpm test:e2e:cronograma`. Para validar además
+la migración y los triggers en PostgreSQL sin conservar cambios, ejecuta
+`node test/cronograma/gestion-recursos.db-check.cjs` con
+`RUN_DB_RESOURCE_CHECK=1`; la prueba usa fixtures propios y termina con `ROLLBACK`.
+Después de desplegar la migración, agrega `--installed` para validar las garantías
+instaladas sin volver a ejecutar el SQL de migración; solo se revierten los fixtures.
+La comprobación real de S3 está en `test/cronograma/gestion-recursos.s3-check.cjs`:
+ejecútala con `RUN_S3_RESOURCE_CHECK=1`. Crea un único objeto temporal, valida
+URL firmada, PUT, HEAD y DELETE, y limpia el objeto al terminar. Tras un DELETE
+exitoso admite el `403` de HEAD para una clave inexistente sin `ListBucket`,
+según el [contrato de AWS](https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html).
 
 ---
 
@@ -283,6 +331,111 @@ node -e "const {randomBytes,createHash}=require('crypto');const key=randomBytes(
 El valor `SHA-256` se guarda en la variable de entorno; el valor `API key` se
 configura como secreto únicamente en el módulo consumidor. Si el hash falta o
 es inválido, el acceso queda denegado de forma segura.
+
+---
+
+## Contenido vigente para React desde Chat
+
+`GET /chat/me/contenidos-vigentes` es la entrada de la PWA del estudiante. Es
+una integración del módulo consumidor M-3 con RF-21; no sustituye los endpoints
+internos. La consulta administrativa de otro usuario utiliza la ruta independiente
+documentada a continuación.
+
+Requiere la cookie de sesión existente, cuenta activa, rol `ESTUDIANTE` y alcance
+`COMPLETA`. El backend obtiene el usuario del contexto autenticado y utiliza
+exclusivamente la fecha y hora actuales del servidor. No admite parámetros de
+consulta: enviar `id_usuario`, `fecha_consulta` u otro parámetro devuelve `400`.
+No se envían `Authorization`, `X-Module-Code` ni API keys desde React. Por ser
+una lectura GET, no requiere un token CSRF adicional.
+
+Chat fija su identidad como `CHAT` en su adaptador de integración. Cronograma
+exporta `ConsultaContenidoVigentePort`, verifica la lista de módulos autorizados
+y que CHAT siga activo en la BD, y reutiliza el caso de uso y la función SQL de
+RF-21. Las llamadas dentro del monolito no requieren API keys ni peticiones HTTP
+al propio servidor. Las API keys siguen siendo obligatorias en las rutas
+`/cronograma/interno/...` para consumidores HTTP externos al proceso.
+
+Respuestas:
+
+- `200`: arreglo con el mismo contrato de metadatos de contenido vigente de RF-21
+  (IDs de contenido y asociación, nombre, tipo, unidad temporal, órdenes, fechas
+  ISO 8601 y estado de disponibilidad).
+- `204`: sin cuerpo, cuando no hay contenido vigente.
+- `401`: cookie ausente, sesión inválida/cerrada/vencida o cuenta no activa.
+- `403`: sesión limitada, rol no autorizado o módulo CHAT inactivo/no registrado.
+- `404`: estudiante sin cronograma asignado.
+- `422`: falta fecha de inicio o una condición temporal inválida reportada por RF-22.
+- `500`: fallo inesperado; no se exponen detalles de infraestructura.
+
+La respuesta exitosa usa `Cache-Control: no-store`. No entrega automáticamente
+recursos, archivos ni URLs de S3; el contrato conserva la consulta de vigencia.
+
+Desde el `apiClient` de React, que ya tiene `withCredentials: true`:
+
+```jsx
+const respuesta = await apiClient.get('/chat/me/contenidos-vigentes');
+const contenidos = respuesta.status === 204 ? [] : respuesta.data;
+```
+
+La PWA debe completar el flujo existente de registro/consentimiento y obtener
+una sesión completa antes de consultar. Debe distinguir contenido vacío (`204`),
+ausencia de asignación (`404`) y falta de fecha de inicio (`422`), y aplicar sus
+flujos existentes de sesión (`401`) y permisos (`403`). No guardar credenciales
+internas ni cachear contenido entre usuarios. En producción, configurar HTTPS,
+el origen autorizado de la PWA (`PWA_ORIGINS`) y las cookies según el despliegue;
+no ampliar CORS para admitir encabezados de módulos internos.
+
+Verificación: `pnpm test:e2e:chat` usa los módulos y guards reales y reemplaza
+únicamente las dependencias externas. Comprueba el contrato, la autorización,
+el aislamiento de usuarios y el uso de la hora del servidor sin escribir en
+PostgreSQL ni acceder a S3. No requiere migración ni dependencias nuevas.
+
+## Contenido vigente para React administrativo
+
+`GET /cronograma/usuarios/:id_usuario/contenidos-vigentes` permite consultar el
+contenido vigente del estudiante seleccionado con la cookie de sesión existente,
+cuenta activa, rol `ADMINISTRATIVO` y alcance `COMPLETA`. Mantiene la política de
+acceso administrativo global del módulo; no añade permisos por institución ni
+asignaciones entre administrativos y estudiantes.
+
+El UUID del estudiante se recibe exclusivamente en la ruta y se valida con
+`ParseUUIDPipe`. No admite parámetros de consulta ni fechas del cliente: siempre
+utiliza la fecha y hora actuales del servidor. Un UUID inválido o cualquier
+parámetro de consulta devuelve `400`. Una sesión de estudiante devuelve `403`.
+La ruta personal `/chat/me/contenidos-vigentes` sigue restringida a estudiantes.
+
+El controlador reutiliza directamente el caso de uso de RF-21 dentro de Cronograma
+y su función SQL; no se hace pasar por el módulo CHAT ni depende de que CHAT esté
+activo. La autorización corresponde al administrativo autenticado. Los endpoints
+internos conservan su autenticación por módulo sin cambios.
+
+La respuesta conserva los mismos once campos de metadatos y `Cache-Control:
+no-store`: `200` con un arreglo, `204` sin cuerpo cuando no hay contenido, `401`
+por sesión inválida/cerrada/vencida o cuenta inactiva, `403` por rol o alcance no
+autorizado, `404` si no existe cronograma asignado para ese UUID, `422` si falta la
+fecha de inicio o hay una condición temporal inválida y `500` sin detalles de
+infraestructura. No expone recursos, archivos ni URLs de S3.
+
+Desde el cliente administrativo de React, con `withCredentials: true`:
+
+```jsx
+const respuesta = await apiClient.get(
+  `/cronograma/usuarios/${encodeURIComponent(idEstudiante)}/contenidos-vigentes`,
+);
+const contenidos = respuesta.status === 204 ? [] : respuesta.data;
+```
+
+No enviar API keys, `Authorization`, `X-Module-Code` ni parámetros de consulta.
+El frontend debe separar los estados `204`, `404` y `422`, tratar `401`/`403` con
+los flujos existentes y limpiar la consulta al cambiar de estudiante o cerrar
+sesión. Evitar que una petición anterior actualice la vista de otro estudiante
+cancelándola o comprobando el identificador antes de mostrar su resultado.
+Es un GET de solo lectura: no necesita un token CSRF adicional. Se mantiene la
+configuración existente de HTTPS, cookies y `PWA_ORIGINS`.
+
+`pnpm test:e2e:chat` también comprueba esta ruta con los módulos y guards reales,
+incluyendo el rechazo cruzado entre roles y la conservación de la consulta
+personal. No requiere migración ni dependencias nuevas.
 
 ---
 

@@ -11,11 +11,11 @@ import { EstadoRegistro } from '../../domain/enums/estado-registro.enum';
 import { Sesion } from '../../domain/entities/sesiones.entity';
 import { CredencialesInvalidasException } from '../../domain/exeption/credenciales-invalidas.exception';
 import { IniciarSesionDtoRequest } from '../dto/iniciar-sesion.dto-request';
-import {
-  IniciarSesionDtoResponse,
+import { IniciarSesionDtoResponse,
   SiguienteAccionSesion,
 } from '../dto/iniciar-sesion.dto-response';
 import { AlcanceSesion } from '../../domain/enums/alcance-sesion.enum';
+import { Usuario } from '../../domain/entities/usuarios.entity';
 
 const HASH_CREDENCIAL_INEXISTENTE =
   '$2b$12$jurWGh98YEJZnGRrfgi.qOWXK5uNqgLdhSYofSZuW.fwcqE8ZY4ke';
@@ -41,6 +41,7 @@ export class IniciarSesionUseCase {
       dto.correoElectronico.trim().toLowerCase(),
     );
     const usuario = await this.usuarioRepository.buscarPorCorreo(correo.value);
+
     const contrasenaValida = await this.passwordHasher.compare(
       dto.contrasena,
       usuario?.contrasenaHash ?? HASH_CREDENCIAL_INEXISTENTE,
@@ -61,16 +62,27 @@ export class IniciarSesionUseCase {
       );
     }
 
-    const estadoRegistro = this.obtenerNombreEstadoRegistro(
+    let estadoRegistro = this.obtenerNombreEstadoRegistro(
       usuario.estadoRegistro,
     );
+
+    const idConsentimiento = usuario.idConsentimiento ?? (usuario as any).id_consentimiento;
+
+    if (rol === 'ESTUDIANTE' && !idConsentimiento && estadoRegistro === 'REGISTRO_COMPLETO') {
+      estadoRegistro = 'PENDIENTE_CONSENTIMIENTO';
+
+    }
+
     const flujo = this.obtenerFlujo(estadoRegistro);
     const tokenSesion = this.sessionTokenGenerator.generarToken();
     const csrfToken = this.sessionTokenGenerator.generarToken();
     const tokenHash = await this.sessionTokenHasher.hash(tokenSesion);
     const csrfTokenHash = await this.sessionTokenHasher.hash(csrfToken);
+
+    const idUsuario = usuario.id_usuario ?? (usuario as any).idUsuario;
+
     const sesion = Sesion.iniciar(
-      usuario.id_usuario,
+      idUsuario,
       tokenHash,
       csrfTokenHash,
       flujo.alcance,
@@ -82,7 +94,7 @@ export class IniciarSesionUseCase {
     return {
       tokenSesion,
       respuesta: IniciarSesionDtoResponse.crear({
-        idUsuario: usuario.id_usuario,
+        idUsuario,
         alcance: flujo.alcance,
         estadoRegistro,
         rol,

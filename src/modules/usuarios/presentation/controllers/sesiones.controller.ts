@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UseGuards,UsePipes, ValidationPipe} from '@nestjs/common';
 import type { CookieOptions, Response } from 'express';
+import type { AuthenticatedSessionRequest } from '../http/authenticated-session-request';
 import { IniciarSesionUseCase } from '../../application/use-cases/iniciar-sesion.use-case';
 import { CerrarSesionUseCase } from '../../application/use-cases/cerrar-sesion.use-case';
 import { RegistrarActividadSesionUseCase } from '../../application/use-cases/registrar-actividad-sesion.use-case';
@@ -17,7 +18,9 @@ import { SessionScopeGuard } from '../guards/session-scope.guard';
 import { AlcancesSesion } from '../decorators/alcances-sesion.decorator';
 import { AlcanceSesion } from '../../domain/enums/alcance-sesion.enum';
 import { EstadoRegistro } from '../../domain/enums/estado-registro.enum';
-import type { AuthenticatedSessionRequest } from '../http/authenticated-session-request';
+import {ActualizarConsentimientoUseCase} from '../../application/use-cases/actualizar-consentimeinto.use-case'
+import { ActualizacionConsentimientoDtoRequest } from '../../application/dto/actualizar-consentimiento.dto-request';
+import { ActualizacionConsentimientoDtoResponse } from '../../application/dto/actualizar-consentimiento.dto-response';
 
 @Controller('/usuarios')
 export class SesionesController {
@@ -27,6 +30,7 @@ export class SesionesController {
     private readonly registrarActividadSesionUseCase: RegistrarActividadSesionUseCase,
     private readonly renovarCsrfSesionUseCase: RenovarCsrfSesionUseCase,
     private readonly cookieConfig: SessionCookieConfig,
+    private readonly actualizarConsentimientoUseCase: ActualizarConsentimientoUseCase
   ) {}
 
   @Post('/iniciar-sesion')
@@ -122,5 +126,14 @@ export class SesionesController {
 
   private obtenerNombreEstadoRegistro(estado: EstadoRegistro): string {
     return typeof estado === 'string' ? estado : EstadoRegistro[estado];
+  }
+
+  @Post('/actualizar-consentimiento')
+  @HttpCode(HttpStatus.OK)
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async actualizarConsentimiento(
+    @Body() dto: ActualizacionConsentimientoDtoRequest,
+  ): Promise<ActualizacionConsentimientoDtoResponse> {
+    return await this.actualizarConsentimientoUseCase.execute(dto);
   }
 }

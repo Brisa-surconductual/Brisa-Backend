@@ -18,10 +18,14 @@ if (!Prisma.ModelName) {
 }
 const consentimiento = Prisma.dmmf.datamodel.models
   .find((model) => model.name === 'usuarios')
-  ?.fields.find((field) => field.name === 'consentimiendo_aceptado');
-if (consentimiento?.dbName !== 'consentimiento_aceptado') {
+  ?.fields.find((field) => field.name === 'consentimiento_aceptado');
+
+if (
+  !consentimiento ||
+  (consentimiento.dbName ?? consentimiento.name) !== 'consentimiento_aceptado'
+) {
   throw new Error(
-    'El cliente Prisma no mapea la columna de consentimiento de Supabase.',
+    'El cliente Prisma no contiene la columna de consentimiento esperada.',
   );
 }
 require('bcrypt');

@@ -10,9 +10,13 @@ export abstract class UsuarioRepository {
   ): Promise<void>;
 
   abstract buscarPorCorreo(correo: string): Promise<Usuario | null>;
-
   abstract buscarPorId(id_usuario: string): Promise<Usuario | null>;
   abstract actualizar(usuario: Usuario): Promise<void>;
   abstract crearAdministrador(usuario: Usuario): Promise<void>;
-  abstract buscarPorTermino(termino: string): Promise<Usuario[]>;
+  abstract buscarPorTermino(termino: string): Promise<Usuario[]>
+  abstract actualizarConsentimientoYEstado(
+    id_usuario: string,
+    id_consentimiento: string,
+    nuevoEstadoRegistro: string,
+  ): Promise<void>;
 }

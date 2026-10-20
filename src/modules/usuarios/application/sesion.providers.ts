@@ -3,6 +3,7 @@ import { CerrarSesionUseCase } from './use-cases/cerrar-sesion.use-case';
 import { RegistrarActividadSesionUseCase } from './use-cases/registrar-actividad-sesion.use-case';
 import { ExpirarSesionesUseCase } from './use-cases/expirar-sesiones.use-case';
 import { RenovarCsrfSesionUseCase } from './use-cases/renovar-csrf-sesion.use-case';
+import {ActualizarConsentimientoUseCase} from './use-cases/actualizar-consentimeinto.use-case'
 
 export const SesionApplicationProviders = [
   IniciarSesionUseCase,
@@ -10,4 +11,5 @@ export const SesionApplicationProviders = [
   RegistrarActividadSesionUseCase,
   ExpirarSesionesUseCase,
   RenovarCsrfSesionUseCase,
+  ActualizarConsentimientoUseCase
 ];

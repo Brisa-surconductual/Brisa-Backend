@@ -33,4 +33,6 @@ export abstract class AlmacenamientoRecursosPort {
   abstract obtenerMetadatos(
     solicitud: SolicitudObjetoAlmacenado,
   ): Promise<MetadatosObjetoAlmacenado | null>;
+
+  abstract eliminarObjeto(solicitud: SolicitudObjetoAlmacenado): Promise<void>;
 }

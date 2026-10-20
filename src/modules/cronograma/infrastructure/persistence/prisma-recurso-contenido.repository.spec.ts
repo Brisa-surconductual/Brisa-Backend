@@ -9,13 +9,18 @@ describe('PrismaRecursoContenidoRepository (RF-153/RF-154)', () => {
   const idModuloUno = '00000000-0000-4000-8000-000000000003';
   const idModuloDos = '00000000-0000-4000-8000-000000000004';
   const tx = {
-    modulos_sistema: { findMany: jest.fn() },
+    $queryRaw: jest.fn(),
+    $executeRaw: jest.fn(),
+    contenidos_cronograma: { findFirst: jest.fn() },
+    modulos_sistema: { findMany: jest.fn(), count: jest.fn() },
     recursos_contenido: {
       create: jest.fn(),
+      findUnique: jest.fn(),
+      delete: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
     },
-    recursos_modulos_destino: { createMany: jest.fn() },
+    recursos_modulos_destino: { createMany: jest.fn(), deleteMany: jest.fn() },
   };
   const prisma = {
     $transaction: jest.fn(),
@@ -25,6 +30,8 @@ describe('PrismaRecursoContenidoRepository (RF-153/RF-154)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    tx.$queryRaw.mockResolvedValue([{ id_contenido: idContenido }]);
+    tx.contenidos_cronograma.findFirst.mockResolvedValue(null);
     prisma.$transaction.mockImplementation((callback: EjecutarTransaccion) =>
       callback(tx),
     );
@@ -164,6 +171,95 @@ describe('PrismaRecursoContenidoRepository (RF-153/RF-154)', () => {
     ).rejects.toMatchObject({ status: 400 });
     expect(tx.recursos_contenido.update.mock.calls).toHaveLength(0);
   });
+
+  it('rechaza modificación y eliminación de contenido activo sin escribir', async () => {
+    tx.recursos_contenido.findUnique.mockResolvedValue(recursoPrisma());
+    tx.contenidos_cronograma.findFirst.mockResolvedValue({
+      id_contenido_cronograma: idContenido,
+    });
+    await expect(
+      repository.actualizar(idRecurso, { textoContenido: 'Nuevo' }),
+    ).rejects.toMatchObject({ status: 403 });
+    await expect(repository.eliminar(idRecurso)).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(
+      repository.crearConModulosDestino(recurso(), [idModuloUno]),
+    ).rejects.toMatchObject({ status: 403 });
+    await expect(
+      repository.reordenar(idContenido, [idRecurso, idModuloDos]),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(tx.recursos_contenido.update).not.toHaveBeenCalled();
+    expect(tx.recursos_contenido.delete).not.toHaveBeenCalled();
+  });
+
+  it('devuelve 404 para un recurso inexistente', async () => {
+    tx.recursos_contenido.findUnique.mockResolvedValue(null);
+    await expect(repository.eliminar(idRecurso)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
+  it('reemplaza todos los destinos y conserva los campos omitidos', async () => {
+    tx.recursos_contenido.findUnique.mockResolvedValue(recursoPrisma());
+    tx.modulos_sistema.count.mockResolvedValue(1);
+    tx.recursos_contenido.update.mockResolvedValue({
+      ...recursoPrisma(),
+      recursos_modulos_destino: [{ id_modulo: idModuloDos }],
+    });
+    const resultado = await repository.actualizar(idRecurso, {
+      idModulos: [idModuloDos],
+    });
+    expect(resultado.idModulos).toEqual([idModuloDos]);
+    expect(resultado.recurso.texto_contenido).toBe('Texto educativo');
+    expect(tx.recursos_modulos_destino.deleteMany).toHaveBeenCalledWith({
+      where: { id_recurso: idRecurso },
+    });
+    expect(tx.recursos_modulos_destino.createMany).toHaveBeenCalledWith({
+      data: [{ id_recurso: idRecurso, id_modulo: idModuloDos }],
+    });
+  });
+
+  it('impide dejar recursos sin destinos o con destinos inactivos', async () => {
+    tx.recursos_contenido.findUnique.mockResolvedValue(recursoPrisma());
+    await expect(
+      repository.actualizar(idRecurso, { idModulos: [] }),
+    ).rejects.toMatchObject({ status: 400 });
+    tx.modulos_sistema.count.mockResolvedValue(0);
+    await expect(
+      repository.actualizar(idRecurso, { idModulos: [idModuloUno] }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(tx.recursos_modulos_destino.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('compacta el orden al eliminar y no toca recursos de otro contenido', async () => {
+    tx.recursos_contenido.findUnique.mockResolvedValue(recursoPrisma());
+    tx.recursos_contenido.findMany.mockResolvedValue([
+      { id_recurso: idModuloDos },
+    ]);
+    await repository.eliminar(idRecurso);
+    expect(tx.recursos_contenido.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id_contenido: idContenido } }),
+    );
+    expect(tx.recursos_contenido.update).toHaveBeenLastCalledWith({
+      where: { id_recurso: idModuloDos },
+      data: { orden_bloque: 1 },
+    });
+  });
+
+  it.each([
+    { code: 'P2002', meta: { target: ['clave_almacenamiento'] } },
+    { code: 'P2034' },
+    { code: 'P2004', meta: { constraint: 'ck_recurso_clave_retirada' } },
+  ])(
+    'traduce conflictos de archivo y concurrencia a 409: %p',
+    async (error) => {
+      prisma.$transaction.mockRejectedValue(error);
+      await expect(repository.eliminar(idRecurso)).rejects.toMatchObject({
+        status: 409,
+      });
+    },
+  );
 
   function recurso(): RecursoContenido {
     return new RecursoContenido(

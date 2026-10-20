@@ -112,12 +112,12 @@ model usuarios {
   estado_cuenta                                                                     estado_cuenta_enum         @default(ACTIVA)
   fecha_registro                                                                    DateTime                   @default(now()) @db.Timestamptz(6)
   fecha_actualizacion                                                               DateTime                   @default(now()) @db.Timestamptz(6)
-  // Conservar el nombre del cliente; Supabase usa la columna con la grafía correcta.
-  consentimiendo_aceptado                                                           Boolean?                   @map("consentimiento_aceptado")
+  consentimiento_aceptado                                                           Boolean?
   registro_consumo_aceptado                                                         Boolean?
   id_consentimiento                                                                 String?                    @db.Uuid
   exportaciones                                                                     exportaciones[]
   flujo_conversacion                                                                flujo_conversacion[]
+  auditoria_arboles                                                                 auditoria_arboles[]
   historial_nodos                                                                   historial_nodos[]
   nodos                                                                             nodos[]
   perfil_clinico                                                                    perfil_clinico?
@@ -293,6 +293,24 @@ model recursos_contenido {
   recursos_modulos_destino recursos_modulos_destino[]
 
   @@unique([id_contenido, orden_bloque], map: "uq_recurso_orden")
+  @@unique([clave_almacenamiento], map: "uq_recurso_clave_almacenamiento", where: raw("(clave_almacenamiento IS NOT NULL)"))
+  @@schema("cronograma")
+}
+
+/// Outbox de eliminación S3; conserva el contenido de origen aunque sea eliminado.
+model limpieza_objetos_recurso {
+  id_limpieza          BigInt    @id @default(autoincrement())
+  id_contenido         String    @db.Uuid
+  clave_almacenamiento String    @unique
+  estado               String    @default("PENDIENTE") @db.VarChar(16)
+  intentos             Int       @default(0)
+  disponible_desde     DateTime  @default(dbgenerated("(now() + '01:05:00'::interval)")) @db.Timestamptz(6)
+  reclamado_en         DateTime? @db.Timestamptz(6)
+  fecha_creacion       DateTime  @default(now()) @db.Timestamptz(6)
+  fecha_completado     DateTime? @db.Timestamptz(6)
+  ultimo_error         String?
+
+  @@index([disponible_desde, id_limpieza], map: "ix_limpieza_objetos_pendientes", where: raw("((estado)::text <> 'COMPLETADO'::text)"))
   @@schema("cronograma")
 }
 
@@ -383,11 +401,27 @@ model flujo_conversacion {
   fecha_publicacion DateTime?              @db.Timestamptz(6)
   fecha_archivado   DateTime?              @db.Timestamptz(6)
   usuarios          usuarios               @relation(fields: [creado_por], references: [id_usuario], onUpdate: NoAction, map: "fk_flujo_creado_por")
+  auditoria_arboles auditoria_arboles[]
   nodos             nodos?
   reglas_nodos      reglas_nodos[]
   sesiones          chat_sesiones[]
 
   @@unique([modalidad, tipo_dependencia, tipo_craving], map: "uq_flujo_publicado_personalizada", where: raw("((estado = 'PUBLICADO'::chat.estado_flujo_enum) AND (modalidad = 'PERSONALIZADA'::chat.modalidad_enum))"))
+  @@unique([tipo_dependencia, tipo_craving, version], map: "uq_flujo_version_personalizada", where: raw("(modalidad = 'PERSONALIZADA'::chat.modalidad_enum)"))
+  @@schema("chat")
+}
+
+model auditoria_arboles {
+  id_auditoria       BigInt             @id @default(autoincrement())
+  id_flujo           String?            @db.Uuid
+  id_actor           String             @db.Uuid
+  accion             String             @db.VarChar(40)
+  id_objeto          String?            @db.Uuid
+  fecha_operacion    DateTime           @default(now()) @db.Timestamptz(6)
+  flujo_conversacion flujo_conversacion? @relation(fields: [id_flujo], references: [id_flujo], onDelete: Restrict, onUpdate: NoAction, map: "fk_auditoria_arbol_flujo")
+  usuarios           usuarios           @relation(fields: [id_actor], references: [id_usuario], onDelete: Restrict, onUpdate: NoAction, map: "fk_auditoria_arbol_actor")
+
+  @@index([id_flujo, fecha_operacion], map: "ix_auditoria_arbol_flujo_fecha")
   @@schema("chat")
 }
 
