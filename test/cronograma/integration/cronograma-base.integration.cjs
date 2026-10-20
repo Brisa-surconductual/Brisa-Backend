@@ -190,6 +190,24 @@ async function main() {
       const contenido = await prisma.contenidos.create({
         data: { nombre_contenido: name, tipo_contenido: 'INFORMATIVO' },
       });
+      const modulo = await prisma.modulos_sistema.upsert({
+        where: { codigo_modulo: 'CHAT' },
+        create: {
+          codigo_modulo: 'CHAT',
+          nombre_modulo: 'Chat de prueba',
+          activo: true,
+        },
+        update: { activo: true },
+      });
+      await prisma.recursos_contenido.create({
+        data: {
+          id_contenido: contenido.id_contenido,
+          tipo_recurso: 'TEXTO',
+          orden_bloque: 1,
+          texto_contenido: 'Recurso de prueba local',
+          recursos_modulos_destino: { create: { id_modulo: modulo.id_modulo } },
+        },
+      });
       await prisma.contenidos_cronograma.create({
         data: {
           id_unidad_temporal: unidad.id_unidad_temporal,

@@ -20,6 +20,7 @@ export class ConsultarMiCronogramaUseCase {
       id_cronograma: cronograma.id_cronograma,
       nombre: cronograma.nombre_cronograma,
       estado: cronograma.estado,
+      es_base_actual: cronograma.es_base,
       fecha_inicio_usuario: asignacion.fecha_inicio_usuario,
     };
   }

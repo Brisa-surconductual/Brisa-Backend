@@ -8,8 +8,29 @@ import {
 import { Contenido } from '../../../domain/entities/contenido.entity';
 import { ContenidoCronograma } from '../../../domain/entities/contenido-cronograma.entity';
 import { TipoContenido } from '../../../domain/enums/tipo-contenido.enum';
+import { EstadoCatalogoContenido } from '../../../domain/repositories/catalogo-contenido.repository';
 
 export class ContenidosExitentesDtoResponse {
+  editable!: boolean;
+  estadoCronograma!: string | null;
+  cantidadRecursos!: number;
+  listoParaProgramar!: boolean;
+
+  static fromCatalogo(
+    entrada: EstadoCatalogoContenido,
+  ): ContenidosExitentesDtoResponse {
+    const dto = ContenidosExitentesDtoResponse.fromEntity(
+      entrada.contenido,
+      null,
+    );
+    dto.idAsociasionUnidadTemporalContenido = entrada.idAsociacion;
+    dto.asociado = entrada.idAsociacion !== null;
+    dto.estadoCronograma = entrada.estadoCronograma;
+    dto.editable = entrada.estadoCronograma !== 'ACTIVO';
+    dto.cantidadRecursos = entrada.cantidadRecursos;
+    dto.listoParaProgramar = entrada.recursosListos;
+    return dto;
+  }
   @IsString()
   idContenido!: string;
 

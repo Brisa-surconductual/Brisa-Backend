@@ -28,6 +28,16 @@ export function estructuraValida(): EstructuraActivacionCronograma {
         fecha_fin: new Date('2026-01-08T00:00:00Z'),
         contenidos_cronograma: [
           {
+            contenidos: {
+              nombre_contenido: 'Contenido completo',
+              recursos_contenido: [
+                {
+                  recursos_modulos_destino: [
+                    { modulos_sistema: { activo: true } },
+                  ],
+                },
+              ],
+            },
             orden_contenido: 1,
             fecha_inicio_disponibilidad: fecha,
             fecha_fin_disponibilidad: new Date('2026-01-07T00:00:00Z'),
@@ -39,6 +49,22 @@ export function estructuraValida(): EstructuraActivacionCronograma {
 }
 
 describe('Consistencia global antes de activar', () => {
+  it.each(['sin recursos', 'sin módulos', 'módulos inactivos'])(
+    'rechaza un contenido %s',
+    (caso) => {
+      const estructura = estructuraValida();
+      const contenido =
+        estructura.unidades[0].contenidos_cronograma[0].contenidos;
+      if (caso === 'sin recursos') contenido.recursos_contenido = [];
+      if (caso === 'sin módulos')
+        contenido.recursos_contenido[0].recursos_modulos_destino = [];
+      if (caso === 'módulos inactivos')
+        contenido.recursos_contenido[0].recursos_modulos_destino[0].modulos_sistema.activo = false;
+      expect(() => validador.validar(estructura)).toThrow(
+        UnprocessableEntityException,
+      );
+    },
+  );
   const validador = new ValidarConsistenciaCronogramaService();
   it('admite una plantilla histórica porque su inicio se desplaza por usuario', () => {
     expect(() => validador.validar(estructuraValida())).not.toThrow();
@@ -78,6 +104,16 @@ describe('Consistencia global antes de activar', () => {
       fecha_fin: new Date('2026-01-15T00:00:00Z'),
       contenidos_cronograma: [
         {
+          contenidos: {
+            nombre_contenido: 'Otro contenido completo',
+            recursos_contenido: [
+              {
+                recursos_modulos_destino: [
+                  { modulos_sistema: { activo: true } },
+                ],
+              },
+            ],
+          },
           orden_contenido: 1,
           fecha_inicio_disponibilidad: new Date('2026-01-08T00:00:00Z'),
           fecha_fin_disponibilidad: new Date('2026-01-14T00:00:00Z'),

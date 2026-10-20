@@ -1,4 +1,6 @@
 import { ActivacionCronogramaRepository } from '../domain/repositories/activacion-cronograma.repository';
+import { CatalogoContenidoRepository } from '../domain/repositories/catalogo-contenido.repository';
+import { PrismaCatalogoContenidoRepository } from './persistence/prisma-catalogo-contenido.repository';
 import { PrismaActivacionCronogramaRepository } from './persistence/prisma-activacion-cronograma.repository';
 import { InicializarCronogramaRegistroListener } from './messaging/inicializar-cronograma-registro.listener';
 import { CondicionesInicializacionUsuarioRepository } from '../domain/repositories/condiciones-inicializacion-usuario.repository';
@@ -45,6 +47,10 @@ import { PrismaUbicacionesTemporalesParticipantesRepository } from './persistenc
 import { LimpiarObjetosRecursoCron } from './cron/limpiar-objetos-recurso.cron';
 
 export const CronogramaInfrastructureProviders = [
+  {
+    provide: CatalogoContenidoRepository,
+    useClass: PrismaCatalogoContenidoRepository,
+  },
   {
     provide: ActivacionCronogramaRepository,
     useClass: PrismaActivacionCronogramaRepository,

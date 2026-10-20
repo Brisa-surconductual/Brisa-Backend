@@ -22,6 +22,16 @@ describe('Activación transaccional del cronograma base', () => {
         fecha_fin: new Date('2026-01-08'),
         contenidos_cronograma: [
           {
+            contenidos: {
+              nombre_contenido: 'Completo',
+              recursos_contenido: [
+                {
+                  recursos_modulos_destino: [
+                    { modulos_sistema: { activo: true } },
+                  ],
+                },
+              ],
+            },
             orden_contenido: 1,
             fecha_inicio_disponibilidad: fecha,
             fecha_fin_disponibilidad: new Date('2026-01-07'),

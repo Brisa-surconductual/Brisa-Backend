@@ -85,7 +85,10 @@ describe('Cronograma - ubicaciones temporales de participantes (e2e)', () => {
     );
   });
 
-  it('retorna un listado vacío con HTTP 200', async () => {
+  it.each([
+    '/cronograma/ubicaciones-temporales',
+    '/cronograma/participantes/ubicaciones-temporales',
+  ])('retorna un listado vacío con HTTP 200 en %s', async (ruta) => {
     execute.mockResolvedValue({
       total: 0,
       page: 1,
@@ -94,7 +97,7 @@ describe('Cronograma - ubicaciones temporales de participantes (e2e)', () => {
     });
 
     await request(app.getHttpServer())
-      .get('/cronograma/participantes/ubicaciones-temporales')
+      .get(ruta)
       .expect(200)
       .expect({ total: 0, page: 1, page_size: 50, participantes: [] });
   });
@@ -107,12 +110,13 @@ describe('Cronograma - ubicaciones temporales de participantes (e2e)', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
-  it('retorna HTTP 403 cuando el guard de rol deniega la consulta', async () => {
+  it.each([
+    '/cronograma/ubicaciones-temporales',
+    '/cronograma/participantes/ubicaciones-temporales',
+  ])('retorna HTTP 403 cuando el guard de rol deniega %s', async (ruta) => {
     autorizarRol.mockReturnValue(false);
 
-    await request(app.getHttpServer())
-      .get('/cronograma/participantes/ubicaciones-temporales')
-      .expect(403);
+    await request(app.getHttpServer()).get(ruta).expect(403);
 
     expect(execute).not.toHaveBeenCalled();
   });

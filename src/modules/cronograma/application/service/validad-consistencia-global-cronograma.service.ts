@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { EstructuraActivacionCronograma } from '../../domain/repositories/activacion-cronograma.repository';
 import { CronogramaSinUnidadesTemporalesException } from '../../domain/exeption/cronograma/cronograma-sin-unidades-temporales.exeption';
@@ -44,6 +45,20 @@ export class ValidarConsistenciaCronogramaService {
       // La secuencia existente es (orden_unidad, orden_contenido).
       const ordenesContenido = new Set<number>();
       for (const contenido of unidad.contenidos_cronograma) {
+        const recursos = contenido.contenidos.recursos_contenido;
+        if (
+          recursos.length === 0 ||
+          recursos.some(
+            (recurso) =>
+              !recurso.recursos_modulos_destino.some(
+                (destino) => destino.modulos_sistema.activo,
+              ),
+          )
+        ) {
+          throw new UnprocessableEntityException(
+            `El contenido «${contenido.contenidos.nombre_contenido}» debe tener al menos un recurso y cada recurso debe tener un módulo destino activo antes de activar el cronograma.`,
+          );
+        }
         const inicio = contenido.fecha_inicio_disponibilidad;
         const fin = contenido.fecha_fin_disponibilidad;
         if (

@@ -26,6 +26,7 @@ describe('Consultar cronograma propio', () => {
       id_cronograma: 'anterior',
       nombre: 'Base anterior',
       estado: 'ACTIVO',
+      es_base_actual: false,
       fecha_inicio_usuario: fecha,
     });
     expect(buscarPorUsuario).toHaveBeenCalledWith('estudiante');

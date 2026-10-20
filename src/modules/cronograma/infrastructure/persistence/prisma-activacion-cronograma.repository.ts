@@ -26,7 +26,23 @@ export class PrismaActivacionCronogramaRepository extends ActivacionCronogramaRe
               where: { id_cronograma: idCronograma },
               include: {
                 unidades_temporales: {
-                  include: { contenidos_cronograma: true },
+                  include: {
+                    contenidos_cronograma: {
+                      include: {
+                        contenidos: {
+                          include: {
+                            recursos_contenido: {
+                              include: {
+                                recursos_modulos_destino: {
+                                  include: { modulos_sistema: true },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
                 },
               },
             });
