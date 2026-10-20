@@ -118,6 +118,27 @@ export class IniciarOReanudarSesionUseCase {
     }
 
     if (flujo === null) {
+      if (
+        contexto.modalidad === ModalidadConversacional.PERSONALIZADA &&
+        contexto.perfil !== null
+      ) {
+        const { total } = await this.arboles.listarFlujos({
+          modalidad: ModalidadConversacional.PERSONALIZADA,
+          tipoDependencia: contexto.perfil.tipoDependencia,
+          tipoCraving: contexto.perfil.tipoCraving,
+          page: 1,
+          pageSize: 1,
+        });
+
+        if (total > 0) {
+          throw new ConflictException({
+            codigo: 'FLUJO_NO_PUBLICADO',
+            mensaje:
+              'Existen árboles para el perfil clínico, pero ninguno está publicado.',
+          });
+        }
+      }
+
       throw new NotFoundException({
         codigo: 'SIN_FLUJO_PUBLICADO',
         mensaje: 'No existe un árbol publicado para el contexto del usuario.',

@@ -38,6 +38,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
     buscarPublicadoPersonalizado: jest.fn(),
     obtenerArbol: jest.fn(),
     buscarNodo: jest.fn(),
+    listarFlujos: jest.fn(),
   };
 
   const determinarContexto = {
@@ -189,9 +190,14 @@ describe('IniciarOReanudarSesionUseCase', () => {
     });
   });
 
-  it('inicia una sesión PERSONALIZADA según el perfil clínico', async () => {
-    const tipoDependencia = TipoDependenciaClinica.ABSTINENCIA_FISICA;
-    const tipoCraving = TipoCravingClinico.POSITIVO;
+  it.each([
+    [TipoDependenciaClinica.ABSTINENCIA_FISICA, TipoCravingClinico.POSITIVO],
+    [TipoDependenciaClinica.ABSTINENCIA_FISICA, TipoCravingClinico.NEGATIVO],
+    [TipoDependenciaClinica.TOLERANCIA, TipoCravingClinico.POSITIVO],
+    [TipoDependenciaClinica.TOLERANCIA, TipoCravingClinico.NEGATIVO],
+  ])(
+    'inicia una sesión PERSONALIZADA para %s y %s',
+    async (tipoDependencia, tipoCraving) => {
 
     const flujoPersonalizado = new FlujoConversacional(
       ids.flujo,
@@ -279,6 +285,77 @@ describe('IniciarOReanudarSesionUseCase', () => {
 
     expect(sesiones.iniciarOReanudar).not.toHaveBeenCalled();
     expect(arboles.obtenerArbol).not.toHaveBeenCalled();
+  });
+
+  it('rechaza el inicio PERSONALIZADO sin árbol publicado', async () => {
+    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+
+    determinarContexto.execute.mockResolvedValue({
+      modalidad: ModalidadConversacional.PERSONALIZADA,
+      perfil: {
+        tipoDependencia: TipoDependenciaClinica.TOLERANCIA,
+        tipoCraving: TipoCravingClinico.NEGATIVO,
+      },
+    });
+
+    arboles.buscarPublicadoPersonalizado.mockResolvedValue(null);
+
+    arboles.listarFlujos.mockResolvedValue({
+      items: [],
+      total: 0,
+    });
+
+    await expect(casoDeUso.execute(ids.usuario)).rejects.toMatchObject({
+      status: 404,
+      response: {
+        codigo: 'SIN_FLUJO_PUBLICADO',
+      },
+    });
+
+    expect(arboles.buscarPublicadoPersonalizado).toHaveBeenCalledWith({
+      tipoDependencia: TipoDependenciaClinica.TOLERANCIA,
+      tipoCraving: TipoCravingClinico.NEGATIVO,
+    });
+
+    expect(arboles.buscarPublicadoGrupal).not.toHaveBeenCalled();
+    expect(sesiones.iniciarOReanudar).not.toHaveBeenCalled();
+  });
+
+  it('responde 409 cuando el árbol personalizado existe pero no está publicado', async () => {
+    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+
+    determinarContexto.execute.mockResolvedValue({
+      modalidad: ModalidadConversacional.PERSONALIZADA,
+      perfil: {
+        tipoDependencia: TipoDependenciaClinica.TOLERANCIA,
+        tipoCraving: TipoCravingClinico.NEGATIVO,
+      },
+    });
+
+    arboles.buscarPublicadoPersonalizado.mockResolvedValue(null);
+
+    arboles.listarFlujos.mockResolvedValue({
+      items: [],
+      total: 1,
+    });
+
+    await expect(casoDeUso.execute(ids.usuario)).rejects.toMatchObject({
+      status: 409,
+      response: {
+        codigo: 'FLUJO_NO_PUBLICADO',
+      },
+    });
+
+    expect(arboles.listarFlujos).toHaveBeenCalledWith({
+      modalidad: ModalidadConversacional.PERSONALIZADA,
+      tipoDependencia: TipoDependenciaClinica.TOLERANCIA,
+      tipoCraving: TipoCravingClinico.NEGATIVO,
+      page: 1,
+      pageSize: 1,
+    });
+
+    expect(arboles.buscarPublicadoGrupal).not.toHaveBeenCalled();
+    expect(sesiones.iniciarOReanudar).not.toHaveBeenCalled();
   });
 
   it('responde PERFIL_INCOMPLETO (409) sin crear sesión', async () => {
