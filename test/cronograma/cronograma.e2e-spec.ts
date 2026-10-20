@@ -102,10 +102,6 @@ describe('Cronograma - endpoints propios (e2e)', () => {
         { provide: EliminarRecursoContenidoUseCase, useValue: eliminarRecurso },
         { provide: ListarRecursosContenidoUseCase, useValue: listarRecursos },
         {
-          provide: ListarRecursosContenidoUseCase,
-          useValue: { execute: jest.fn() },
-        },
-        {
           provide: CatologoContenitosUseCase,
           useValue: { execute: jest.fn() },
         },
