@@ -16,6 +16,7 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
   const actualizarContenidoUseCase = { execute: jest.fn() };
   const eliminarContenidoUseCase = { execute: jest.fn() };
   const crearRecursoContenidoUseCase = { execute: jest.fn() };
+  const listarRecursosContenidoUseCase = { execute: jest.fn() };
   const solicitarUrlSubidaRecursoUseCase = { execute: jest.fn() };
   const listarModulosDestinoUseCase = { execute: jest.fn() };
   const reordenarRecursosContenidoUseCase = { execute: jest.fn() };
@@ -49,6 +50,7 @@ describe('CronogramaController - contenido psicoeducativo (RF-152)', () => {
       actualizarContenidoUseCase as never,
       eliminarContenidoUseCase as never,
       crearRecursoContenidoUseCase as never,
+      listarRecursosContenidoUseCase as never,
       solicitarUrlSubidaRecursoUseCase as never,
       listarModulosDestinoUseCase as never,
       reordenarRecursosContenidoUseCase as never,
