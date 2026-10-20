@@ -12,9 +12,16 @@ export class CrearCronogramaUseCase {
   async execute(
     dto: CrearCronogramaDtoRequest,
   ): Promise<CrearCronogramaDtoResponse> {
-
-
-    if (dto.fecha_activacion && dto.fecha_activacion < new Date()) {
+    const hoy = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Bogota',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    if (
+      dto.fecha_activacion &&
+      dto.fecha_activacion.toISOString().slice(0, 10) < hoy
+    ) {
       throw new FechaInicioNoHayaPasoException();
     }
 
@@ -24,9 +31,7 @@ export class CrearCronogramaUseCase {
       dto.fecha_activacion,
     );
 
-
     await this.cronogramaRepository.save(cronograma);
     return CrearCronogramaDtoResponse.crearMensaje();
-
   }
 }
