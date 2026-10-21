@@ -5,7 +5,7 @@ import { BcryptPasswordHasher } from './security/bycrptPassword';
 import { PrismaSolicitudRecuperacionRepository } from './persistence/prisma-solicitud-recuperacion.repository';
 import { RecuperacionRepository } from '../domain/repositories/recuperacion.repository';
 import { EmailService } from '../application/ports/email';
-import { NodemailerEmailService } from './email/nodemailer-email';
+import { crearEmailService } from './email/email-provider.factory';
 import { RecoveryTokenGenerator } from '../application/ports/passhwor-recovery-token-generator';
 import { ExpirarCodigosCron } from './cron/expirar-codigos.cron';
 import { RecoveryCodeHasher } from '../application/ports/recovery-code-hasher';
@@ -44,7 +44,7 @@ export const UsuarioInfraestructureProviders = [
 
   {
     provide: EmailService,
-    useClass: NodemailerEmailService,
+    useFactory: crearEmailService,
   },
 
   {
