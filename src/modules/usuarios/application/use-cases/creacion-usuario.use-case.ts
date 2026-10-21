@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { RegistroEstudiantePublisher } from '../ports/registro-estudiante.publisher';
 import { UsuarioRepository } from '../../domain/repositories/user.repository';
 import { CreacionUsuarioDtoRequest } from '../dto/creacion-usuario.dto-request';
 import { CreacionUsuarioDtoResponse } from '../dto/creacion-usuario.dto-response';
@@ -23,11 +24,13 @@ export interface ResultadoCreacionUsuario {
 
 @Injectable()
 export class CreacionUsuarioUseCase {
+  private readonly logger = new Logger(CreacionUsuarioUseCase.name);
   constructor(
     private readonly usuarioRepository: UsuarioRepository,
     private readonly passwordHasher: PasswordHasher,
     private readonly consentimientosRepository: ConsentimientosRepository,
     private readonly sessionService: SessionService,
+    private readonly registroPublisher: RegistroEstudiantePublisher,
   ) {}
 
   async execute(
@@ -82,6 +85,15 @@ export class CreacionUsuarioUseCase {
     );
 
     await this.usuarioRepository.crear(usuario, lineaBase, session.sesion);
+
+    try {
+      await this.registroPublisher.publicar(usuario.id_usuario);
+    } catch {
+      // No reportar un registro fallido después de haber persistido la cuenta.
+      this.logger.warn(
+        'La inicialización del programa quedó pendiente para reintento automático.',
+      );
+    }
 
     return {
       tokenSesion: session.tokenSesion,

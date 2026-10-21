@@ -115,14 +115,14 @@ model usuarios {
   consentimiento_aceptado                                                           Boolean?
   registro_consumo_aceptado                                                         Boolean?
   id_consentimiento                                                                 String?                    @db.Uuid
+  auditoria_arboles                                                                 auditoria_arboles[]
   exportaciones                                                                     exportaciones[]
   flujo_conversacion                                                                flujo_conversacion[]
-  auditoria_arboles                                                                 auditoria_arboles[]
   historial_nodos                                                                   historial_nodos[]
   nodos                                                                             nodos[]
   perfil_clinico                                                                    perfil_clinico?
   punto_control                                                                     punto_control[]
-  chat_sesiones                                                                          chat_sesiones[]
+  chat_sesiones                                                                     chat_sesiones[]
   sincronizaciones                                                                  sincronizaciones[]
   tipo_terapia_tipo_terapia_administrador_responsableTousuarios                     tipo_terapia[]             @relation("tipo_terapia_administrador_responsableTousuarios")
   tipo_terapia_tipo_terapia_id_usuarioTousuarios                                    tipo_terapia?              @relation("tipo_terapia_id_usuarioTousuarios")
@@ -283,7 +283,7 @@ model recursos_contenido {
   tipo_recurso             tipo_recurso_enum
   orden_bloque             Int
   texto_contenido          String?
-  clave_almacenamiento     String?
+  clave_almacenamiento     String?                    @unique(map: "uq_recurso_clave_almacenamiento", where: raw("(clave_almacenamiento IS NOT NULL)"))
   mime_type                String?                    @db.VarChar(100)
   tamano_bytes             BigInt?
   duracion_segundos        Int?
@@ -293,7 +293,6 @@ model recursos_contenido {
   recursos_modulos_destino recursos_modulos_destino[]
 
   @@unique([id_contenido, orden_bloque], map: "uq_recurso_orden")
-  @@unique([clave_almacenamiento], map: "uq_recurso_clave_almacenamiento", where: raw("(clave_almacenamiento IS NOT NULL)"))
   @@schema("cronograma")
 }
 
@@ -400,8 +399,8 @@ model flujo_conversacion {
   fecha_creacion    DateTime               @default(now()) @db.Timestamptz(6)
   fecha_publicacion DateTime?              @db.Timestamptz(6)
   fecha_archivado   DateTime?              @db.Timestamptz(6)
-  usuarios          usuarios               @relation(fields: [creado_por], references: [id_usuario], onUpdate: NoAction, map: "fk_flujo_creado_por")
   auditoria_arboles auditoria_arboles[]
+  usuarios          usuarios               @relation(fields: [creado_por], references: [id_usuario], onUpdate: NoAction, map: "fk_flujo_creado_por")
   nodos             nodos?
   reglas_nodos      reglas_nodos[]
   sesiones          chat_sesiones[]
@@ -412,14 +411,14 @@ model flujo_conversacion {
 }
 
 model auditoria_arboles {
-  id_auditoria       BigInt             @id @default(autoincrement())
-  id_flujo           String?            @db.Uuid
-  id_actor           String             @db.Uuid
-  accion             String             @db.VarChar(40)
-  id_objeto          String?            @db.Uuid
-  fecha_operacion    DateTime           @default(now()) @db.Timestamptz(6)
+  id_auditoria       BigInt              @id @default(autoincrement())
+  id_flujo           String?             @db.Uuid
+  id_actor           String              @db.Uuid
+  accion             String              @db.VarChar(40)
+  id_objeto          String?             @db.Uuid
+  fecha_operacion    DateTime            @default(now()) @db.Timestamptz(6)
+  usuarios           usuarios            @relation(fields: [id_actor], references: [id_usuario], onUpdate: NoAction, map: "fk_auditoria_arbol_actor")
   flujo_conversacion flujo_conversacion? @relation(fields: [id_flujo], references: [id_flujo], onDelete: Restrict, onUpdate: NoAction, map: "fk_auditoria_arbol_flujo")
-  usuarios           usuarios           @relation(fields: [id_actor], references: [id_usuario], onDelete: Restrict, onUpdate: NoAction, map: "fk_auditoria_arbol_actor")
 
   @@index([id_flujo, fecha_operacion], map: "ix_auditoria_arbol_flujo_fecha")
   @@schema("chat")

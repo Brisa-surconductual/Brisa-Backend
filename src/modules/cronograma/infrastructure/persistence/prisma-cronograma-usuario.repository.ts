@@ -10,6 +10,23 @@ import { CronogramaUsuarioMapper } from '../mappers/cronograma-usuario.mapper';
 export class PrismaCronogramaUsuarioRepository implements CronogramaUsuarioRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async actualizar(cronogramaUsuario: CronogramaUsuario): Promise<void> {
+    try {
+      await this.prisma.cronogramas_usuario.update({
+        where: { id_usuario: cronogramaUsuario.id_usuario },
+        data: {
+          id_cronograma: cronogramaUsuario.id_cronograma,
+          fecha_inicio_usuario: cronogramaUsuario.fecha_inicio_usuario,
+        },
+      });
+    } catch (error: unknown) {
+      if (this.esRechazoPorCronogramaInactivo(error)) {
+        throw new CronogramaBaseInactivoException();
+      }
+      throw error;
+    }
+  }
+
   async buscarPorUsuario(idUsuario: string): Promise<CronogramaUsuario | null> {
     const cronogramaUsuario = await this.prisma.cronogramas_usuario.findUnique({
       where: { id_usuario: idUsuario },
