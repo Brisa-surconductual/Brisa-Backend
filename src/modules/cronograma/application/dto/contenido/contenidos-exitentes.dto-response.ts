@@ -1,12 +1,36 @@
-import { IsBoolean, IsDate, IsEnum, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsDate,
+  IsEnum,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { Contenido } from '../../../domain/entities/contenido.entity';
 import { ContenidoCronograma } from '../../../domain/entities/contenido-cronograma.entity';
-import { UnidadTemporal } from '../../../domain/entities/unidad-temporal.entity';
-import { Cronograma } from '../../../domain/entities/cronograma.entity';
 import { TipoContenido } from '../../../domain/enums/tipo-contenido.enum';
-import { EstadoCronograma } from '../../../domain/enums/estado-cronograma.enum';
+import { EstadoCatalogoContenido } from '../../../domain/repositories/catalogo-contenido.repository';
 
 export class ContenidosExitentesDtoResponse {
+  editable!: boolean;
+  estadoCronograma!: string | null;
+  cantidadRecursos!: number;
+  listoParaProgramar!: boolean;
+
+  static fromCatalogo(
+    entrada: EstadoCatalogoContenido,
+  ): ContenidosExitentesDtoResponse {
+    const dto = ContenidosExitentesDtoResponse.fromEntity(
+      entrada.contenido,
+      null,
+    );
+    dto.idAsociasionUnidadTemporalContenido = entrada.idAsociacion;
+    dto.asociado = entrada.idAsociacion !== null;
+    dto.estadoCronograma = entrada.estadoCronograma;
+    dto.editable = entrada.estadoCronograma !== 'ACTIVO';
+    dto.cantidadRecursos = entrada.cantidadRecursos;
+    dto.listoParaProgramar = entrada.recursosListos;
+    return dto;
+  }
   @IsString()
   idContenido!: string;
 
@@ -26,26 +50,11 @@ export class ContenidosExitentesDtoResponse {
   @IsDate()
   fechaCreacionContenido!: Date;
 
-  @IsString()
-  @IsOptional()
-  nombreUnidadTemporal?: string | null;
-
-  @IsString()
-  @IsOptional()
-  nombreUnidadPadreCronograma!: string | null;
-
-  @IsEnum(EstadoCronograma)
-  @IsOptional()
-  estadoCronograma?: EstadoCronograma | null;
-
   static fromEntity(
     entity: Contenido,
     asociacion: ContenidoCronograma | null,
-    unidadTemporal: UnidadTemporal | null,
-    cronograma: Cronograma | null,
   ): ContenidosExitentesDtoResponse {
     const dto = new ContenidosExitentesDtoResponse();
-
     dto.idContenido = entity.id_contenido;
     dto.idAsociasionUnidadTemporalContenido =
       asociacion?.id_contenido_cronograma ?? null;
@@ -53,12 +62,6 @@ export class ContenidosExitentesDtoResponse {
     dto.nombre = entity.nombre_contenido;
     dto.tipoContenido = entity.tipo_contenido;
     dto.fechaCreacionContenido = entity.fecha_creacion;
-    dto.nombreUnidadTemporal =
-      unidadTemporal?.nombre != null ? String(unidadTemporal.nombre) : null;
-    dto.nombreUnidadPadreCronograma =
-      cronograma?.nombre_cronograma ?? null;
-    dto.estadoCronograma = cronograma?.estado ?? null;
-
     return dto;
   }
 }

@@ -1,29 +1,20 @@
-import { IsArray, IsDate, IsNumber, IsString } from "class-validator";
-import { RecursoDtoResponse } from "../recursoContenido/recurso.dto-response";
+import { IsArray, IsString } from 'class-validator';
 
 export class ContenidoDetalleResponseDto {
-    @IsString()
-    idContenido!: string;
+  idContenidoCronograma!: string;
+  ordenContenido!: number | null;
+  fechaInicioDisponibilidad!: Date | null;
+  fechaFinDisponibilidad!: Date | null;
+  @IsString()
+  idContenido!: string;
 
-    @IsString()
-    idContenidoCronograma!: string;
+  @IsString()
+  nombreContenido!: string;
 
-    @IsNumber()
-    ordenContenido!: number;
+  @IsString()
+  tipo!: string;
 
-    @IsDate()
-    fechaInicioDisponibilidad!: Date;
-
-    @IsDate()
-    fechaFinDisponibilidad!: Date;
-
-    @IsString()
-    nombreContenido!: string;
-
-    @IsString()
-    tipo!: string;
-
-    @IsString()
-    @IsArray()
-    recursos!: RecursoDtoResponse[];
+  @IsString()
+  @IsArray()
+  recursos!: { idRecurso: string; claveAlmacenamiento: string }[];
 }

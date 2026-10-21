@@ -1,3 +1,4 @@
+import { RegistroEstudiantePublisher } from '../ports/registro-estudiante.publisher';
 import { Sesion } from '../../domain/entities/sesiones.entity';
 import { AlcanceSesion } from '../../domain/enums/alcance-sesion.enum';
 import { MotivoConsumo } from '../../domain/enums/motivo-consumo-enum';
@@ -8,33 +9,55 @@ import { PasswordHasher } from '../ports/password-hasher';
 import { SessionService } from '../services/sesion.service';
 import { CreacionUsuarioUseCase } from './creacion-usuario.use-case';
 
+type BoundMock<T> = {
+  [K in keyof T]: T[K] extends (...args: infer A) => infer R
+    ? jest.Mock<R, A>
+    : T[K];
+};
+
+function mockMethod<T extends (...args: never[]) => unknown>() {
+  return jest.fn<ReturnType<T>, Parameters<T>>();
+}
+
 describe('CreacionUsuarioUseCase - mayoría de edad', () => {
-  let usuarioRepository: jest.Mocked<UsuarioRepository>;
-  let passwordHasher: jest.Mocked<PasswordHasher>;
-  let consentimientosRepository: jest.Mocked<ConsentimientosRepository>;
-  let sessionService: jest.Mocked<SessionService>;
+  const registroPublisher: BoundMock<RegistroEstudiantePublisher> = {
+    publicar: mockMethod<RegistroEstudiantePublisher['publicar']>(),
+  };
+  let usuarioRepository: BoundMock<UsuarioRepository>;
+  let passwordHasher: BoundMock<PasswordHasher>;
+  let consentimientosRepository: BoundMock<ConsentimientosRepository>;
+  let sessionService: Pick<BoundMock<SessionService>, 'crearSesion'>;
 
   beforeEach(() => {
+    registroPublisher.publicar.mockReset();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-08-28T12:00:00.000Z'));
 
     usuarioRepository = {
-      crear: jest.fn(),
-      buscarPorCorreo: jest.fn(),
-      buscarPorId: jest.fn(),
-      actualizar: jest.fn(),
-      crearAdministrador: jest.fn(),
+      crear: mockMethod<UsuarioRepository['crear']>(),
+      buscarPorCorreo: mockMethod<UsuarioRepository['buscarPorCorreo']>(),
+      buscarPorId: mockMethod<UsuarioRepository['buscarPorId']>(),
+      actualizar: mockMethod<UsuarioRepository['actualizar']>(),
+      crearAdministrador: mockMethod<UsuarioRepository['crearAdministrador']>(),
+      buscarPorTermino: mockMethod<UsuarioRepository['buscarPorTermino']>(),
+      actualizarConsentimientoYEstado:
+        mockMethod<UsuarioRepository['actualizarConsentimientoYEstado']>(),
     };
     passwordHasher = {
-      hash: jest.fn(),
-      compare: jest.fn(),
+      hash: mockMethod<PasswordHasher['hash']>(),
+      compare: mockMethod<PasswordHasher['compare']>(),
     };
     consentimientosRepository = {
-      obtenerIdConsitimientoVigente: jest.fn(),
+      buscarPorId: mockMethod<ConsentimientosRepository['buscarPorId']>(),
+      findVigentes: mockMethod<ConsentimientosRepository['findVigentes']>(),
+      obtenerIdConsitimientoVigente:
+        mockMethod<
+          ConsentimientosRepository['obtenerIdConsitimientoVigente']
+        >(),
     };
     sessionService = {
-      crearSesion: jest.fn(),
-    } as unknown as jest.Mocked<SessionService>;
+      crearSesion: mockMethod<SessionService['crearSesion']>(),
+    };
   });
 
   afterEach(() => {
@@ -46,7 +69,8 @@ describe('CreacionUsuarioUseCase - mayoría de edad', () => {
       usuarioRepository,
       passwordHasher,
       consentimientosRepository,
-      sessionService,
+      sessionService as unknown as SessionService,
+      registroPublisher,
     );
 
     await expect(
@@ -60,6 +84,7 @@ describe('CreacionUsuarioUseCase - mayoría de edad', () => {
     ).not.toHaveBeenCalled();
     expect(sessionService.crearSesion).not.toHaveBeenCalled();
     expect(usuarioRepository.crear).not.toHaveBeenCalled();
+    expect(registroPublisher.publicar).not.toHaveBeenCalled();
   });
 
   it('persiste el flujo completo de un adulto con la fecha normalizada', async () => {
@@ -68,23 +93,26 @@ describe('CreacionUsuarioUseCase - mayoría de edad', () => {
     consentimientosRepository.obtenerIdConsitimientoVigente.mockResolvedValue(
       '00000000-0000-4000-8000-000000000010',
     );
-    sessionService.crearSesion.mockImplementation(async (idUsuario) => ({
-      sesion: Sesion.iniciar(
-        idUsuario,
-        'hash-token-sesion',
-        'hash-token-csrf',
-        AlcanceSesion.COMPLETA,
-        15,
-      ),
-      tokenSesion: 'token-sesion',
-      csrfToken: 'token-csrf',
-    }));
+    sessionService.crearSesion.mockImplementation((idUsuario) =>
+      Promise.resolve({
+        sesion: Sesion.iniciar(
+          idUsuario,
+          'hash-token-sesion',
+          'hash-token-csrf',
+          AlcanceSesion.COMPLETA,
+          15,
+        ),
+        tokenSesion: 'token-sesion',
+        csrfToken: 'token-csrf',
+      }),
+    );
 
     const casoUso = new CreacionUsuarioUseCase(
       usuarioRepository,
       passwordHasher,
       consentimientosRepository,
-      sessionService,
+      sessionService as unknown as SessionService,
+      registroPublisher,
     );
 
     await casoUso.execute(crearDto(new Date('2008-08-28T18:45:00.000Z')));
@@ -95,7 +123,12 @@ describe('CreacionUsuarioUseCase - mayoría de edad', () => {
     );
     expect(usuarioRepository.crear).toHaveBeenCalledTimes(1);
 
+    expect(registroPublisher.publicar).toHaveBeenCalledTimes(1);
+    expect(usuarioRepository.crear.mock.invocationCallOrder[0]).toBeLessThan(
+      registroPublisher.publicar.mock.invocationCallOrder[0],
+    );
     const [usuario, lineaBase, sesion] = usuarioRepository.crear.mock.calls[0];
+    expect(registroPublisher.publicar).toHaveBeenCalledWith(usuario.id_usuario);
     expect(lineaBase.id_usuario).toBe(usuario.id_usuario);
     expect(sesion.id_usuario).toBe(usuario.id_usuario);
     expect(lineaBase.fechaNacimiento).toEqual(

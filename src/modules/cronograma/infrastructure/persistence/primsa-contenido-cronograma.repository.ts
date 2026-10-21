@@ -1,6 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ContenidoCronogramaRepository } from '../../domain/repositories/contenido-cronograma.repository';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from '../../../../../prisma/prisma.service';
 import { ContenidoCronograma } from '../../domain/entities/contenido-cronograma.entity';
 import { ContenidoCronogramaMapper } from '../mappers/contenido-cronograma.mapper';
 import { AsignacionOrden } from '../../application/service/reordenar-contenido-temporal.service';
@@ -39,8 +44,11 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
   }
 
   async eliminar(id_contenido_cronograma: string): Promise<void> {
-    await this.prisma.contenidos_cronograma.deleteMany({
-      where: { id_contenido_cronograma },
+    await this.prisma.$transaction(async (tx) => {
+      await this.asegurarAsociacionEditable(tx, id_contenido_cronograma);
+      await tx.contenidos_cronograma.deleteMany({
+        where: { id_contenido_cronograma },
+      });
     });
   }
 
@@ -49,6 +57,10 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
     reordenamientoHermanas: AsignacionOrden[],
   ): Promise<ContenidoCronograma> {
     await this.prisma.$transaction(async (tx) => {
+      await this.asegurarUnidadEditable(
+        tx,
+        contenidoCronograma.id_unidad_temporal,
+      );
       for (const asignacion of reordenamientoHermanas) {
         await tx.contenidos_cronograma.update({
           where: {
@@ -59,7 +71,7 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
       }
 
       await tx.contenidos_cronograma.create({
-        data: ContenidoCronogramaMapper.toPrisma(contenidoCronograma) as any,
+        data: ContenidoCronogramaMapper.toPrisma(contenidoCronograma),
       });
 
       for (const asignacion of reordenamientoHermanas) {
@@ -124,13 +136,16 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
     fecha_inicio_disponibilidad: Date,
     fecha_fin_disponibilidad: Date,
   ): Promise<void> {
-    await this.prisma.contenidos_cronograma.update({
-      where: { id_contenido_cronograma },
-      data: {
-        fecha_inicio_disponibilidad,
-        fecha_fin_disponibilidad,
-        fecha_actualizacion: new Date(),
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await this.asegurarAsociacionEditable(tx, id_contenido_cronograma);
+      await tx.contenidos_cronograma.update({
+        where: { id_contenido_cronograma },
+        data: {
+          fecha_inicio_disponibilidad,
+          fecha_fin_disponibilidad,
+          fecha_actualizacion: new Date(),
+        },
+      });
     });
   }
 
@@ -140,6 +155,11 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
     }
 
     await this.prisma.$transaction(async (tx) => {
+      for (const asignacion of asignaciones)
+        await this.asegurarAsociacionEditable(
+          tx,
+          asignacion.id_contenido_cronograma,
+        );
       for (const asignacion of asignaciones) {
         await tx.contenidos_cronograma.update({
           where: {
@@ -164,8 +184,12 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
     contenidoCronograma: ContenidoCronograma,
   ): Promise<ContenidoCronograma> {
     await this.prisma.$transaction(async (tx) => {
+      await this.asegurarUnidadEditable(
+        tx,
+        contenidoCronograma.id_unidad_temporal,
+      );
       await tx.contenidos_cronograma.create({
-        data: ContenidoCronogramaMapper.toPrisma(contenidoCronograma) as any,
+        data: ContenidoCronogramaMapper.toPrisma(contenidoCronograma),
       });
     });
     return contenidoCronograma;
@@ -190,5 +214,34 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
           }),
         ),
       );
+  }
+
+  private async asegurarUnidadEditable(
+    tx: Prisma.TransactionClient,
+    idUnidad: string,
+  ): Promise<void> {
+    const estados = await tx.$queryRaw<{ estado: string }[]>(Prisma.sql`
+        SELECT c.estado FROM cronograma.cronogramas c
+        JOIN cronograma.unidades_temporales u ON u.id_cronograma = c.id_cronograma
+        WHERE u.id_unidad_temporal = ${idUnidad}::uuid FOR UPDATE OF c
+      `);
+    if (!estados.length)
+      throw new NotFoundException('La unidad temporal no existe.');
+    if (estados[0].estado !== 'INACTIVO')
+      throw new ConflictException(
+        'El cronograma está activo. Su contenido y programación son de solo lectura.',
+      );
+  }
+
+  private async asegurarAsociacionEditable(
+    tx: Prisma.TransactionClient,
+    idAsociacion: string,
+  ): Promise<void> {
+    const asociacion = await tx.contenidos_cronograma.findUnique({
+      where: { id_contenido_cronograma: idAsociacion },
+      select: { id_unidad_temporal: true },
+    });
+    if (asociacion)
+      await this.asegurarUnidadEditable(tx, asociacion.id_unidad_temporal);
   }
 }

@@ -1,3 +1,5 @@
+import { ActivarCronogramaUseCase } from './use-cases/cronograma/activar-cronograma.use-case';
+import { ConsultarMiCronogramaUseCase } from './use-cases/cronograma/consultar-mi-cronograma.use-case';
 import { InicializarCronogramaUsuarioUseCase } from './use-cases/cronograma/inicializar-cronograma-usuario.use-case';
 import { CreacionUnidadTemporalUseCase } from './use-cases/unidad-temporal/crear-unidad-temporal.use-case';
 import { ValidarSolapamientoTemporalService } from './service/validar-solapamiento-temporal.service';
@@ -42,6 +44,8 @@ import {
 import {AsignarCronogramaUsuarioUseCase} from './use-cases/cronograma/asignar-cronograma.use-case';
 
 export const CronogramaApplicationProviders = [
+  ActivarCronogramaUseCase,
+  ConsultarMiCronogramaUseCase,
   InicializarCronogramaUsuarioUseCase,
   CreacionUnidadTemporalUseCase,
   ValidarSolapamientoTemporalService,
