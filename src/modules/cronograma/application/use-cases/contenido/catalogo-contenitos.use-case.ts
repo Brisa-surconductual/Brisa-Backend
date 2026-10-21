@@ -1,30 +1,14 @@
-import { Injectable } from "@nestjs/common";
-import { ContenidosExitentesDtoResponse } from "../../dto/contenido/contenidos-exitentes.dto-response";
-import { ContenidoRepository } from "../../../domain/repositories/contenido.repository";
-import { ContenidoCronogramaRepository } from "../../../domain/repositories/contenido-cronograma.repository";
+import { Injectable } from '@nestjs/common';
+import { ContenidosExitentesDtoResponse } from '../../dto/contenido/contenidos-exitentes.dto-response';
+import { CatalogoContenidoRepository } from '../../../domain/repositories/catalogo-contenido.repository';
 
 @Injectable()
 export class CatologoContenitosUseCase {
-    constructor(
-        private readonly contenidoRepository: ContenidoRepository, 
-        private readonly contenidoCronogramaRepository: ContenidoCronogramaRepository
-    ) {}
+  constructor(private readonly catalogo: CatalogoContenidoRepository) {}
 
-    async execute(): Promise<ContenidosExitentesDtoResponse[]> {
-
-        const contenidos = await this.contenidoRepository.listar();
-
-        const contenidosConAsociacion = await Promise.all(
-            contenidos.map(async (contenido) => ({
-                contenido,
-                asociacion: await this.contenidoCronogramaRepository.obtenerPorIdContenido(
-                    contenido.id_contenido,
-                ),
-            })),
-        );
-
-        return contenidosConAsociacion.map(({ contenido, asociacion }) =>
-            ContenidosExitentesDtoResponse.fromEntity(contenido, asociacion),
-        );
-    }
+  async execute(): Promise<ContenidosExitentesDtoResponse[]> {
+    return (await this.catalogo.listar()).map((contenido) =>
+      ContenidosExitentesDtoResponse.fromCatalogo(contenido),
+    );
+  }
 }
