@@ -6,4 +6,5 @@ export abstract class CronogramaUsuarioRepository {
   ): Promise<CronogramaUsuario | null>;
 
   abstract crear(cronogramaUsuario: CronogramaUsuario): Promise<void>;
+  abstract  actualizar (cronogramaUsuario: CronogramaUsuario): Promise<void>;
 }

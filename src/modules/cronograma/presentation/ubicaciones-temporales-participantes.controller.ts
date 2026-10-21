@@ -16,7 +16,7 @@ export class UbicacionesTemporalesParticipantesController {
     private readonly consultarUbicaciones: ConsultarUbicacionesTemporalesParticipantesUseCase,
   ) {}
 
-  @Get('/ubicaciones-temporales')
+  @Get(['/ubicaciones-temporales', '/participantes/ubicaciones-temporales'])
   @Header('Cache-Control', 'no-store')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
   @Roles(Rol.ADMINISTRATIVO)
