@@ -41,6 +41,7 @@ import {
   EliminarRecursoContenidoUseCase,
   ListarRecursosContenidoUseCase,
 } from './use-cases/recurso-contenido/gestionar-recurso-contenido.use-cases';
+import {AsignarCronogramaUsuarioUseCase} from './use-cases/cronograma/asignar-cronograma.use-case';
 
 export const CronogramaApplicationProviders = [
   ActivarCronogramaUseCase,
@@ -53,6 +54,7 @@ export const CronogramaApplicationProviders = [
   ActualizarContenidoUseCase,
   EliminarContenidoUseCase,
   CrearRecursoContenidoUseCase,
+  ListarRecursosContenidoUseCase,
   SolicitarUrlSubidaRecursoUseCase,
   ListarModulosDestinoUseCase,
   ReordenarRecursosContenidoUseCase,
@@ -86,4 +88,5 @@ export const CronogramaApplicationProviders = [
   ListarRecursosContenidoUseCase,
   ActualizarRecursoContenidoUseCase,
   EliminarRecursoContenidoUseCase,
+  AsignarCronogramaUsuarioUseCase,
 ];

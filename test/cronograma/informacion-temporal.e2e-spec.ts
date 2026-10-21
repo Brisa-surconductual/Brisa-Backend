@@ -1,57 +1,41 @@
-import { createHash } from 'crypto';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { ModuloApiKeyHasherPort } from '../../src/modules/cronograma/application/ports/modulo-api-key-hasher.port';
-import { ModuloInternoCredentialsConfigPort } from '../../src/modules/cronograma/application/ports/modulo-interno-credentials-config.port';
 import { ConsultarInformacionTemporalUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/consultar-informacion-temporal-usuario.use-case';
-import { ModuloSistema } from '../../src/modules/cronograma/domain/entities/modulo-sistema.entity';
 import { CronogramaActivoUsuarioNoEncontradoException } from '../../src/modules/cronograma/domain/exeption/cronograma/cronograma-activo-usuario-no-encontrado.exception';
-import { ModuloSistemaRepository } from '../../src/modules/cronograma/domain/repositories/modulo-sistema.repository';
-import { Sha256ModuloApiKeyHasher } from '../../src/modules/cronograma/infrastructure/security/sha256-modulo-api-key-hasher';
-import { ModuloInternoAuthGuard } from '../../src/modules/cronograma/presentation/guards/modulo-interno-auth.guard';
 import { InformacionTemporalController } from '../../src/modules/cronograma/presentation/informacion-temporal.controller';
+import { CsrfSessionGuard } from '../../src/modules/usuarios/presentation/guards/csrf-session.guard';
+import { SessionAuthGuard } from '../../src/modules/usuarios/presentation/guards/session-auth.guard';
+import { SessionScopeGuard } from '../../src/modules/usuarios/presentation/guards/session-scope.guard';
+import { RolesGuard } from '../../src/shared/presentation/guards/role-guard';
 
-describe('Cronograma - información temporal interna (e2e)', () => {
+describe('Cronograma - información temporal de participante (e2e)', () => {
   const idUsuario = '00000000-0000-4000-8000-000000000001';
-  const idModulo = '00000000-0000-4000-8000-000000000010';
-  const apiKey = 'api-key-interna-segura-de-32-bytes-minimo';
-  const apiKeyHash = createHash('sha256').update(apiKey).digest('hex');
-  const codigosAutorizados = ['CHAT', 'SEGUIM', 'GAMIF', 'NOTIF'];
+  const url = `/cronograma/participantes/${idUsuario}/informacion-temporal`;
   const consultarInformacion = { execute: jest.fn() };
-  const buscarActivoPorCodigo = jest.fn();
-  const obtenerApiKeyHash = jest.fn((codigo: string) =>
-    codigosAutorizados.includes(codigo) ? apiKeyHash : null,
-  );
+  const autorizarRol = jest.fn(() => true);
   let app: INestApplication<App>;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       controllers: [InformacionTemporalController],
       providers: [
-        ModuloInternoAuthGuard,
         {
           provide: ConsultarInformacionTemporalUsuarioUseCase,
           useValue: consultarInformacion,
         },
-        {
-          provide: ModuloSistemaRepository,
-          useValue: {
-            listarActivos: jest.fn(),
-            buscarActivoPorCodigo,
-          },
-        },
-        {
-          provide: ModuloInternoCredentialsConfigPort,
-          useValue: { obtenerApiKeyHash },
-        },
-        {
-          provide: ModuloApiKeyHasherPort,
-          useClass: Sha256ModuloApiKeyHasher,
-        },
       ],
-    }).compile();
+    })
+      .overrideGuard(SessionAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(SessionScopeGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(CsrfSessionGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: autorizarRol })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
@@ -66,19 +50,18 @@ describe('Cronograma - información temporal interna (e2e)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    buscarActivoPorCodigo.mockImplementation((codigo: string) =>
-      Promise.resolve(new ModuloSistema(idModulo, codigo, codigo)),
-    );
+    autorizarRol.mockReturnValue(true);
   });
 
   afterAll(async () => {
-    await app.close();
+    await app?.close();
   });
 
   it('retorna ubicación y contenidos usando el mismo instante de consulta', async () => {
     consultarInformacion.execute.mockResolvedValue(crearRespuesta());
 
-    await solicitudAutorizada('CHAT')
+    await request(app.getHttpServer())
+      .get(url)
       .query({ fecha_consulta: '2026-09-15T12:00:00.000Z' })
       .expect(200)
       .expect('Cache-Control', 'no-store')
@@ -96,7 +79,8 @@ describe('Cronograma - información temporal interna (e2e)', () => {
       contenidos_vigentes: [],
     });
 
-    await solicitudAutorizada('CHAT')
+    await request(app.getHttpServer())
+      .get(url)
       .expect(200)
       .expect((respuesta) => {
         expect(respuesta.body).toHaveProperty(
@@ -107,22 +91,13 @@ describe('Cronograma - información temporal interna (e2e)', () => {
       });
   });
 
-  it.each(['CHAT', 'SEGUIM', 'GAMIF', 'NOTIF'])(
-    'autoriza al módulo consumidor %s',
-    async (codigoModulo) => {
-      consultarInformacion.execute.mockResolvedValue(crearRespuesta());
-
-      await solicitudAutorizada(codigoModulo).expect(200);
-      expect(buscarActivoPorCodigo).toHaveBeenCalledWith(codigoModulo);
-    },
-  );
-
   it('retorna 404 cuando el usuario no tiene cronograma activo', async () => {
     consultarInformacion.execute.mockRejectedValue(
       new CronogramaActivoUsuarioNoEncontradoException(),
     );
 
-    await solicitudAutorizada('CHAT')
+    await request(app.getHttpServer())
+      .get(url)
       .expect(404)
       .expect((respuesta) => {
         expect(respuesta.text).toContain(
@@ -131,39 +106,21 @@ describe('Cronograma - información temporal interna (e2e)', () => {
       });
   });
 
-  it('retorna 403 para un módulo fuera de la lista autorizada', async () => {
-    await solicitudAutorizada('DIARIO').expect(403);
+  it('retorna 403 cuando el rol no está autorizado', async () => {
+    autorizarRol.mockReturnValue(false);
 
-    expect(consultarInformacion.execute).not.toHaveBeenCalled();
-    expect(buscarActivoPorCodigo).not.toHaveBeenCalled();
-  });
-
-  it('retorna 403 cuando la API key no coincide', async () => {
-    await request(app.getHttpServer())
-      .get(`/cronograma/interno/usuarios/${idUsuario}/informacion-temporal`)
-      .set('X-Module-Code', 'CHAT')
-      .set('Authorization', `Bearer ${'x'.repeat(40)}`)
-      .expect(403);
-
-    expect(consultarInformacion.execute).not.toHaveBeenCalled();
-  });
-
-  it('retorna 403 cuando faltan las credenciales del módulo', async () => {
-    await request(app.getHttpServer())
-      .get(`/cronograma/interno/usuarios/${idUsuario}/informacion-temporal`)
-      .expect(403);
+    await request(app.getHttpServer()).get(url).expect(403);
 
     expect(consultarInformacion.execute).not.toHaveBeenCalled();
   });
 
   it('retorna 400 ante fecha o usuario inválidos', async () => {
-    await solicitudAutorizada('CHAT')
+    await request(app.getHttpServer())
+      .get(url)
       .query({ fecha_consulta: 'fecha-invalida' })
       .expect(400);
     await request(app.getHttpServer())
-      .get('/cronograma/interno/usuarios/id-invalido/informacion-temporal')
-      .set('X-Module-Code', 'CHAT')
-      .set('Authorization', `Bearer ${apiKey}`)
+      .get('/cronograma/participantes/id-invalido/informacion-temporal')
       .expect(400);
 
     expect(consultarInformacion.execute).not.toHaveBeenCalled();
@@ -171,22 +128,12 @@ describe('Cronograma - información temporal interna (e2e)', () => {
 
   it('no expone operaciones de escritura sobre el contrato RF-23', async () => {
     await request(app.getHttpServer())
-      .patch(`/cronograma/interno/usuarios/${idUsuario}/informacion-temporal`)
-      .set('X-Module-Code', 'CHAT')
-      .set('Authorization', `Bearer ${apiKey}`)
+      .patch(url)
       .send({ cronograma_finalizado: true })
       .expect(404);
 
     expect(consultarInformacion.execute).not.toHaveBeenCalled();
   });
-
-  function solicitudAutorizada(codigoModulo: string): request.Test {
-    return request(app.getHttpServer())
-      .get(`/cronograma/interno/usuarios/${idUsuario}/informacion-temporal`)
-      .set('X-Module-Code', codigoModulo)
-      .set('Authorization', `Bearer ${apiKey}`);
-  }
-
   function crearRespuesta(): Record<string, unknown> {
     return {
       ubicacion_temporal: {

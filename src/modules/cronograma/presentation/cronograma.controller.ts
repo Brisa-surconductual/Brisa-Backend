@@ -1,17 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards, } from '@nestjs/common';
 import { CreacionUnidadTemporalUseCase } from '../application/use-cases/unidad-temporal/crear-unidad-temporal.use-case';
 import { UnidadTemporalDtoRequest } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-request';
 import { UnidadTemporalDtoResponse } from '../application/dto/contenidoUnidadTemporal/crear-unidad-temporal.dto-response';
@@ -83,6 +70,10 @@ import { ObtenerUnidadesTemporalesUseCase } from '../application/use-cases/unida
 import { ObtenerUnidadesTemporalesDtoResponse } from '../application/dto/unidadTemporal/obtener-unidades-temporales.dto-response';
 import { ConsultarPausasAdministraivasUseCase } from '../application/use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
 import { ConsultarPausasAdministrativasUsuarioDtoResponse } from '../application/dto/pausaAdministrativa/conusltar-pausas-administarivas.dto-response';
+import {AsignarCronogramaUsuarioUseCase} from '../application/use-cases/cronograma/asignar-cronograma.use-case';
+import {AsignarCronogramaDtoRequest} from '../application/dto/cronograma/asignar-cronograma.dto-request';
+import {AsignarCronogramaDtoResponse} from '../application/dto/cronograma/asignar-cronograma.dto-response';
+
 
 @Controller('/cronograma')
 export class CronogramaController {
@@ -92,10 +83,10 @@ export class CronogramaController {
     private readonly actualizarContenidoUseCase: ActualizarContenidoUseCase,
     private readonly eliminarContenidoUseCase: EliminarContenidoUseCase,
     private readonly crearRecursoContenidoUseCase: CrearRecursoContenidoUseCase,
+    private readonly listarRecursosContenidoUseCase: ListarRecursosContenidoUseCase,
     private readonly solicitarUrlSubidaRecursoUseCase: SolicitarUrlSubidaRecursoUseCase,
     private readonly listarModulosDestinoUseCase: ListarModulosDestinoUseCase,
     private readonly reordenarRecursosContenidoUseCase: ReordenarRecursosContenidoUseCase,
-    private readonly listarRecursosContenidoUseCase: ListarRecursosContenidoUseCase,
     private readonly actualizarRecursoContenidoUseCase: ActualizarRecursoContenidoUseCase,
     private readonly eliminarRecursoContenidoUseCase: EliminarRecursoContenidoUseCase,
     private readonly asociarContenidoUnidadTemporalUseCase: AsociarContenidoUnidadTemporalUseCase,
@@ -112,6 +103,7 @@ export class CronogramaController {
     private readonly obtenerCronogramasUseCase: ObtenerCronogramasUseCase,
     private readonly ObtenerUnidadesTemporalesUseCase: ObtenerUnidadesTemporalesUseCase,
     private readonly consultarPausasAdministraivasUseCase: ConsultarPausasAdministraivasUseCase,
+    private readonly asignarCronogramaUsuarioUseCase: AsignarCronogramaUsuarioUseCase,
   ) {}
 
   @Post('/crear/unidad-temporal')
@@ -359,5 +351,15 @@ export class CronogramaController {
     ConsultarPausasAdministrativasUsuarioDtoResponse[]
   > {
     return this.consultarPausasAdministraivasUseCase.execute();
+  }
+
+  @Patch('/usuarios/:id_usuario/asignar-cronograma')
+  @Roles(Rol.ADMINISTRATIVO)
+  @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+  async asignarCronogramaAUsuario(
+    @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,
+    @Body() dto: AsignarCronogramaDtoRequest,
+  ): Promise<AsignarCronogramaDtoResponse> {
+    return this.asignarCronogramaUsuarioUseCase.execute(idUsuario, dto);
   }
 }
