@@ -70,6 +70,7 @@ import { ObtenerUnidadesTemporalesUseCase } from '../application/use-cases/unida
 import { ObtenerUnidadesTemporalesDtoResponse } from '../application/dto/unidadTemporal/obtener-unidades-temporales.dto-response';
 import { ConsultarPausasAdministraivasUseCase } from '../application/use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
 import { ConsultarPausasAdministrativasUsuarioDtoResponse } from '../application/dto/pausaAdministrativa/conusltar-pausas-administarivas.dto-response';
+import { ListarRecursosContenidoDtoResponse } from '../application/dto/recursoContenido/listar-recursos-contenido.dto-response';
 import {AsignarCronogramaUsuarioUseCase} from '../application/use-cases/cronograma/asignar-cronograma.use-case';
 import {AsignarCronogramaDtoRequest} from '../application/dto/cronograma/asignar-cronograma.dto-request';
 import {AsignarCronogramaDtoResponse} from '../application/dto/cronograma/asignar-cronograma.dto-response';
