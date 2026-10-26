@@ -15,12 +15,25 @@ import { SessionCookieConfig } from './application/ports/session-cookie-config';
 import { SessionTokenHasher } from './application/ports/session-token-hasher';
 import { CsrfSessionGuard } from './presentation/guards/csrf-session.guard';
 import { SessionScopeGuard } from './presentation/guards/session-scope.guard';
+import { EstadisticasProgramaController } from './presentation/controllers/estadisticas-programa.controller';
+import { ConsultarEstadisticasProgramaUseCase } from './application/use-cases/consultar-estadisticas-programa.use-case';
+import { EstadisticasProgramaRepository } from './domain/repositories/estadisticas-programa.repository';
+import { PrismaEstadisticasProgramaRepository } from './infrastructure/persistence/prisma-estadisticas-programa.repository';
 
 @Module({
-  controllers: [UsuariosController, SesionesController],
+  controllers: [
+    UsuariosController,
+    SesionesController,
+    EstadisticasProgramaController,
+  ],
 
   providers: [
     PrismaService,
+    ConsultarEstadisticasProgramaUseCase,
+    {
+      provide: EstadisticasProgramaRepository,
+      useClass: PrismaEstadisticasProgramaRepository,
+    },
     SessionAuthGuard,
     ...UsuarioAplicationProviders,
     ...UsuarioInfraestructureProviders,

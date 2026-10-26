@@ -1135,7 +1135,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
   ): Promise<void> {
     await tx.auditoria_arboles.create({
       data: {
-        id_flujo: idFlujo,
+        id_flujo: idFlujo!,
         id_actor: idActor,
         accion,
         id_objeto: idObjeto,

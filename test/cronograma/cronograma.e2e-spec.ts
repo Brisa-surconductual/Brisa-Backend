@@ -1,9 +1,3 @@
-import { ConsultarPausasAdministraivasUseCase } from '../../src/modules/cronograma/application/use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
-import { ObtenerUnidadesTemporalesUseCase } from '../../src/modules/cronograma/application/use-cases/unidad-temporal/obtener-unidades-temporales.use-case';
-import { ObtenerCronogramasUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/obtener-cronogrmas.use-case';
-import { CrearCronogramaUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/crear-cronograma.use-case';
-import { CatologoContenitosUseCase } from '../../src/modules/cronograma/application/use-cases/contenido/catalogo-contenitos.use-case';
-import { ListarRecursosContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/recurso-contenido/listar-recursos-contenido.use-case';
 import {
   ExecutionContext,
   INestApplication,
@@ -107,10 +101,6 @@ describe('Cronograma - endpoints propios (e2e)', () => {
         },
         { provide: EliminarRecursoContenidoUseCase, useValue: eliminarRecurso },
         { provide: ListarRecursosContenidoUseCase, useValue: listarRecursos },
-        {
-          provide: ListarRecursosContenidoUseCase,
-          useValue: { execute: jest.fn() },
-        },
         {
           provide: CatologoContenitosUseCase,
           useValue: { execute: jest.fn() },

@@ -22,4 +22,17 @@ export class CronogramaUsuario {
       ahora,
     );
   }
+
+  asignarNuevoCronograma(
+    idNuevoCronograma: string,
+    fechaCalculada: Date,
+  ): CronogramaUsuario {
+    return new CronogramaUsuario(
+      this.id_cronograma_usuario,
+      this.id_usuario,
+      idNuevoCronograma, // Cambia el cronograma
+      fechaCalculada,    // Cambia la fecha de inicio
+      this.fecha_creacion, // Mantiene su fecha original de registro
+    );
+  }
 }

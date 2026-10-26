@@ -10,13 +10,13 @@ import { SessionScopeGuard } from '../../usuarios/presentation/guards/session-sc
 import { Roles } from '../../../shared/presentation/decorators/roles.decorator';
 import { RolesGuard } from '../../../shared/presentation/guards/role-guard';
 
-@Controller('/cronograma/')
+@Controller('/cronograma')
 export class UbicacionesTemporalesParticipantesController {
   constructor(
     private readonly consultarUbicaciones: ConsultarUbicacionesTemporalesParticipantesUseCase,
   ) {}
 
-  @Get('/ubicaciones-temporales')
+  @Get(['/ubicaciones-temporales', '/participantes/ubicaciones-temporales'])
   @Header('Cache-Control', 'no-store')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
   @Roles(Rol.ADMINISTRATIVO)

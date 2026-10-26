@@ -3,6 +3,8 @@ import { PrismaService } from '../../../../../prisma/prisma.service';
 import { Cronograma } from '../../domain/entities/cronograma.entity';
 import { CronogramaRepository } from '../../domain/repositories/cronograma.repository';
 import { CronogramaMapper } from '../mappers/cronograma.mapper';
+import { CronogramaSinUnidadesTemporalesException } from '../../domain/exeption/cronograma/cronograma-sin-unidades-temporales.exeption';
+import { CronogramaSinContenidoProgramadoException } from '../../domain/exeption/cronograma/cronograma-sin-contenido-programado.exeption';
 
 @Injectable()
 export class PrismaCronogramaRepository implements CronogramaRepository {
@@ -10,13 +12,15 @@ export class PrismaCronogramaRepository implements CronogramaRepository {
 
   async obtenerCronogramas(): Promise<Cronograma[]> {
     const cronogramas = await this.prisma.cronogramas.findMany();
-    return cronogramas.map((cronograma) => CronogramaMapper.toDomain(cronograma));
+    return cronogramas.map((cronograma) =>
+      CronogramaMapper.toDomain(cronograma),
+    );
   }
 
   async save(cronograma: Cronograma): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await tx.cronogramas.create({
-        data: CronogramaMapper.toDomain(cronograma) as any,
+        data: CronogramaMapper.toDomain(cronograma),
       });
     });
   }
@@ -43,9 +47,24 @@ export class PrismaCronogramaRepository implements CronogramaRepository {
       orderBy: {
         fecha_activacion: 'desc',
       },
+      include: {
+        unidades_temporales: {
+          select: { _count: { select: { contenidos_cronograma: true } } },
+        },
+      },
     });
 
-    return cronograma ? CronogramaMapper.toDomain(cronograma) : null;
+    if (!cronograma) return null;
+    // Un base histórico o alterado fuera de la activación tampoco debe asignarse vacío.
+    if (cronograma.unidades_temporales.length === 0)
+      throw new CronogramaSinUnidadesTemporalesException();
+    if (
+      cronograma.unidades_temporales.every(
+        (unidad) => unidad._count.contenidos_cronograma === 0,
+      )
+    )
+      throw new CronogramaSinContenidoProgramadoException();
+    return CronogramaMapper.toDomain(cronograma);
   }
 
   async existeBaseConfigurado(): Promise<boolean> {
