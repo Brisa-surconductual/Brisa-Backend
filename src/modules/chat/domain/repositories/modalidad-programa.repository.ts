@@ -1,17 +1,17 @@
-import { EstadoCuenta } from '../../../usuarios/domain/enums/estado-cuenta';
-import { Rol } from '../../../usuarios/domain/enums/rol.enum';
-import { ModalidadConversacional } from '../enums/arbol-conversacional.enums';
-
-export interface AsignacionModalidadVigente {
-  readonly idUsuario: string;
-  readonly modalidad: ModalidadConversacional;
-  readonly rol: Rol;
-  readonly estadoCuenta: EstadoCuenta;
-  readonly perfilCompleto: boolean;
-}
+import { AsignacionModalidad } from '../entities/modalidad/asignacion-modalidad.entity';
+import { AsignacionModalidadVigente } from '../entities/modalidad/asignacion-modalidad-vigente';
 
 export abstract class ModalidadProgramaRepository {
   abstract listarAsignacionesVigentesPorPrograma(
     idPrograma: number,
   ): Promise<AsignacionModalidadVigente[]>;
+
+  /**
+   * Persiste las asignaciones de forma atomica. Una asignacion cerrada debe
+   * seguir vigente en el almacenamiento; si no lo esta, lanza
+   * TransicionConcurrenteException.
+   */
+  abstract guardarAsignaciones(
+    asignaciones: readonly AsignacionModalidad[],
+  ): Promise<void>;
 }

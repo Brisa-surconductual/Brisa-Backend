@@ -1,18 +1,21 @@
-import { HabilitarModalidadProgramaController } from "./habilitar-modalidad-programa.controller";
-import { ChatController } from './chat.controller';
-import { ChatAdminController } from './chat-admin.controller';
-import { ArbolPersonalizadoController } from './arbol-personalizado.controller';
-import { ContenidoVigenteChatController } from './contenido-vigente-chat.controller';
-import { SesionesConversacionalesController } from './sesiones-conversacionales.controller';
-
-import { ModalidadProgramaAdminController } from './modalidad-programa-admin.controller';
+import { ArbolesPersonalizadosController } from './controllers/arbol-personalizado/arboles-personalizados.controller';
+import { CatalogosChatController } from './controllers/catalogos/catalogos-chat.controller';
+import { ContenidoVigenteChatController } from './controllers/contenido-vigente/contenido-vigente-chat.controller';
+import { FlujosConversacionalesController } from './controllers/flujo/flujos-conversacionales.controller';
+import { ModalidadProgramaController } from './controllers/modalidad/modalidad-programa.controller';
+import { NodosConversacionalesController } from './controllers/nodo/nodos-conversacionales.controller';
+import { ReglasValidacionController } from './controllers/regla-validacion/reglas-validacion.controller';
+import { SesionesConversacionalesController } from './controllers/sesion/sesiones-conversacionales.controller';
+import { TransicionesConversacionalesController } from './controllers/transicion/transiciones-conversacionales.controller';
 
 export const ChatPresentationProviders = [
-  HabilitarModalidadProgramaController,
-  ModalidadProgramaAdminController,
-  ChatAdminController,
-  ChatController,
-  ArbolPersonalizadoController,
-  ContenidoVigenteChatController,
   SesionesConversacionalesController,
+  ModalidadProgramaController,
+  ContenidoVigenteChatController,
+  FlujosConversacionalesController,
+  NodosConversacionalesController,
+  TransicionesConversacionalesController,
+  ReglasValidacionController,
+  CatalogosChatController,
+  ArbolesPersonalizadosController,
 ];

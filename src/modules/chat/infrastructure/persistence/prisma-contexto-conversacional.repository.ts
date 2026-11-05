@@ -1,14 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../../prisma/prisma.service';
-import {
-  ModalidadConversacional,
-  TipoCravingClinico,
-  TipoDependenciaClinica,
-} from '../../domain/enums/arbol-conversacional.enums';
-import {
-  ContextoConversacionalRepository,
-  PerfilClinicoConversacional,
-} from '../../domain/repositories/contexto-conversacional.repository';
+import { PerfilClinicoConversacional } from '../../domain/entities/perfil-clinico/perfil-clinico-conversacional';
+import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
+import { ContextoConversacionalRepository } from '../../domain/repositories/contexto-conversacional.repository';
+import { PerfilClinicoConversacionalMapper } from '../mappers/perfil-clinico-conversacional.mapper';
 
 @Injectable()
 export class PrismaContextoConversacionalRepository implements ContextoConversacionalRepository {
@@ -47,18 +42,8 @@ export class PrismaContextoConversacionalRepository implements ContextoConversac
       },
     });
 
-    if (perfil === null) {
-      return null;
-    }
-
-    const tipoDependencia =
-      perfil.tipo_dependencia as TipoDependenciaClinica | null;
-    const tipoCraving = perfil.tipo_craving as TipoCravingClinico | null;
-
-    return {
-      tipoDependencia,
-      tipoCraving,
-      completo: tipoDependencia !== null && tipoCraving !== null,
-    };
+    return perfil === null
+      ? null
+      : PerfilClinicoConversacionalMapper.toDomain(perfil);
   }
 }

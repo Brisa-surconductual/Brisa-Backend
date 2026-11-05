@@ -1,46 +1,16 @@
-import {
-  ModalidadConversacional,
-  TipoCravingClinico,
-  TipoDependenciaClinica,
-} from '../enums/arbol-conversacional.enums';
-
-export type EstadoSesionConversacional = 'ACTIVA' | 'PAUSADA' | 'COMPLETADA';
-
-export interface SesionConversacional {
-  idSesion: string;
-  idUsuario: string;
-  idFlujoConversacional: string;
-  versionArbolUtilizada: number;
-  modalidadActiva: ModalidadConversacional;
-  tipoDependencia: TipoDependenciaClinica | null;
-  tipoCraving: TipoCravingClinico | null;
-  idNodoActual: string;
-  estadoActual: EstadoSesionConversacional;
-  fechaInicio: Date;
-  fechaUltimaInteraccion: Date;
-}
-
-export interface DatosNuevaSesionConversacional {
-  idUsuario: string;
-  idFlujoConversacional: string;
-  versionArbolUtilizada: number;
-  modalidadActiva: ModalidadConversacional;
-  tipoDependencia: TipoDependenciaClinica | null;
-  tipoCraving: TipoCravingClinico | null;
-  idNodoInicial: string;
-}
-
-export interface ResultadoInicioSesionConversacional {
-  sesion: SesionConversacional;
-  reanudada: boolean;
-}
+import { SesionConversacional } from '../entities/sesion/sesion-conversacional.entity';
 
 export abstract class SesionConversacionalRepository {
   abstract buscarUltimaReanudable(
     idUsuario: string,
   ): Promise<SesionConversacional | null>;
 
-  abstract iniciarOReanudar(
-    datos: DatosNuevaSesionConversacional,
-  ): Promise<ResultadoInicioSesionConversacional>;
+  /**
+   * Persiste la sesion. Si la sesion es nueva y el usuario ya tiene una
+   * sesion activa o pausada, lanza SesionActivaExistenteException.
+   *
+   * Una sesión en ERROR_CONFIGURACION no cuenta como activa: si el usuario ya
+   * tiene una, se actualiza esa misma en lugar de crear otra.
+   */
+  abstract guardar(sesion: SesionConversacional): Promise<void>;
 }

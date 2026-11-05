@@ -1,15 +1,14 @@
+import { ReglaValidacion } from '../../domain/entities/reglas-validacion/reglas-validacion.entity';
+import { TipoEntradaConversacional } from '../../domain/entities/catalogos/tipo-entrada.entity';
+import { EstadoFlujoConversacional } from '../../domain/enums/estado-flujo-conversacional.enum';
+import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
+import { OperadorCondicion } from '../../domain/enums/operador-condicional.enum';
 import {
-  ReglaValidacion,
-  TipoEntradaConversacional,
-} from '../../domain/entities/arbol-conversacional.entity';
-import {
-  EstadoFlujoConversacional,
-  ModalidadConversacional,
-  OperadorCondicion,
   TipoCravingClinico,
-  TipoDatoValidacion,
   TipoDependenciaClinica,
-} from '../../domain/enums/arbol-conversacional.enums';
+} from '../../domain/enums/perfil-clinico.enum';
+import { TipoDatoValidacion } from '../../domain/enums/tipo-dato-validacion-enum';
+import { TipoNodoConversacional } from '../../domain/entities/catalogos/tipo-nodo.entity';
 import {
   ArbolConversacionalDtoResponse,
   FlujoConversacionalDtoResponse,
@@ -18,8 +17,12 @@ import {
   TransicionConversacionalDtoResponse,
 } from './arbol-conversacional.dto-response';
 
-export interface RespuestaChatAdmin<T> {
-  data: T;
+export class RespuestaChatAdminDtoResponse<T> {
+  data!: T;
+
+  static de<T>(data: T): RespuestaChatAdminDtoResponse<T> {
+    return { data };
+  }
 }
 
 export class TransicionChatAdminDtoResponse {
@@ -33,7 +36,7 @@ export class TransicionChatAdminDtoResponse {
   orden_evaluacion!: number;
   fecha_creacion!: Date;
 
-  static crear(
+  static desde(
     transicion: TransicionConversacionalDtoResponse,
   ): TransicionChatAdminDtoResponse {
     return {
@@ -55,14 +58,14 @@ export class ArbolChatAdminDtoResponse {
   nodos!: NodoConversacionalDtoResponse[];
   transiciones!: TransicionChatAdminDtoResponse[];
 
-  static crear(
+  static desde(
     arbol: ArbolConversacionalDtoResponse,
   ): ArbolChatAdminDtoResponse {
     return {
       flujo: arbol.flujo,
       nodos: arbol.nodos,
       transiciones: arbol.transiciones.map((transicion) =>
-        TransicionChatAdminDtoResponse.crear(transicion),
+        TransicionChatAdminDtoResponse.desde(transicion),
       ),
     };
   }
@@ -113,4 +116,28 @@ export class CatalogosChatDtoResponse {
     tipo_dato: TipoDatoValidacion[];
     estado_flujo: EstadoFlujoConversacional[];
   };
+
+  static crear(
+    tiposNodo: TipoNodoConversacional[],
+    tiposEntrada: TipoEntradaConversacional[],
+    reglas: ReglaValidacion[],
+  ): CatalogosChatDtoResponse {
+    return {
+      tipos_nodo: tiposNodo.map((tipo) => TipoNodoDtoResponse.crear(tipo)),
+      tipos_entrada: tiposEntrada.map((tipo) =>
+        TipoEntradaDtoResponse.crear(tipo),
+      ),
+      reglas_validacion: reglas.map((regla) =>
+        ReglaValidacionDtoResponse.crear(regla),
+      ),
+      enums: {
+        modalidad: Object.values(ModalidadConversacional),
+        tipo_dependencia: Object.values(TipoDependenciaClinica),
+        tipo_craving: Object.values(TipoCravingClinico),
+        operador_condicion: Object.values(OperadorCondicion),
+        tipo_dato: Object.values(TipoDatoValidacion),
+        estado_flujo: Object.values(EstadoFlujoConversacional),
+      },
+    };
+  }
 }

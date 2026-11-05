@@ -1,79 +1,49 @@
-import { HabilitarModalidadPersonalizadaUseCase } from "./use-cases/habilitar-modalidad-personalizada.use-case";
-import { ConsultarMiContenidoVigenteUseCase } from './use-cases/consultar-mi-contenido-vigente.use-case';
-import { DeterminarContextoConversacionalUseCase } from './use-cases/determinar-contexto-conversacional.use-case';
-import {
-  ActualizarNodoConversacionalUseCase,
-  ActualizarTransicionConversacionalUseCase,
-  ConsultarArbolConversacionalUseCase,
-  CrearFlujoGrupalUseCase,
-  CrearNodoConversacionalUseCase,
-  CrearTransicionConversacionalUseCase,
-  ListarTiposNodoUseCase,
-  PublicarArbolConversacionalUseCase,
-  ValidarArbolConversacionalUseCase,
-} from './use-cases/gestionar-arbol-conversacional.use-cases';
-import {
-  ArchivarArbolPersonalizadoUseCase,
-  ClonarVersionPersonalizadaUseCase,
-  ConsultarArbolPersonalizadoUseCase,
-  ConsultarAuditoriaArbolUseCase,
-  ConsultarPublicadoPersonalizadoUseCase,
-  CrearArbolPersonalizadoUseCase,
-  ListarArbolesPersonalizadosUseCase,
-  PublicarArbolPersonalizadoUseCase,
-  RechazarEliminacionArbolPersonalizadoUseCase,
-} from './use-cases/gestionar-arbol-personalizado.use-cases';
-
-import {
-  ArchivarFlujoUseCase,
-  ClonarVersionFlujoUseCase,
-  ListarFlujosUseCase,
-  PublicarFlujoUseCase,
-} from './use-cases/gestionar-flujos.use-cases';
-import {
-  ActualizarNodoPorIdUseCase,
-  ActualizarTransicionPorIdUseCase,
-  ConsultarCatalogosChatUseCase,
-  CrearFlujoConversacionalUseCase,
-  CrearReglaValidacionUseCase,
-  CrearTransicionReutilizableUseCase,
-} from './use-cases/gestionar-chat-admin.use-cases';
-import { IniciarOReanudarSesionUseCase } from './use-cases/iniciar-o-reanudar-sesion.use-case';
-
-import { ConsultarElegibilidadModalidadUseCase } from "./use-cases/consultar-elegibilidad-modalidad.use-case";
+import { ActualizarNodoConversacionalUseCase } from './use-cases/arbol-conversacional/actualizar-nodo-conversacional.use-case';
+import { ActualizarTransicionConversacionalUseCase } from './use-cases/arbol-conversacional/actualizar-transicion-conversacional.use-case';
+import { ArchivarFlujoUseCase } from './use-cases/arbol-conversacional/archivar-flujo.use-case';
+import { ClonarVersionFlujoUseCase } from './use-cases/arbol-conversacional/clonar-version-flujo.use-case';
+import { ConsultarArbolConversacionalUseCase } from './use-cases/arbol-conversacional/consultar-arbol-conversacional.use-case';
+import { ConsultarCatalogosChatUseCase } from './use-cases/arbol-conversacional/consultar-catalogos-chat.use-case';
+import { CrearFlujoConversacionalUseCase } from './use-cases/arbol-conversacional/crear-flujo-conversacional.use-case';
+import { CrearNodoConversacionalUseCase } from './use-cases/arbol-conversacional/crear-nodo-conversacional.use-case';
+import { CrearReglaValidacionUseCase } from './use-cases/arbol-conversacional/crear-regla-validacion.use-case';
+import { CrearTransicionConversacionalUseCase } from './use-cases/arbol-conversacional/crear-transicion-conversacional.use-case';
+import { ListarFlujosUseCase } from './use-cases/arbol-conversacional/listar-flujos.use-case';
+import { ListarTiposNodoUseCase } from './use-cases/arbol-conversacional/listar-tipos-nodo.use-case';
+import { PublicarFlujoUseCase } from './use-cases/arbol-conversacional/publicar-flujo.use-case';
+import { ValidarArbolConversacionalUseCase } from './use-cases/arbol-conversacional/validar-arbol-conversacional.use-case';
+import { ConsultarAuditoriaArbolUseCase } from './use-cases/arbol-personalizado/consultar-auditoria-arbol.use-case';
+import { ConsultarPublicadoPersonalizadoUseCase } from './use-cases/arbol-personalizado/consultar-publicado-personalizado.use-case';
+import { ListarArbolesPersonalizadosUseCase } from './use-cases/arbol-personalizado/listar-arboles-personalizados.use-case';
+import { RechazarEliminacionArbolPersonalizadoUseCase } from './use-cases/arbol-personalizado/rechazar-eliminacion-arbol-personalizado.use-case';
+import { ConsultarMiContenidoVigenteUseCase } from './use-cases/contenido-vigente/consultar-mi-contenido-vigente.use-case';
+import { ConsultarElegibilidadModalidadUseCase } from './use-cases/modalidad/consultar-elegibilidad-modalidad.use-case';
+import { HabilitarModalidadPersonalizadaUseCase } from './use-cases/modalidad/habilitar-modalidad-personalizada.use-case';
+import { DeterminarContextoConversacionalUseCase } from './use-cases/sesion/determinar-contexto-conversacional.use-case';
+import { IniciarOReanudarSesionUseCase } from './use-cases/sesion/iniciar-o-reanudar-sesion.use-case';
 
 export const ChatApplicationProviders = [
-  HabilitarModalidadPersonalizadaUseCase,
+  IniciarOReanudarSesionUseCase,
+  DeterminarContextoConversacionalUseCase,
   ConsultarElegibilidadModalidadUseCase,
+  HabilitarModalidadPersonalizadaUseCase,
+  CrearFlujoConversacionalUseCase,
+  ListarFlujosUseCase,
+  ConsultarArbolConversacionalUseCase,
+  ValidarArbolConversacionalUseCase,
+  PublicarFlujoUseCase,
   ArchivarFlujoUseCase,
   ClonarVersionFlujoUseCase,
-  ListarFlujosUseCase,
-  PublicarFlujoUseCase,
-  ActualizarNodoPorIdUseCase,
-  ActualizarTransicionPorIdUseCase,
-  ConsultarCatalogosChatUseCase,
-  CrearFlujoConversacionalUseCase,
-  CrearReglaValidacionUseCase,
-  CrearTransicionReutilizableUseCase,
-  ConsultarMiContenidoVigenteUseCase,
-  DeterminarContextoConversacionalUseCase,
-  IniciarOReanudarSesionUseCase,
-  CrearFlujoGrupalUseCase,
-  ListarTiposNodoUseCase,
-  ConsultarArbolConversacionalUseCase,
   CrearNodoConversacionalUseCase,
   ActualizarNodoConversacionalUseCase,
   CrearTransicionConversacionalUseCase,
   ActualizarTransicionConversacionalUseCase,
-  ValidarArbolConversacionalUseCase,
-  PublicarArbolConversacionalUseCase,
-  CrearArbolPersonalizadoUseCase,
-  ClonarVersionPersonalizadaUseCase,
+  CrearReglaValidacionUseCase,
+  ConsultarCatalogosChatUseCase,
+  ListarTiposNodoUseCase,
   ListarArbolesPersonalizadosUseCase,
-  ConsultarArbolPersonalizadoUseCase,
   ConsultarPublicadoPersonalizadoUseCase,
-  PublicarArbolPersonalizadoUseCase,
-  ArchivarArbolPersonalizadoUseCase,
   ConsultarAuditoriaArbolUseCase,
   RechazarEliminacionArbolPersonalizadoUseCase,
+  ConsultarMiContenidoVigenteUseCase,
 ];

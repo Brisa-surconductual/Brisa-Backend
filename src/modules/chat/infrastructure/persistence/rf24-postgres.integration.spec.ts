@@ -1,8 +1,8 @@
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { CalcularUbicacionTemporalUsuarioUseCase } from '../../../cronograma/application/use-cases/cronograma/calcular-ubicacion-temporal-usuario.use-case';
 import { PrismaUbicacionTemporalUsuarioRepository } from '../../../cronograma/infrastructure/persistence/prisma-ubicacion-temporal-usuario.repository';
-import { DeterminarContextoConversacionalUseCase } from '../../application/use-cases/determinar-contexto-conversacional.use-case';
-import { IniciarOReanudarSesionUseCase } from '../../application/use-cases/iniciar-o-reanudar-sesion.use-case';
+import { DeterminarContextoConversacionalUseCase } from '../../application/use-cases/sesion/determinar-contexto-conversacional.use-case';
+import { IniciarOReanudarSesionUseCase } from '../../application/use-cases/sesion/iniciar-o-reanudar-sesion.use-case';
 import { PrismaArbolConversacionalRepository } from './prisma-arbol-conversacional.repository';
 import { PrismaAsignacionCronogramaChatRepository } from './prisma-asignacion-cronograma-chat.repository';
 import { PrismaContextoConversacionalRepository } from './prisma-contexto-conversacional.repository';

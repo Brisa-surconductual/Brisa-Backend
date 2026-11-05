@@ -1,14 +1,5 @@
-import {
-  ModalidadConversacional,
-  TipoCravingClinico,
-  TipoDependenciaClinica,
-} from '../enums/arbol-conversacional.enums';
-
-export interface PerfilClinicoConversacional {
-  tipoDependencia: TipoDependenciaClinica | null;
-  tipoCraving: TipoCravingClinico | null;
-  completo: boolean;
-}
+import { PerfilClinicoConversacional } from '../entities/perfil-clinico/perfil-clinico-conversacional';
+import { ModalidadConversacional } from '../enums/modalidad-conversacional-enum';
 
 export abstract class ContextoConversacionalRepository {
   abstract obtenerModalidadVigente(
