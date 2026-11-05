@@ -1,9 +1,10 @@
-import { AuditoriaArbolConversacional } from '../../domain/entities/arbol-conversacional.entity';
+import { AuditoriaArbolConversacional } from '../../domain/entities/catalogos/auditoria-arbol-conversacional.entity';
+import { FlujoConversacional } from '../../domain/entities/flujo/flujo-conversacional.entity';
+import { EstadoFlujoConversacional } from '../../domain/enums/estado-flujo-conversacional.enum';
 import {
-  EstadoFlujoConversacional,
   TipoCravingClinico,
   TipoDependenciaClinica,
-} from '../../domain/enums/arbol-conversacional.enums';
+} from '../../domain/enums/perfil-clinico.enum';
 import { FlujoConversacionalDtoResponse } from './arbol-conversacional.dto-response';
 
 export class PerfilArbolDtoResponse {
@@ -15,6 +16,36 @@ export class PerfilArbolDtoResponse {
 
 export class HistorialArbolesPersonalizadosDtoResponse {
   combinaciones!: PerfilArbolDtoResponse[];
+
+  /** Siempre entrega las cuatro combinaciones de perfil, con su historial. */
+  static crear(
+    flujos: FlujoConversacional[],
+  ): HistorialArbolesPersonalizadosDtoResponse {
+    return {
+      combinaciones: Object.values(TipoDependenciaClinica).flatMap(
+        (tipoDependencia) =>
+          Object.values(TipoCravingClinico).map((tipoCraving) => {
+            const versiones = flujos
+              .filter(
+                (flujo) =>
+                  flujo.tipoDependencia === tipoDependencia &&
+                  flujo.tipoCraving === tipoCraving,
+              )
+              .map((flujo) => FlujoConversacionalDtoResponse.crear(flujo));
+            return {
+              tipo_dependencia: tipoDependencia,
+              tipo_craving: tipoCraving,
+              publicado:
+                versiones.find(
+                  (flujo) =>
+                    flujo.estado === EstadoFlujoConversacional.PUBLICADO,
+                ) ?? null,
+              versiones,
+            };
+          }),
+      ),
+    };
+  }
 }
 
 export class AuditoriaArbolDtoResponse {
@@ -38,9 +69,3 @@ export class AuditoriaArbolDtoResponse {
     };
   }
 }
-
-export const ESTADOS_ARBOL_PERSONALIZADO = [
-  EstadoFlujoConversacional.BORRADOR,
-  EstadoFlujoConversacional.PUBLICADO,
-  EstadoFlujoConversacional.ARCHIVADO,
-] as const;

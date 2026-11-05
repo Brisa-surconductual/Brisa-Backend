@@ -1,0 +1,43 @@
+name: Deploy Prisma Migrations to Main
+
+# Esto dispara el workflow cada vez que hay un push (o merge) a la rama main
+on:
+  push:
+    branches:
+      - master
+  # Opcional: Permite ejecutarlo manualmente desde la pestaña Actions de GitHub si algo falla
+  workflow_dispatch:
+
+jobs:
+  deploy-migrations:
+    name: Run Prisma Migrations
+    runs-on: ubuntu-latest
+
+    # Variables de entorno globales para este job
+    env:
+      # La URL de la base de datos se obtendrá de los Secretos de GitHub
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      # 1. Descargar el código del repositorio
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Configurar Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Cambia esto si usas otra versión de Node
+          cache: 'npm'       # Cambia a 'yarn' o 'pnpm' si usas otro gestor
+
+      # 3. Instalar dependencias (usamos 'ci' para que sea más rápido y exacto)
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Generar el cliente de Prisma (Recomendado antes de migrar)
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      # 5. Ejecutar las migraciones en la base de datos
+      - name: Apply database migrations
+        run: npx prisma migrate deploy

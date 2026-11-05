@@ -1,16 +1,12 @@
-import {
-  ArbolConversacional,
-  FlujoConversacional,
-  NodoConversacional,
-  ReglaValidacion,
-  TransicionConversacional,
-} from '../../../src/modules/chat/domain/entities/arbol-conversacional.entity';
-import {
-  EstadoFlujoConversacional,
-  ModalidadConversacional,
-  OperadorCondicion,
-  TipoDatoValidacion,
-} from '../../../src/modules/chat/domain/enums/arbol-conversacional.enums';
+import { ArbolConversacional } from '../../../src/modules/chat/domain/entities/flujo/arbol-conversacional.entity';
+import { FlujoConversacional } from '../../../src/modules/chat/domain/entities/flujo/flujo-conversacional.entity';
+import { NodoConversacional } from '../../../src/modules/chat/domain/entities/flujo/nodo-conversacional.entity';
+import { ReglaValidacion } from '../../../src/modules/chat/domain/entities/reglas-validacion/reglas-validacion.entity';
+import { TransicionConversacional } from '../../../src/modules/chat/domain/entities/flujo/transicion-conversacional.entity';
+import { EstadoFlujoConversacional } from '../../../src/modules/chat/domain/enums/estado-flujo-conversacional.enum';
+import { ModalidadConversacional } from '../../../src/modules/chat/domain/enums/modalidad-conversacional-enum';
+import { OperadorCondicion } from '../../../src/modules/chat/domain/enums/operador-condicional.enum';
+import { TipoDatoValidacion } from '../../../src/modules/chat/domain/enums/tipo-dato-validacion-enum';
 
 export const ids = {
   flujo: '00000000-0000-4000-8000-000000000001',

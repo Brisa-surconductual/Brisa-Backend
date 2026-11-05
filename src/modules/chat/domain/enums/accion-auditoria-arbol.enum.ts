@@ -1,0 +1,12 @@
+/** Operaciones sobre el árbol conversacional que se registran para auditoría. */
+export enum AccionAuditoriaArbol {
+  CREAR_FLUJO = 'CREAR_FLUJO',
+  CLONAR_VERSION = 'CLONAR_VERSION',
+  CREAR_NODO = 'CREAR_NODO',
+  EDITAR_NODO = 'EDITAR_NODO',
+  CREAR_TRANSICION = 'CREAR_TRANSICION',
+  EDITAR_TRANSICION = 'EDITAR_TRANSICION',
+  PUBLICAR = 'PUBLICAR',
+  ARCHIVAR = 'ARCHIVAR',
+  CREAR_REGLA_VALIDACION = 'CREAR_REGLA_VALIDACION',
+}

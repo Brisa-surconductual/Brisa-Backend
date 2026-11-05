@@ -1,19 +1,19 @@
 import {
   ArbolConversacional,
-  FlujoConversacional,
-  NodoConversacional,
   ResultadoValidacionArbol,
-  TipoNodoConversacional,
-  TransicionConversacional,
-} from '../../domain/entities/arbol-conversacional.entity';
+} from '../../domain/entities/flujo/arbol-conversacional.entity';
+import { FlujoConversacional } from '../../domain/entities/flujo/flujo-conversacional.entity';
+import { NodoConversacional } from '../../domain/entities/flujo/nodo-conversacional.entity';
+import { TipoNodoConversacional } from '../../domain/entities/catalogos/tipo-nodo.entity';
+import { TransicionConversacional } from '../../domain/entities/flujo/transicion-conversacional.entity';
+import { EstadoFlujoConversacional } from '../../domain/enums/estado-flujo-conversacional.enum';
+import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
+import { OperadorCondicion } from '../../domain/enums/operador-condicional.enum';
 import {
-  EstadoFlujoConversacional,
-  ModalidadConversacional,
-  OperadorCondicion,
   TipoCravingClinico,
-  TipoDatoValidacion,
   TipoDependenciaClinica,
-} from '../../domain/enums/arbol-conversacional.enums';
+} from '../../domain/enums/perfil-clinico.enum';
+import { TipoDatoValidacion } from '../../domain/enums/tipo-dato-validacion-enum';
 
 export class FlujoConversacionalDtoResponse {
   id_flujo!: string;

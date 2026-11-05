@@ -575,20 +575,20 @@ model respuestas {
 model chat_sesiones {
   id_sesion                String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_usuario               String                     @db.Uuid
-  id_flujo_conversacional  String                     @db.Uuid
-  version_arbol_utilizada  Int
+  id_flujo_conversacional  String?                    @db.Uuid
+  version_arbol_utilizada  Int?
   modalidad_activa         modalidad_enum
   tipo_dependencia         tipo_dependencia_enum?
   tipo_craving             tipo_craving_enum?
-  id_nodo_actual           String                     @db.Uuid
+  id_nodo_actual           String?                    @db.Uuid
   fecha_inicio             DateTime                   @default(now()) @db.Timestamptz(6)
   fecha_ultima_interaccion DateTime                   @default(now()) @db.Timestamptz(6)
   estado_sincronizacion    estado_sincronizacion_enum @default(SINCRONIZADO)
   estado_sesiones          estado_sesiones?
   historial_nodos          historial_nodos[]
   interacciones            interacciones[]
-  flujo_conversacion       flujo_conversacion         @relation(fields: [id_flujo_conversacional], references: [id_flujo], onUpdate: NoAction, map: "fk_sesion_flujo")
-  nodos                    nodos                      @relation(fields: [id_nodo_actual], references: [id_nodo], onUpdate: NoAction, map: "fk_sesion_nodo_actual")
+  flujo_conversacion       flujo_conversacion?        @relation(fields: [id_flujo_conversacional], references: [id_flujo], onUpdate: NoAction, map: "fk_sesion_flujo")
+  nodos                    nodos?                     @relation(fields: [id_nodo_actual], references: [id_nodo], onUpdate: NoAction, map: "fk_sesion_nodo_actual")
   usuarios                 usuarios                   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_sesion_usuario")
   sincronizaciones         sincronizaciones[]
 
@@ -811,6 +811,7 @@ enum estado_sesion_enum {
   ACTIVA
   PAUSADA
   COMPLETADA
+  ERROR_CONFIGURACION
 
   @@schema("chat")
 }

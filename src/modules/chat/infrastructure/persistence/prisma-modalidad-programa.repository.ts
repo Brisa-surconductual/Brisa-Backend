@@ -1,16 +1,17 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
+import { AsignacionModalidad } from '../../domain/entities/modalidad/asignacion-modalidad.entity';
+import { AsignacionModalidadVigente } from '../../domain/entities/modalidad/asignacion-modalidad-vigente';
+import { TransicionConcurrenteException } from '../../domain/exceptions';
+import { ModalidadProgramaRepository } from '../../domain/repositories/modalidad-programa.repository';
 import {
-  AsignacionModalidadVigente,
-  ModalidadProgramaRepository,
-} from '../../domain/repositories/modalidad-programa.repository';
-import { ModalidadConversacional } from '../../domain/enums/arbol-conversacional.enums';
-import { Rol } from '../../../usuarios/domain/enums/rol.enum';
-import { EstadoCuenta } from '../../../usuarios/domain/enums/estado-cuenta';
+  ASIGNACION_VIGENTE_SELECT,
+  AsignacionModalidadMapper,
+} from '../mappers/asignacion-modalidad.mapper';
 
 @Injectable()
-export class PrismaModalidadProgramaRepository
-  extends ModalidadProgramaRepository {
+export class PrismaModalidadProgramaRepository extends ModalidadProgramaRepository {
   constructor(private readonly prisma: PrismaService) {
     super();
   }
@@ -23,34 +24,69 @@ export class PrismaModalidadProgramaRepository
         id_programa: idPrograma,
         fecha_vigencia_hasta: null,
       },
-      select: {
-        id_usuario: true,
-        modalidad: true,
-        usuarios_tipo_terapia_id_usuarioTousuarios: {
-          select: {
-            rol: true,
-            estado_cuenta: true,
-            perfil_clinico: {
-              select: {
-                perfil_completo: true,
-              },
-            },
+      select: ASIGNACION_VIGENTE_SELECT,
+    });
+
+    return asignaciones.map((fila) => AsignacionModalidadMapper.toDomain(fila));
+  }
+
+  async guardarAsignaciones(
+    asignaciones: readonly AsignacionModalidad[],
+  ): Promise<void> {
+    const maximoIntentos = 3;
+
+    for (let intento = 1; intento <= maximoIntentos; intento += 1) {
+      try {
+        await this.prisma.$transaction(
+          async (tx) => {
+            for (const asignacion of asignaciones.filter((a) => !a.vigente)) {
+              const cierre = await tx.tipo_terapia.updateMany({
+                where: {
+                  id_tipo_terapia: asignacion.idAsignacion,
+                  fecha_vigencia_hasta: null,
+                },
+                data: { fecha_vigencia_hasta: asignacion.fechaVigenciaHasta },
+              });
+
+              if (cierre.count !== 1) {
+                throw new TransicionConcurrenteException();
+              }
+            }
+
+            const nuevas = asignaciones.filter((a) => a.vigente);
+
+            if (nuevas.length > 0) {
+              await tx.tipo_terapia.createMany({
+                data: nuevas.map((asignacion) =>
+                  AsignacionModalidadMapper.toCreateData(asignacion),
+                ),
+              });
+            }
           },
-        },
-      },
-    });
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
 
-    return asignaciones.map((asignacion) => {
-      const usuario =
-        asignacion.usuarios_tipo_terapia_id_usuarioTousuarios;
+        return;
+      } catch (error: unknown) {
+        if (this.esConflictoDeUnicidad(error)) {
+          throw new TransicionConcurrenteException();
+        }
 
-      return {
-        idUsuario: asignacion.id_usuario,
-        modalidad: asignacion.modalidad as ModalidadConversacional,
-        rol: usuario.rol as Rol,
-        estadoCuenta: usuario.estado_cuenta as EstadoCuenta,
-        perfilCompleto: usuario.perfil_clinico?.perfil_completo === true,
-      };
-    });
+        const conflictoSerializable =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2034';
+
+        if (!conflictoSerializable || intento === maximoIntentos) {
+          throw error;
+        }
+      }
+    }
+  }
+
+  private esConflictoDeUnicidad(error: unknown): boolean {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    );
   }
 }

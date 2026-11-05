@@ -1,4 +1,3 @@
-
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { PrismaSesionConversacionalRepository } from './prisma-sesion-conversacional.repository';
 

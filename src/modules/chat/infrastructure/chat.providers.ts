@@ -1,9 +1,7 @@
-import { TransicionModalidadProgramaRepository } from "../domain/repositories/transicion-modalidad-programa.repository";
-import { PrismaTransicionModalidadProgramaRepository } from "./persistence/prisma-transicion-modalidad-programa.repository";
-import { ContenidoVigenteChatPort } from '../application/ports/contenido-vigente-chat.port';
+import { ContenidoVigenteChatRepository } from '../domain/repositories/contenido-vigente-chat.repository';
 import { ArbolConversacionalRepository } from '../domain/repositories/arbol-conversacional.repository';
 import { ContextoConversacionalRepository } from '../domain/repositories/contexto-conversacional.repository';
-import { CronogramaContenidoVigenteAdapter } from './integration/cronograma-contenido-vigente.adapter';
+import { CronogramaContenidoVigenteChatRepository } from './persistence/cronograma-contenido-vigente-chat.repository';
 import { PrismaArbolConversacionalRepository } from './persistence/prisma-arbol-conversacional.repository';
 import { PrismaContextoConversacionalRepository } from './persistence/prisma-contexto-conversacional.repository';
 import { AsignacionCronogramaChatRepository } from '../domain/repositories/asignacion-cronograma-chat.repository';
@@ -11,18 +9,17 @@ import { SesionConversacionalRepository } from '../domain/repositories/sesion-co
 import { PrismaAsignacionCronogramaChatRepository } from './persistence/prisma-asignacion-cronograma-chat.repository';
 import { PrismaSesionConversacionalRepository } from './persistence/prisma-sesion-conversacional.repository';
 
-import { ModalidadProgramaRepository } from "../domain/repositories/modalidad-programa.repository";
-import { PrismaModalidadProgramaRepository } from "./persistence/prisma-modalidad-programa.repository";
+import { ModalidadProgramaRepository } from '../domain/repositories/modalidad-programa.repository';
+import { PrismaModalidadProgramaRepository } from './persistence/prisma-modalidad-programa.repository';
 
 export const ChatInfrastructureProviders = [
-  { provide: TransicionModalidadProgramaRepository, useClass: PrismaTransicionModalidadProgramaRepository },
   {
     provide: ModalidadProgramaRepository,
     useClass: PrismaModalidadProgramaRepository,
   },
   {
-    provide: ContenidoVigenteChatPort,
-    useClass: CronogramaContenidoVigenteAdapter,
+    provide: ContenidoVigenteChatRepository,
+    useClass: CronogramaContenidoVigenteChatRepository,
   },
   {
     provide: ArbolConversacionalRepository,
