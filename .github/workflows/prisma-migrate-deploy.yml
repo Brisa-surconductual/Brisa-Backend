@@ -13,6 +13,8 @@ jobs:
     name: Run Prisma Migrations
     runs-on: ubuntu-latest
 
+    environment: test
+
     # Variables de entorno globales para este job
     env:
       # La URL de la base de datos se obtendrá de los Secretos de GitHub
