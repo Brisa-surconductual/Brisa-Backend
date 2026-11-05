@@ -15,22 +15,16 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ChatModule } from '../../src/modules/chat/chat.module';
+import { TipoEntradaConversacional } from '../../src/modules/chat/domain/entities/catalogos/tipo-entrada.entity';
+import { TipoNodoConversacional } from '../../src/modules/chat/domain/entities/catalogos/tipo-nodo.entity';
+import { ArbolConversacional } from '../../src/modules/chat/domain/entities/flujo/arbol-conversacional.entity';
+import { FlujoConversacional } from '../../src/modules/chat/domain/entities/flujo/flujo-conversacional.entity';
+import { EstadoFlujoConversacional } from '../../src/modules/chat/domain/enums/estado-flujo-conversacional.enum';
+import { ModalidadConversacional } from '../../src/modules/chat/domain/enums/modalidad-conversacional-enum';
 import {
-  ReglaValidacion,
-  TipoEntradaConversacional,
-  TipoNodoConversacional,
-} from '../../src/modules/chat/domain/entities/arbol-conversacional.entity';
-import {
-  EstadoFlujoConversacional,
-  TipoDatoValidacion,
-} from '../../src/modules/chat/domain/enums/arbol-conversacional.enums';
-import {
-  EstadoFlujoInvalidoException,
-  FlujoConversacionalNoEncontradoException,
-  GrafoInvalidoException,
-  NodoFueraDeFlujoException,
-  PublicadoPorPerfilExistenteException,
-} from '../../src/modules/chat/domain/exeption/arbol-conversacional.exceptions';
+  TipoCravingClinico,
+  TipoDependenciaClinica,
+} from '../../src/modules/chat/domain/enums/perfil-clinico.enum';
 import { ArbolConversacionalRepository } from '../../src/modules/chat/domain/repositories/arbol-conversacional.repository';
 import { S3_CLIENT } from '../../src/modules/cronograma/infrastructure/storage/s3-client.provider';
 import { EmailService } from '../../src/modules/usuarios/application/ports/email';
@@ -55,32 +49,35 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     createHash('sha256').update(valor).digest('hex');
   const arbol = arbolDominio();
   const repo = {
+    obtenerFlujo: jest.fn(),
+    obtenerArbol: jest.fn(),
+    buscarNodo: jest.fn(),
+    buscarTransicion: jest.fn(),
+    buscarReglaValidacion: jest.fn(),
+    buscarTipoNodo: jest.fn(),
     listarFlujos: jest.fn(),
-    clonarVersion: jest.fn(),
-    publicarAdministrativo: jest.fn(),
-    archivarAdministrativo: jest.fn(),
-    crearFlujoGrupal: jest.fn(),
-    crearFlujoPersonalizado: jest.fn(),
-    clonarVersionPersonalizada: jest.fn(),
     listarFlujosPersonalizados: jest.fn(),
     buscarPublicadoGrupal: jest.fn(),
     buscarPublicadoPersonalizado: jest.fn(),
+    obtenerUltimaVersionPersonalizada: jest.fn(),
+    contarUsosReglaValidacion: jest.fn(),
     listarAuditoriaArbol: jest.fn(),
-    publicarPersonalizado: jest.fn(),
-    archivarPersonalizado: jest.fn(),
-    obtenerArbol: jest.fn(),
     listarTiposNodo: jest.fn(),
     listarTiposEntrada: jest.fn(),
     listarReglasValidacion: jest.fn(),
-    buscarNodo: jest.fn(),
-    buscarTransicion: jest.fn(),
-    crearReglaValidacion: jest.fn(),
-    crearNodo: jest.fn(),
-    actualizarNodo: jest.fn(),
-    crearTransicion: jest.fn(),
-    actualizarTransicion: jest.fn(),
-    publicar: jest.fn(),
+    guardarFlujo: jest.fn(),
+    guardarFlujos: jest.fn(),
+    guardarArbolClonado: jest.fn(),
+    guardarNodo: jest.fn(),
+    guardarTransicion: jest.fn(),
+    guardarReglaValidacion: jest.fn(),
   } satisfies jest.Mocked<ArbolConversacionalRepository>;
+  const arbolPublicado = () =>
+    new ArbolConversacional(
+      arbol.flujo.publicar(fecha),
+      arbol.nodos,
+      arbol.transiciones,
+    );
   const bodyFlujo = { nombre: 'Inicio', modalidad: 'GRUPAL' };
   const bodyNodo = { id_tipo_nodo: ids.tipo, contenido: { texto: 'Inicio' } };
   const bodyTransicion = {
@@ -101,6 +98,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     { metodo: 'post', ruta: `/flujos/${ids.flujo}/clonar-version` },
     { metodo: 'post', ruta: `/flujos/${ids.flujo}/publicar` },
     { metodo: 'post', ruta: `/flujos/${ids.flujo}/archivar` },
+    { metodo: 'post', ruta: `/flujos/${ids.flujo}/validar` },
     { metodo: 'post', ruta: '/flujos', cuerpo: bodyFlujo },
     { metodo: 'get', ruta: `/flujos/${ids.flujo}` },
     { metodo: 'post', ruta: `/flujos/${ids.flujo}/nodos`, cuerpo: bodyNodo },
@@ -208,31 +206,22 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     repo.listarFlujos.mockResolvedValue({ items: [arbol.flujo], total: 1 });
-    repo.clonarVersion.mockResolvedValue({
-      flujo: { ...arbol.flujo, idFlujo: ids.otroFlujo, version: 2 },
-      idFlujoOrigen: ids.flujo,
-      nodosCopiados: 2,
-      transicionesCopiadas: 1,
-    });
-    repo.publicarAdministrativo.mockResolvedValue({
-      ...arbol.flujo,
-      estado: EstadoFlujoConversacional.PUBLICADO,
-      fechaPublicacion: fecha,
-    });
-    repo.archivarAdministrativo.mockResolvedValue({
-      ...arbol.flujo,
-      estado: EstadoFlujoConversacional.ARCHIVADO,
-      fechaArchivado: fecha,
-    });
-    repo.crearFlujoGrupal.mockResolvedValue(arbol.flujo);
-    repo.crearFlujoPersonalizado.mockResolvedValue(arbol.flujo);
+    repo.obtenerFlujo.mockResolvedValue(arbol.flujo);
     repo.obtenerArbol.mockResolvedValue(arbol);
-    repo.crearNodo.mockResolvedValue(arbol.nodos[1]);
-    repo.actualizarNodo.mockResolvedValue(arbol.nodos[0]);
-    repo.buscarNodo.mockResolvedValue(arbol.nodos[0]);
+    repo.buscarNodo.mockImplementation((id) =>
+      Promise.resolve(arbol.nodos.find((nodo) => nodo.idNodo === id) ?? null),
+    );
     repo.buscarTransicion.mockResolvedValue(arbol.transiciones[0]);
-    repo.crearTransicion.mockResolvedValue(arbol.transiciones[0]);
-    repo.actualizarTransicion.mockResolvedValue(arbol.transiciones[0]);
+    repo.buscarReglaValidacion.mockResolvedValue(
+      arbol.transiciones[0].reglaValidacion,
+    );
+    repo.buscarTipoNodo.mockResolvedValue(
+      new TipoNodoConversacional(ids.tipo, 'MENSAJE'),
+    );
+    repo.buscarPublicadoGrupal.mockResolvedValue(null);
+    repo.buscarPublicadoPersonalizado.mockResolvedValue(null);
+    repo.obtenerUltimaVersionPersonalizada.mockResolvedValue(0);
+    repo.contarUsosReglaValidacion.mockResolvedValue(1);
     repo.listarTiposNodo.mockResolvedValue([
       new TipoNodoConversacional(ids.tipo, 'MENSAJE'),
     ]);
@@ -242,9 +231,6 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     repo.listarReglasValidacion.mockResolvedValue([
       arbol.transiciones[0].reglaValidacion,
     ]);
-    repo.crearReglaValidacion.mockResolvedValue(
-      arbol.transiciones[0].reglaValidacion,
-    );
   });
 
   afterAll(async () => {
@@ -308,17 +294,20 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       .expect(201);
     expect(respuesta.body).toMatchObject({
       data: {
-        id_flujo: ids.flujo,
+        id_flujo: expect.any(String),
         estado: 'BORRADOR',
         version: 1,
         creado_por: ids.actor,
       },
     });
-    expect(repo.crearFlujoGrupal).toHaveBeenCalledWith({
-      nombre: 'Inicio',
-      version: 1,
-      creadoPor: ids.actor,
-    });
+    expect(repo.guardarFlujo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nombre: 'Inicio',
+        version: 1,
+        creadoPor: ids.actor,
+      }),
+      ids.actor,
+    );
   });
 
   it.each([
@@ -352,7 +341,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     '03-A rechaza campos inválidos o un perfil incoherente: %j',
     async (cuerpo) => {
       await admin('post', '/flujos').send(cuerpo).expect(400);
-      expect(repo.crearFlujoGrupal).not.toHaveBeenCalled();
+      expect(repo.guardarFlujo).not.toHaveBeenCalled();
     },
   );
 
@@ -365,12 +354,16 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
         tipo_craving: 'NEGATIVO',
       })
       .expect(201);
-    expect(repo.crearFlujoPersonalizado).toHaveBeenCalledWith({
-      nombre: 'Personalizado',
-      tipoDependencia: 'TOLERANCIA',
-      tipoCraving: 'NEGATIVO',
-      creadoPor: ids.actor,
-    });
+    expect(repo.guardarFlujo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nombre: 'Personalizado',
+        tipoDependencia: 'TOLERANCIA',
+        tipoCraving: 'NEGATIVO',
+        version: 1,
+        creadoPor: ids.actor,
+      }),
+      ids.actor,
+    );
   });
 
   it('03-B conserva la estructura completa y las fechas de ciclo de vida', async () => {
@@ -402,19 +395,20 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       .expect(201);
     expect(respuesta.body).toMatchObject({
       data: {
-        id_nodo: ids.destino,
+        id_nodo: expect.any(String),
         id_flujo: ids.flujo,
         id_tipo_nodo: ids.tipo,
         es_nodo_inicial: false,
       },
     });
-    expect(repo.crearNodo).toHaveBeenCalledWith(
+    expect(repo.guardarNodo).toHaveBeenCalledWith(
       expect.objectContaining({
         esNodoInicial: false,
         orden: null,
         idContenidoCronograma: null,
         creadoPor: ids.actor,
       }),
+      ids.actor,
     );
   });
 
@@ -424,7 +418,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       await admin('patch', `/nodos/${ids.origen}`)
         .send({ [campo]: null })
         .expect(400);
-      expect(repo.actualizarNodo).not.toHaveBeenCalled();
+      expect(repo.guardarNodo).not.toHaveBeenCalled();
     },
   );
 
@@ -433,14 +427,15 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       .send({ orden: null, id_contenido_cronograma: null })
       .expect(200);
     expect(respuesta.body).toHaveProperty('data.fecha_actualizacion');
-    expect(repo.actualizarNodo).toHaveBeenCalledWith(
+    expect(repo.guardarNodo).toHaveBeenCalledWith(
       expect.objectContaining({
         idFlujo: ids.flujo,
         idNodo: ids.origen,
         orden: null,
         idContenidoCronograma: null,
-        contenido: undefined,
+        contenido: { texto: 'Mensaje' },
       }),
+      ids.actor,
     );
   });
 
@@ -454,7 +449,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       .expect(201);
     expect(respuesta.body).toMatchObject({
       data: {
-        id_regla: ids.transicion,
+        id_regla: expect.any(String),
         id_flujo: ids.flujo,
         id_regla_validacion: ids.validacion,
         valor_condicion: bodyTransicion.valor_condicion,
@@ -462,11 +457,14 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     });
     expect(respuesta.body).not.toHaveProperty('data.id_transicion');
     expect(respuesta.body).not.toHaveProperty('data.regla_validacion');
-    expect(repo.crearTransicion).toHaveBeenCalledWith(
+    expect(repo.guardarTransicion).toHaveBeenCalledWith(
       expect.objectContaining({
-        idReglaValidacion: ids.validacion,
-        creadoPor: ids.actor,
+        idFlujo: ids.flujo,
+        reglaValidacion: expect.objectContaining({
+          idReglaValidacion: ids.validacion,
+        }),
       }),
+      ids.actor,
     );
   });
 
@@ -476,11 +474,13 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     await admin('post', `/flujos/${ids.flujo}/transiciones`)
       .send(cuerpo)
       .expect(400);
-    expect(repo.crearTransicion).not.toHaveBeenCalled();
+    expect(repo.guardarTransicion).not.toHaveBeenCalled();
   });
 
   it('03-E conserva 422 y NODO_FUERA_DE_FLUJO', async () => {
-    repo.crearTransicion.mockRejectedValueOnce(new NodoFueraDeFlujoException());
+    repo.buscarNodo.mockResolvedValueOnce(
+      arbol.nodos[0].copiarEn(ids.otroFlujo, ids.actor),
+    );
     const respuesta = await admin('post', `/flujos/${ids.flujo}/transiciones`)
       .send(bodyTransicion)
       .expect(422);
@@ -492,14 +492,18 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       .send({ orden_evaluacion: 2 })
       .expect(200);
     expect(respuesta.body).toHaveProperty('data.id_regla', ids.transicion);
-    expect(repo.actualizarTransicion).toHaveBeenCalledWith(
+    expect(repo.guardarTransicion).toHaveBeenCalledWith(
       expect.objectContaining({
+        idTransicion: ids.transicion,
         idFlujo: ids.flujo,
         ordenEvaluacion: 2,
-        idNodoDestino: undefined,
-        idReglaValidacion: undefined,
-        valorCondicion: undefined,
+        idNodoDestino: ids.destino,
+        valorCondicion: bodyTransicion.valor_condicion,
+        reglaValidacion: expect.objectContaining({
+          idReglaValidacion: ids.validacion,
+        }),
       }),
+      ids.actor,
     );
   });
 
@@ -513,7 +517,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     await admin('patch', `/transiciones/${ids.transicion}`)
       .send({ [campo]: null })
       .expect(400);
-    expect(repo.actualizarTransicion).not.toHaveBeenCalled();
+    expect(repo.guardarTransicion).not.toHaveBeenCalled();
   });
 
   it('03-F impide cambiar el origen y rechaza un PATCH vacío', async () => {
@@ -531,7 +535,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       await admin('post', `/flujos/${ids.flujo}/transiciones`)
         .send({ ...bodyTransicion, valor_condicion: valor })
         .expect(400);
-      expect(repo.crearTransicion).not.toHaveBeenCalled();
+      expect(repo.guardarTransicion).not.toHaveBeenCalled();
     },
   );
 
@@ -541,7 +545,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       await admin('patch', `/transiciones/${ids.transicion}`)
         .send({ valor_condicion: valor })
         .expect(400);
-      expect(repo.actualizarTransicion).not.toHaveBeenCalled();
+      expect(repo.guardarTransicion).not.toHaveBeenCalled();
     },
   );
 
@@ -550,8 +554,9 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     await admin('patch', `/transiciones/${ids.transicion}`)
       .send({ valor_condicion: condicion })
       .expect(200);
-    expect(repo.actualizarTransicion).toHaveBeenCalledWith(
+    expect(repo.guardarTransicion).toHaveBeenCalledWith(
       expect.objectContaining({ valorCondicion: condicion }),
+      ids.actor,
     );
   });
 
@@ -582,7 +587,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       .expect(201);
     expect(respuesta.body).toEqual({
       data: {
-        id_regla_validacion: ids.validacion,
+        id_regla_validacion: expect.any(String),
         tipo_dato: 'TEXTO',
         obligatorio: true,
         valor_min: null,
@@ -592,16 +597,18 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
         mensaje_error: 'Respuesta requerida',
       },
     });
-    expect(repo.crearReglaValidacion).toHaveBeenCalledWith({
-      tipoDato: 'TEXTO',
-      obligatorio: true,
-      valorMin: null,
-      valorMax: null,
-      formatoRegex: null,
-      valoresPermitidos: [],
-      mensajeError: 'Respuesta requerida',
-      creadoPor: ids.actor,
-    });
+    expect(repo.guardarReglaValidacion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipoDato: 'TEXTO',
+        obligatorio: true,
+        valorMin: null,
+        valorMax: null,
+        formatoRegex: null,
+        valoresPermitidos: [],
+        mensajeError: 'Respuesta requerida',
+      }),
+      ids.actor,
+    );
   });
 
   it.each([
@@ -616,7 +623,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     { tipo_dato: 'TEXTO', mensaje_error: 'Error', creado_por: ids.otroFlujo },
   ])('03-G rechaza un cuerpo inválido: %j', async (cuerpo) => {
     await admin('patch', '/reglas-validacion').send(cuerpo).expect(400);
-    expect(repo.crearReglaValidacion).not.toHaveBeenCalled();
+    expect(repo.guardarReglaValidacion).not.toHaveBeenCalled();
   });
 
   it('03-G conserva false, cero y decimales al crear una regla numérica', async () => {
@@ -627,55 +634,33 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       valor_max: 2.75,
       mensaje_error: '  Fuera de rango  ',
     };
-    repo.crearReglaValidacion.mockResolvedValueOnce(
-      new ReglaValidacion(
-        ids.validacion,
-        TipoDatoValidacion.NUMERICO,
-        false,
-        0,
-        2.75,
-        null,
-        [],
-        'Fuera de rango',
-      ),
-    );
     const respuesta = await admin('patch', '/reglas-validacion')
       .send(cuerpo)
       .expect(201);
     expect(respuesta.body).toEqual({
       data: {
-        id_regla_validacion: ids.validacion,
+        id_regla_validacion: expect.any(String),
         ...cuerpo,
         mensaje_error: 'Fuera de rango',
         formato_regex: null,
         valores_permitidos: [],
       },
     });
-    expect(repo.crearReglaValidacion).toHaveBeenCalledWith({
-      tipoDato: 'NUMERICO',
-      obligatorio: false,
-      valorMin: 0,
-      valorMax: 2.75,
-      formatoRegex: null,
-      valoresPermitidos: [],
-      mensajeError: 'Fuera de rango',
-      creadoPor: ids.actor,
-    });
+    expect(repo.guardarReglaValidacion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipoDato: 'NUMERICO',
+        obligatorio: false,
+        valorMin: 0,
+        valorMax: 2.75,
+        formatoRegex: null,
+        valoresPermitidos: [],
+        mensajeError: 'Fuera de rango',
+      }),
+      ids.actor,
+    );
   });
 
   it('03-G devuelve las opciones de selección como arreglo de texto reutilizable', async () => {
-    repo.crearReglaValidacion.mockResolvedValueOnce(
-      new ReglaValidacion(
-        ids.validacion,
-        TipoDatoValidacion.SELECCION,
-        true,
-        null,
-        null,
-        null,
-        ['si', 'no'],
-        'Elige una opción',
-      ),
-    );
     const respuesta = await admin('patch', '/reglas-validacion')
       .send({
         tipo_dato: 'SELECCION',
@@ -685,7 +670,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       .expect(201);
     expect(respuesta.body).toMatchObject({
       data: {
-        id_regla_validacion: ids.validacion,
+        id_regla_validacion: expect.any(String),
         tipo_dato: 'SELECCION',
         valores_permitidos: ['si', 'no'],
       },
@@ -707,17 +692,25 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       'data.id_regla_validacion',
       ids.validacion,
     );
-    expect(repo.crearReglaValidacion).toHaveBeenCalledTimes(1);
-    expect(repo.crearTransicion).toHaveBeenCalledWith(
-      expect.objectContaining({ idReglaValidacion: ids.validacion }),
+    expect(repo.guardarReglaValidacion).toHaveBeenCalledTimes(1);
+    expect(repo.guardarTransicion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reglaValidacion: expect.objectContaining({
+          idReglaValidacion: ids.validacion,
+        }),
+      }),
+      ids.actor,
     );
   });
 
-  it('03-G conserva PATCH como único método de creación en esa ruta', async () => {
-    await admin('post', '/reglas-validacion')
-      .send({ tipo_dato: 'TEXTO', mensaje_error: 'Error' })
-      .expect(404);
-    expect(repo.crearReglaValidacion).not.toHaveBeenCalled();
+  it('03-G crea la regla con POST y conserva PATCH por compatibilidad', async () => {
+    for (const metodo of ['post', 'patch'] as const) {
+      repo.guardarReglaValidacion.mockClear();
+      await admin(metodo, '/reglas-validacion')
+        .send({ tipo_dato: 'TEXTO', mensaje_error: 'Error' })
+        .expect(201);
+      expect(repo.guardarReglaValidacion).toHaveBeenCalledTimes(1);
+    }
   });
 
   it('responde 404 para nodo y transición inexistentes', async () => {
@@ -735,7 +728,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
   });
 
   it('mantiene errores de infraestructura sanitizados', async () => {
-    repo.crearFlujoGrupal.mockRejectedValueOnce(
+    repo.guardarFlujo.mockRejectedValueOnce(
       new Error('credencial-privada-simulada'),
     );
     const respuesta = await admin('post', '/flujos')
@@ -744,7 +737,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     expect(respuesta.text).not.toContain('credencial-privada-simulada');
   });
 
-  it('conserva la ruta administrativa anterior y no agrega DELETE', async () => {
+  it('conserva las rutas históricas de /chat/administracion y no agrega DELETE', async () => {
     const anterior = await request(app.getHttpServer())
       .get(`/chat/administracion/flujos/${ids.flujo}/arbol`)
       .set('Cookie', 'brisa_session=admin')
@@ -758,6 +751,137 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       .delete(`${base}/flujos/${ids.flujo}`)
       .set('Cookie', 'brisa_session=admin')
       .expect(404);
+  });
+
+  describe('rutas de compatibilidad con el front', () => {
+    const historico = (metodo: 'get' | 'post' | 'patch', ruta: string) =>
+      request(app.getHttpServer())
+        [metodo](ruta)
+        .set('Cookie', 'brisa_session=admin')
+        .set('X-CSRF-Token', 'csrf');
+
+    it('POST /chat/administracion/flujos crea un flujo grupal y responde sin envoltorio', async () => {
+      const respuesta = await historico('post', '/chat/administracion/flujos')
+        .send({ nombre: 'Grupal', version: 1 })
+        .expect(201);
+      expect(respuesta.body).toMatchObject({
+        nombre: 'Grupal',
+        modalidad: 'GRUPAL',
+        estado: 'BORRADOR',
+      });
+      expect(respuesta.body).not.toHaveProperty('data');
+    });
+
+    it('GET /chat/administracion/tipos-nodo devuelve el catálogo de tipos', async () => {
+      const respuesta = await historico(
+        'get',
+        '/chat/administracion/tipos-nodo',
+      ).expect(200);
+      expect(respuesta.body).toEqual([
+        { id_tipo_nodo: ids.tipo, nombre: 'MENSAJE' },
+      ]);
+    });
+
+    it('crea una transición con la regla embebida y la devuelve completa', async () => {
+      const respuesta = await historico(
+        'post',
+        `/chat/administracion/flujos/${ids.flujo}/transiciones`,
+      )
+        .send({
+          id_nodo_origen: ids.origen,
+          id_nodo_destino: ids.destino,
+          operador_condicion: 'IGUALDAD',
+          valor_condicion: { valor: 'si' },
+          orden_evaluacion: 2,
+          regla_validacion: { tipo_dato: 'TEXTO', mensaje_error: 'Requerida' },
+        })
+        .expect(201);
+      expect(respuesta.body).toMatchObject({
+        id_flujo: ids.flujo,
+        regla_validacion: { tipo_dato: 'TEXTO', mensaje_error: 'Requerida' },
+      });
+    });
+
+    it('POST /chat/administracion/flujos/:id/publicar responde el flujo completo', async () => {
+      const respuesta = await historico(
+        'post',
+        `/chat/administracion/flujos/${ids.flujo}/publicar`,
+      ).expect(201);
+      expect(respuesta.body).toMatchObject({
+        id_flujo: ids.flujo,
+        estado: 'PUBLICADO',
+        nombre: arbol.flujo.nombre,
+      });
+    });
+
+    it('administra árboles personalizados: crear, publicar, archivar y nueva versión', async () => {
+      const base = '/chat/administracion/arboles-personalizados';
+      const personalizado = new FlujoConversacional(
+        ids.flujo,
+        'Personalizado',
+        ModalidadConversacional.PERSONALIZADA,
+        EstadoFlujoConversacional.BORRADOR,
+        1,
+        ids.actor,
+        fecha,
+        null,
+        TipoDependenciaClinica.TOLERANCIA,
+        TipoCravingClinico.NEGATIVO,
+      );
+
+      const creado = await historico('post', base)
+        .send({
+          nombre: 'Personalizado',
+          tipo_dependencia: 'TOLERANCIA',
+          tipo_craving: 'NEGATIVO',
+        })
+        .expect(201);
+      expect(creado.body).toMatchObject({
+        modalidad: 'PERSONALIZADA',
+        tipo_dependencia: 'TOLERANCIA',
+        version: 1,
+      });
+
+      repo.obtenerArbol.mockResolvedValueOnce(
+        new ArbolConversacional(personalizado, arbol.nodos, arbol.transiciones),
+      );
+      const publicado = await historico(
+        'post',
+        `${base}/${ids.flujo}/publicar`,
+      ).expect(200);
+      expect(publicado.body).toMatchObject({ estado: 'PUBLICADO' });
+
+      repo.obtenerFlujo.mockResolvedValueOnce(personalizado.publicar());
+      const archivado = await historico(
+        'post',
+        `${base}/${ids.flujo}/archivar`,
+      ).expect(200);
+      expect(archivado.body).toMatchObject({ estado: 'ARCHIVADO' });
+
+      repo.obtenerArbol.mockResolvedValueOnce(
+        new ArbolConversacional(
+          personalizado.publicar(),
+          arbol.nodos,
+          arbol.transiciones,
+        ),
+      );
+      const nueva = await historico(
+        'post',
+        `${base}/${ids.flujo}/nueva-version`,
+      ).expect(201);
+      expect(nueva.body).toMatchObject({ estado: 'BORRADOR', version: 1 });
+      expect(nueva.body.id_flujo).not.toBe(ids.flujo);
+    });
+  });
+
+  it('RF-25 valida la estructura del árbol sin modificarlo', async () => {
+    const respuesta = await admin('post', `/flujos/${ids.flujo}/validar`)
+      .send({})
+      .expect(200);
+    expect(respuesta.body).toEqual({
+      data: { valido: true, total_nodos: 2, total_transiciones: 1 },
+    });
+    expect(repo.guardarFlujo).not.toHaveBeenCalled();
   });
 
   describe('HU-05 / RF-25C: contratos generales de gestión de flujos', () => {
@@ -776,9 +900,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
         },
         meta: { page: 1, page_size: 20, total: 1 },
       });
-      expect(repo.listarFlujos).toHaveBeenCalledWith(
-        expect.objectContaining({ page: 1, pageSize: 20 }),
-      );
+      expect(repo.listarFlujos).toHaveBeenCalledWith(expect.any(Object), 1, 20);
       expect(respuesta.headers['cache-control']).toBe('no-store');
     });
 
@@ -793,14 +915,16 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
           page_size: 100,
         })
         .expect(200);
-      expect(repo.listarFlujos).toHaveBeenCalledWith({
-        modalidad: 'PERSONALIZADA',
-        tipoDependencia: 'TOLERANCIA',
-        tipoCraving: 'NEGATIVO',
-        estado: 'ARCHIVADO',
-        page: 2,
-        pageSize: 100,
-      });
+      expect(repo.listarFlujos).toHaveBeenCalledWith(
+        {
+          modalidad: 'PERSONALIZADA',
+          tipoDependencia: 'TOLERANCIA',
+          tipoCraving: 'NEGATIVO',
+          estado: 'ARCHIVADO',
+        },
+        2,
+        100,
+      );
     });
 
     it.each([
@@ -838,6 +962,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     });
 
     it('05-B devuelve nuevo UUID, origen, versión y cantidades con actor de sesión', async () => {
+      repo.obtenerArbol.mockResolvedValueOnce(arbolPublicado());
       const respuesta = await admin(
         'post',
         `/flujos/${ids.flujo}/clonar-version`,
@@ -846,7 +971,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
         .expect(201);
       expect(respuesta.body).toEqual({
         data: {
-          id_flujo: ids.otroFlujo,
+          id_flujo: expect.any(String),
           id_flujo_origen: ids.flujo,
           version: 2,
           estado: 'BORRADOR',
@@ -854,7 +979,12 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
           transiciones_copiadas: 1,
         },
       });
-      expect(repo.clonarVersion).toHaveBeenCalledWith(ids.flujo, ids.actor);
+      expect(respuesta.body.data.id_flujo).not.toBe(ids.flujo);
+      expect(repo.guardarArbolClonado).toHaveBeenCalledWith(
+        expect.any(ArbolConversacional),
+        ids.flujo,
+        ids.actor,
+      );
     });
 
     it('05-C entrega únicamente los campos de publicación documentados', async () => {
@@ -867,37 +997,75 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
           id_flujo: ids.flujo,
           estado: 'PUBLICADO',
           version: 1,
-          fecha_publicacion: fecha.toISOString(),
+          fecha_publicacion: expect.any(String),
         },
       });
-      expect(repo.publicarAdministrativo).toHaveBeenCalledWith(
-        ids.flujo,
+      expect(repo.guardarFlujo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idFlujo: ids.flujo,
+          estado: EstadoFlujoConversacional.PUBLICADO,
+        }),
         ids.actor,
       );
     });
 
-    it('05-C devuelve 409 y el identificador del publicado previo', async () => {
-      repo.publicarAdministrativo.mockRejectedValueOnce(
-        new PublicadoPorPerfilExistenteException(ids.otroFlujo),
+    it('05-C archiva el publicado anterior de la misma combinación al publicar un personalizado', async () => {
+      const borradorPersonalizado = new FlujoConversacional(
+        ids.flujo,
+        'Personalizado',
+        ModalidadConversacional.PERSONALIZADA,
+        EstadoFlujoConversacional.BORRADOR,
+        2,
+        ids.actor,
+        fecha,
+        null,
+        TipoDependenciaClinica.TOLERANCIA,
+        TipoCravingClinico.NEGATIVO,
+      );
+      repo.obtenerArbol.mockResolvedValueOnce(
+        new ArbolConversacional(
+          borradorPersonalizado,
+          arbol.nodos,
+          arbol.transiciones,
+        ),
+      );
+      repo.buscarPublicadoPersonalizado.mockResolvedValueOnce(
+        new FlujoConversacional(
+          ids.otroFlujo,
+          'Personalizado',
+          ModalidadConversacional.PERSONALIZADA,
+          EstadoFlujoConversacional.PUBLICADO,
+          1,
+          ids.actor,
+          fecha,
+          fecha,
+          TipoDependenciaClinica.TOLERANCIA,
+          TipoCravingClinico.NEGATIVO,
+        ),
       );
       const respuesta = await admin(
         'post',
         `/flujos/${ids.flujo}/publicar`,
-      ).expect(409);
+      ).expect(200);
       expect(respuesta.body).toMatchObject({
-        codigo: 'YA_EXISTE_PUBLICADO',
-        detalles: { id_flujo_publicado: ids.otroFlujo },
+        data: { id_flujo: ids.flujo, estado: 'PUBLICADO' },
       });
+      const [guardados, actor] = repo.guardarFlujos.mock.calls[0];
+      expect(guardados.map((f) => [f.idFlujo, f.estado])).toEqual([
+        [ids.otroFlujo, EstadoFlujoConversacional.ARCHIVADO],
+        [ids.flujo, EstadoFlujoConversacional.PUBLICADO],
+      ]);
+      expect(actor).toBe(ids.actor);
     });
 
     it('05-C conserva los detalles estructurados del grafo inválido', async () => {
       const detalles = {
         nodos_huerfanos: [ids.destino],
-        ciclos: [[ids.origen, ids.origen]],
+        ciclos: [],
         sin_nodo_inicial: false,
       };
-      repo.publicarAdministrativo.mockRejectedValueOnce(
-        new GrafoInvalidoException(detalles),
+      repo.obtenerArbol.mockResolvedValueOnce(
+        new ArbolConversacional(arbol.flujo, arbol.nodos, []),
       );
       const respuesta = await admin(
         'post',
@@ -918,61 +1086,84 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
         data: {
           id_flujo: ids.flujo,
           estado: 'ARCHIVADO',
-          fecha_archivado: fecha.toISOString(),
+          fecha_archivado: expect.any(String),
         },
       });
-      expect(repo.archivarAdministrativo).toHaveBeenCalledWith(
-        ids.flujo,
+      expect(repo.guardarFlujo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idFlujo: ids.flujo,
+          estado: EstadoFlujoConversacional.ARCHIVADO,
+        }),
         ids.actor,
       );
     });
 
-    it.each(['clonar-version', 'publicar', 'archivar'])(
+    // Cada acción lee el flujo (o el árbol) y persiste el resultado.
+    const accionesFlujo = {
+      'clonar-version': {
+        leer: () => repo.obtenerArbol,
+        persistir: () => repo.guardarArbolClonado,
+        // clonar exige un flujo que ya no sea borrador
+        valido: () => arbolPublicado(),
+        invalido: () => arbol,
+      },
+      publicar: {
+        leer: () => repo.obtenerArbol,
+        persistir: () => repo.guardarFlujo,
+        valido: () => arbol,
+        invalido: () => arbolPublicado(),
+      },
+      archivar: {
+        leer: () => repo.obtenerFlujo,
+        persistir: () => repo.guardarFlujo,
+        valido: () => arbol.flujo,
+        invalido: () => arbol.flujo.archivar(fecha),
+      },
+    } as const;
+
+    it.each(['clonar-version', 'publicar', 'archivar'] as const)(
       '%s rechaza UUID inválido, estado inválido e inexistencia',
       async (accion) => {
-        const operacion =
-          accion === 'clonar-version'
-            ? repo.clonarVersion
-            : accion === 'publicar'
-              ? repo.publicarAdministrativo
-              : repo.archivarAdministrativo;
+        const { leer, persistir, invalido } = accionesFlujo[accion];
         await admin('post', `/flujos/no-uuid/${accion}`).expect(400);
-        expect(operacion).not.toHaveBeenCalled();
-        operacion.mockRejectedValueOnce(new EstadoFlujoInvalidoException());
+        expect(persistir()).not.toHaveBeenCalled();
+        (leer() as jest.Mock).mockResolvedValueOnce(invalido());
         const respuesta = await admin(
           'post',
           `/flujos/${ids.flujo}/${accion}`,
         ).expect(409);
         expect(respuesta.body).toHaveProperty('codigo', 'ESTADO_INVALIDO');
-        operacion.mockRejectedValueOnce(
-          new FlujoConversacionalNoEncontradoException(),
-        );
+        (leer() as jest.Mock).mockResolvedValueOnce(null);
         await admin('post', `/flujos/${ids.flujo}/${accion}`).expect(404);
+        expect(persistir()).not.toHaveBeenCalled();
       },
     );
 
-    it.each(['clonar-version', 'publicar', 'archivar'])(
-      '%s rechaza campos en el body y arreglos',
+    it.each(['clonar-version', 'publicar', 'archivar'] as const)(
+      '%s ignora el body: el actor siempre sale de la sesión',
       async (accion) => {
+        const { leer, valido } = accionesFlujo[accion];
+        (leer() as jest.Mock).mockResolvedValueOnce(valido());
+
         await admin('post', `/flujos/${ids.flujo}/${accion}`)
           .send({ creado_por: ids.otroFlujo })
-          .expect(400);
-        await admin('post', `/flujos/${ids.flujo}/${accion}`)
-          .send([])
-          .expect(400);
+          .expect(accion === 'clonar-version' ? 201 : 200);
+
+        const llamada = (accionesFlujo[accion].persistir() as jest.Mock).mock
+          .calls[0] as unknown[];
+        expect(llamada).toContain(ids.actor);
+        expect(llamada).not.toContain(ids.otroFlujo);
       },
     );
 
-    it.each(['clonar-version', 'publicar', 'archivar'])(
+    it.each(['clonar-version', 'publicar', 'archivar'] as const)(
       '%s sanitiza errores inesperados de base de datos',
       async (accion) => {
-        const operacion =
-          accion === 'clonar-version'
-            ? repo.clonarVersion
-            : accion === 'publicar'
-              ? repo.publicarAdministrativo
-              : repo.archivarAdministrativo;
-        operacion.mockRejectedValueOnce(new Error('conexion-privada-simulada'));
+        const { leer, persistir, valido } = accionesFlujo[accion];
+        (leer() as jest.Mock).mockResolvedValueOnce(valido());
+        (persistir() as jest.Mock).mockRejectedValueOnce(
+          new Error('conexion-privada-simulada'),
+        );
         const respuesta = await admin(
           'post',
           `/flujos/${ids.flujo}/${accion}`,

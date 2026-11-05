@@ -1,8 +1,8 @@
-import { Transform, Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
+  Equals,
   IsArray,
   IsBoolean,
-  IsDefined,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -15,27 +15,9 @@ import {
   MaxLength,
   Min,
   ValidateIf,
-  ValidateNested,
 } from 'class-validator';
-import {
-  OperadorCondicion,
-  TipoDatoValidacion,
-} from '../../domain/enums/arbol-conversacional.enums';
-
-export class CrearFlujoGrupalDtoRequest {
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(150)
-  nombre!: string;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsInt()
-  @Min(1)
-  version: number = 1;
-}
+import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
+import { TipoDatoValidacion } from '../../domain/enums/tipo-dato-validacion-enum';
 
 export class CrearNodoConversacionalDtoRequest {
   @IsUUID()
@@ -116,6 +98,25 @@ export class ReglaValidacionDtoRequest {
   mensaje_error!: string;
 }
 
+export class CrearFlujoGrupalDtoRequest {
+  /** Esta solicitud solo crea flujos grupales. */
+  @Equals(ModalidadConversacional.GRUPAL)
+  modalidad: ModalidadConversacional.GRUPAL = ModalidadConversacional.GRUPAL;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  nombre!: string;
+
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
+  @IsInt()
+  @Min(1)
+  version: number = 1;
+}
+
 export class ActualizarReglaValidacionDtoRequest {
   @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsEnum(TipoDatoValidacion)
@@ -146,58 +147,4 @@ export class ActualizarReglaValidacionDtoRequest {
   @IsString()
   @IsNotEmpty()
   mensaje_error?: string;
-}
-
-export class CrearTransicionConversacionalDtoRequest {
-  @IsUUID()
-  id_nodo_origen!: string;
-
-  @IsUUID()
-  id_nodo_destino!: string;
-
-  @IsEnum(OperadorCondicion)
-  operador_condicion!: OperadorCondicion;
-
-  @IsDefined()
-  valor_condicion!: unknown;
-
-  @IsInt()
-  @Min(1)
-  orden_evaluacion!: number;
-
-  @ValidateNested()
-  @IsDefined()
-  @IsObject()
-  @Type(() => ReglaValidacionDtoRequest)
-  regla_validacion!: ReglaValidacionDtoRequest;
-}
-
-export class ActualizarTransicionConversacionalDtoRequest {
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsUUID()
-  id_nodo_origen?: string;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsUUID()
-  id_nodo_destino?: string;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsEnum(OperadorCondicion)
-  operador_condicion?: OperadorCondicion;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsDefined()
-  valor_condicion?: unknown;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsInt()
-  @Min(1)
-  orden_evaluacion?: number;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsObject()
-  @IsNotEmptyObject()
-  @ValidateNested()
-  @Type(() => ActualizarReglaValidacionDtoRequest)
-  regla_validacion?: ActualizarReglaValidacionDtoRequest;
 }

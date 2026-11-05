@@ -1,3 +1,5 @@
+import { ContenidoVigenteChat } from '../../domain/entities/contenido-vigente/contenido-vigente-chat.entity';
+
 export class ContenidoVigenteChatDtoResponse {
   id_contenido!: string;
   id_contenido_cronograma!: string;
@@ -10,4 +12,22 @@ export class ContenidoVigenteChatDtoResponse {
   fecha_inicio_disponibilidad!: Date;
   fecha_fin_disponibilidad!: Date;
   estado_disponibilidad!: string;
+
+  static crear(
+    contenido: ContenidoVigenteChat,
+  ): ContenidoVigenteChatDtoResponse {
+    return {
+      id_contenido: contenido.idContenido,
+      id_contenido_cronograma: contenido.idContenidoCronograma,
+      nombre_contenido: contenido.nombreContenido,
+      tipo_contenido: contenido.tipoContenido,
+      id_unidad_temporal: contenido.idUnidadTemporal,
+      nombre_unidad: contenido.nombreUnidad,
+      orden_unidad: contenido.ordenUnidad,
+      orden_contenido: contenido.ordenContenido,
+      fecha_inicio_disponibilidad: contenido.fechaInicioDisponibilidad,
+      fecha_fin_disponibilidad: contenido.fechaFinDisponibilidad,
+      estado_disponibilidad: contenido.estadoDisponibilidad,
+    };
+  }
 }

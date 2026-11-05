@@ -1,10 +1,22 @@
-import { Allow, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import {
+  Allow,
+  Equals,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+} from 'class-validator';
+import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
 import {
   TipoCravingClinico,
   TipoDependenciaClinica,
-} from '../../domain/enums/arbol-conversacional.enums';
+} from '../../domain/enums/perfil-clinico.enum';
 
 export class CrearArbolPersonalizadoDtoRequest {
+  /** Esta solicitud solo crea flujos personalizados. */
+  @Equals(ModalidadConversacional.PERSONALIZADA)
+  modalidad: ModalidadConversacional.PERSONALIZADA =
+    ModalidadConversacional.PERSONALIZADA;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(150)

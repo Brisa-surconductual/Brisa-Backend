@@ -1,349 +1,570 @@
+import { Prisma } from '@prisma/client';
+import { ArbolConversacional } from '../../domain/entities/flujo/arbol-conversacional.entity';
+import { FlujoConversacional } from '../../domain/entities/flujo/flujo-conversacional.entity';
+import { NodoConversacional } from '../../domain/entities/flujo/nodo-conversacional.entity';
+import { TransicionConversacional } from '../../domain/entities/flujo/transicion-conversacional.entity';
+import { ReglaValidacion } from '../../domain/entities/reglas-validacion/reglas-validacion.entity';
+import { EstadoFlujoConversacional } from '../../domain/enums/estado-flujo-conversacional.enum';
+import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
+import { OperadorCondicion } from '../../domain/enums/operador-condicional.enum';
 import {
-  CicloConversacionalNoPermitidoException,
-  NodoDestinoNoEncontradoException,
+  TipoCravingClinico,
+  TipoDependenciaClinica,
+} from '../../domain/enums/perfil-clinico.enum';
+import { TipoDatoValidacion } from '../../domain/enums/tipo-dato-validacion-enum';
+import {
+  FlujoGrupalPublicadoExistenteException,
+  FlujoPersonalizadoPublicadoExistenteException,
   NodoInicialDuplicadoException,
-} from '../../domain/exeption/arbol-conversacional.exceptions';
-import {
-  EstadoFlujoConversacional,
-  ModalidadConversacional,
-  OperadorCondicion,
-  TipoDatoValidacion,
-} from '../../domain/enums/arbol-conversacional.enums';
+  OrdenTransicionDuplicadoException,
+  TipoNodoNoEncontradoException,
+  VersionPersonalizadaDuplicadaException,
+} from '../../domain/exceptions';
 import { PrismaArbolConversacionalRepository } from './prisma-arbol-conversacional.repository';
 
-describe('PrismaArbolConversacionalRepository (RF-25)', () => {
-  const idFlujo = '00000000-0000-4000-8000-000000000001';
-  const idNodoA = '00000000-0000-4000-8000-000000000002';
-  const idNodoB = '00000000-0000-4000-8000-000000000003';
-  const idTipo = '00000000-0000-4000-8000-000000000004';
-  const idAdministrador = '00000000-0000-4000-8000-000000000005';
-  const idValidacion = '00000000-0000-4000-8000-000000000006';
+describe('PrismaArbolConversacionalRepository', () => {
+  const ids = {
+    flujo: '00000000-0000-4000-8000-000000000001',
+    nodoA: '00000000-0000-4000-8000-000000000002',
+    nodoB: '00000000-0000-4000-8000-000000000003',
+    tipo: '00000000-0000-4000-8000-000000000004',
+    actor: '00000000-0000-4000-8000-000000000005',
+    regla: '00000000-0000-4000-8000-000000000006',
+    transicion: '00000000-0000-4000-8000-000000000007',
+    origen: '00000000-0000-4000-8000-000000000008',
+  };
   const fecha = new Date('2026-09-19T12:00:00.000Z');
+
+  const flujoGrupal = new FlujoConversacional(
+    ids.flujo,
+    'Árbol grupal',
+    ModalidadConversacional.GRUPAL,
+    EstadoFlujoConversacional.BORRADOR,
+    1,
+    ids.actor,
+    fecha,
+    null,
+  );
+  const nodo = new NodoConversacional(
+    ids.nodoA,
+    ids.flujo,
+    ids.tipo,
+    'MENSAJE',
+    { texto: 'Hola' },
+    true,
+    1,
+    null,
+    ids.actor,
+    fecha,
+    fecha,
+  );
+  const regla = new ReglaValidacion(
+    ids.regla,
+    TipoDatoValidacion.NUMERICO,
+    true,
+    1,
+    5,
+    null,
+    [],
+    'Fuera de rango',
+  );
+  const transicion = new TransicionConversacional(
+    ids.transicion,
+    ids.flujo,
+    ids.nodoA,
+    ids.nodoB,
+    OperadorCondicion.IGUALDAD,
+    'si',
+    1,
+    regla,
+    fecha,
+  );
+
   const flujoRow = {
-    id_flujo: idFlujo,
+    id_flujo: ids.flujo,
     nombre: 'Árbol grupal',
     modalidad: 'GRUPAL',
     estado: 'BORRADOR',
     version: 1,
-    creado_por: idAdministrador,
+    creado_por: ids.actor,
     fecha_creacion: fecha,
     fecha_publicacion: null,
+    fecha_archivado: null,
+    tipo_dependencia: null,
+    tipo_craving: null,
   };
-  const nodoRow = (id: string, inicial = false) => ({
+  const nodoRow = (id: string) => ({
     id_nodo: id,
-    id_flujo: idFlujo,
-    id_tipo_nodo: idTipo,
+    id_flujo: ids.flujo,
+    id_tipo_nodo: ids.tipo,
     contenido: { texto: id },
-    es_nodo_inicial: inicial,
-    orden: inicial ? 1 : 2,
+    es_nodo_inicial: id === ids.nodoA,
+    orden: 1,
     id_contenido_cronograma: null,
-    creado_por: idAdministrador,
+    creado_por: ids.actor,
     fecha_creacion: fecha,
     fecha_actualizacion: fecha,
-    tipo_nodo: { nombre: inicial ? 'MENSAJE' : 'PREGUNTA' },
+    tipo_nodo: { nombre: 'MENSAJE' },
   });
-  const validacionRow = {
-    id_regla_validacion: idValidacion,
-    tipo_dato: 'TEXTO',
+  const reglaRow = {
+    id_regla_validacion: ids.regla,
+    tipo_dato: 'NUMERICO',
     obligatorio: true,
-    valor_min: null,
-    valor_max: null,
+    valor_min: new Prisma.Decimal(1),
+    valor_max: new Prisma.Decimal(5),
     formato_regex: null,
     valores_permitidos: [],
-    mensaje_error: 'Respuesta requerida',
+    mensaje_error: 'Fuera de rango',
   };
-  const transicionRow = (origen: string, destino: string) => ({
-    id_regla: '00000000-0000-4000-8000-000000000007',
-    id_flujo: idFlujo,
-    id_nodo_origen: origen,
-    id_nodo_destino: destino,
-    id_regla_validacion: idValidacion,
+  const transicionRow = {
+    id_regla: ids.transicion,
+    id_flujo: ids.flujo,
+    id_nodo_origen: ids.nodoA,
+    id_nodo_destino: ids.nodoB,
+    id_regla_validacion: ids.regla,
     operador_condicion: 'IGUALDAD',
-    valor_condicion: true,
+    valor_condicion: 'si',
     orden_evaluacion: 1,
     fecha_creacion: fecha,
-    reglas_validaciones: validacionRow,
-  });
+    reglas_validaciones: reglaRow,
+  };
 
   const tx = {
     flujo_conversacion: {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
     },
     nodos: {
-      findFirst: jest.fn(),
+      findUnique: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
     },
     reglas_nodos: {
-      findFirst: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-    },
-    reglas_validaciones: {
-      create: jest.fn(),
-      update: jest.fn(),
-    },
-    tipo_nodo: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
-    },
-    auditoria_arboles: {
       create: jest.fn(),
-      findMany: jest.fn(),
+      update: jest.fn(),
+      count: jest.fn(),
     },
+    reglas_validaciones: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      upsert: jest.fn(),
+    },
+    tipo_nodo: { findUnique: jest.fn(), findMany: jest.fn() },
+    tipo_entrada: { findMany: jest.fn() },
+    auditoria_arboles: { create: jest.fn(), findMany: jest.fn() },
   };
-  const prisma = {
-    ...tx,
-    $transaction: jest.fn(
-      async (operacion: (cliente: typeof tx) => Promise<unknown>) =>
-        operacion(tx),
-    ),
-  };
-  const repository = new PrismaArbolConversacionalRepository(prisma as never);
+  const prisma = { ...tx, $transaction: jest.fn() };
+  const repo = new PrismaArbolConversacionalRepository(prisma as never);
+
+  const errorPrisma = (code: string, message = '', meta?: unknown) =>
+    Object.assign(new Error(message), { code, meta });
+  const auditoria = (
+    accion: string,
+    idFlujo: string | null = ids.flujo,
+    idObjeto: string | null = null,
+  ) => ({
+    data: {
+      id_flujo: idFlujo,
+      id_actor: ids.actor,
+      accion,
+      id_objeto: idObjeto,
+    },
+  });
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    tx.flujo_conversacion.findFirst.mockResolvedValue(null);
-    tx.flujo_conversacion.findUnique.mockResolvedValue({
-      estado: EstadoFlujoConversacional.BORRADOR,
-    });
-  });
-
-  it('busca exclusivamente el flujo grupal publicado y devuelve null si no existe', async () => {
-    await expect(repository.buscarPublicadoGrupal()).resolves.toBeNull();
-    expect(tx.flujo_conversacion.findFirst).toHaveBeenCalledWith({
-      where: { modalidad: 'GRUPAL', estado: 'PUBLICADO' },
-    });
-    expect(tx.auditoria_arboles.create).not.toHaveBeenCalled();
-  });
-
-  it('devuelve el identificador y la versión del grupal publicado con sus datos de dominio', async () => {
-    tx.flujo_conversacion.findFirst.mockResolvedValue({
-      ...flujoRow,
-      estado: 'PUBLICADO',
-      version: 3,
-      fecha_publicacion: fecha,
-      fecha_archivado: null,
-      tipo_dependencia: null,
-      tipo_craving: null,
-    });
-
-    const publicado = await repository.buscarPublicadoGrupal();
-
-    expect(publicado).toMatchObject({
-      idFlujo,
-      version: 3,
-      modalidad: ModalidadConversacional.GRUPAL,
-      estado: EstadoFlujoConversacional.PUBLICADO,
-      fechaPublicacion: fecha,
-      tipoDependencia: null,
-      tipoCraving: null,
-    });
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-    expect(tx.auditoria_arboles.create).not.toHaveBeenCalled();
-  });
-
-  it('permite cargar el grupal publicado y recuperar su nodo inicial sin cambiar sus referencias', async () => {
-    const publicadoRow = { ...flujoRow, estado: 'PUBLICADO', version: 3 };
-    tx.flujo_conversacion.findFirst.mockResolvedValue(publicadoRow);
-    tx.flujo_conversacion.findUnique.mockResolvedValue(publicadoRow);
-    tx.nodos.findMany.mockResolvedValue([
-      nodoRow(idNodoA, true),
-      nodoRow(idNodoB),
-    ]);
-    tx.reglas_nodos.findMany.mockResolvedValue([
-      transicionRow(idNodoA, idNodoB),
-    ]);
-
-    const publicado = await repository.buscarPublicadoGrupal();
-    expect(publicado).not.toBeNull();
-    const arbol = await repository.obtenerArbol(publicado!.idFlujo);
-
-    expect(arbol?.flujo.idFlujo).toBe(idFlujo);
-    expect(arbol?.flujo.version).toBe(3);
-    expect(arbol?.nodos.find((nodo) => nodo.esNodoInicial)?.idNodo).toBe(
-      idNodoA,
+    jest.resetAllMocks();
+    prisma.$transaction.mockImplementation(
+      async (op: (cliente: typeof tx) => Promise<unknown>) => op(tx),
     );
-    expect(arbol?.transiciones[0].idNodoDestino).toBe(idNodoB);
-    expect(tx.nodos.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id_flujo: idFlujo } }),
+    tx.flujo_conversacion.findUnique.mockResolvedValue(flujoRow);
+    tx.flujo_conversacion.findMany.mockResolvedValue([flujoRow]);
+    tx.flujo_conversacion.count.mockResolvedValue(1);
+    tx.nodos.findMany.mockResolvedValue([nodoRow(ids.nodoA)]);
+    tx.reglas_nodos.findMany.mockResolvedValue([transicionRow]);
+    tx.auditoria_arboles.create.mockResolvedValue({});
+  });
+
+  describe('consultas', () => {
+    it('filtra nodos y transiciones exclusivamente por el flujo solicitado', async () => {
+      const arbol = await repo.obtenerArbol(ids.flujo);
+
+      expect(tx.nodos.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id_flujo: ids.flujo } }),
+      );
+      expect(tx.reglas_nodos.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id_flujo: ids.flujo } }),
+      );
+      expect(arbol).toBeInstanceOf(ArbolConversacional);
+      expect(arbol?.transiciones[0].reglaValidacion.valorMax).toBe(5);
+    });
+
+    it('retorna null si el flujo no existe', async () => {
+      tx.flujo_conversacion.findUnique.mockResolvedValue(null);
+
+      await expect(repo.obtenerArbol(ids.flujo)).resolves.toBeNull();
+      await expect(repo.obtenerFlujo(ids.flujo)).resolves.toBeNull();
+    });
+
+    it('lista con el mismo filtro para la página y el conteo', async () => {
+      const resultado = await repo.listarFlujos(
+        {
+          modalidad: ModalidadConversacional.PERSONALIZADA,
+          estado: EstadoFlujoConversacional.PUBLICADO,
+        },
+        3,
+        10,
+      );
+
+      const where = tx.flujo_conversacion.findMany.mock.calls[0][0].where;
+      expect(tx.flujo_conversacion.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 20, take: 10 }),
+      );
+      expect(tx.flujo_conversacion.count).toHaveBeenCalledWith({ where });
+      expect(resultado.total).toBe(1);
+      expect(resultado.items[0]).toBeInstanceOf(FlujoConversacional);
+    });
+
+    it('calcula la última versión del perfil, 0 si no hay ninguna', async () => {
+      tx.flujo_conversacion.findFirst.mockResolvedValueOnce({ version: 4 });
+      tx.flujo_conversacion.findFirst.mockResolvedValueOnce(null);
+
+      await expect(
+        repo.obtenerUltimaVersionPersonalizada(
+          TipoDependenciaClinica.TOLERANCIA,
+          TipoCravingClinico.NEGATIVO,
+        ),
+      ).resolves.toBe(4);
+      await expect(
+        repo.obtenerUltimaVersionPersonalizada(
+          TipoDependenciaClinica.TOLERANCIA,
+          TipoCravingClinico.NEGATIVO,
+        ),
+      ).resolves.toBe(0);
+    });
+
+    it('consulta la auditoría por flujo y conserva bigint', async () => {
+      tx.auditoria_arboles.findMany.mockResolvedValue([
+        {
+          id_auditoria: 7,
+          id_actor: ids.actor,
+          accion: 'PUBLICAR',
+          id_objeto: null,
+          fecha_operacion: fecha,
+        },
+      ]);
+
+      const registros = await repo.listarAuditoriaArbol(ids.flujo);
+
+      expect(tx.auditoria_arboles.findMany).toHaveBeenCalledWith({
+        where: { id_flujo: ids.flujo },
+        orderBy: { id_auditoria: 'asc' },
+      });
+      expect(registros[0].idAuditoria).toBe(7n);
+    });
+  });
+
+  describe('guardarFlujo / guardarFlujos', () => {
+    it('crea el flujo nuevo y su auditoría en la misma transacción serializable', async () => {
+      tx.flujo_conversacion.findUnique.mockResolvedValue(null);
+
+      await repo.guardarFlujo(flujoGrupal, ids.actor);
+
+      expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      });
+      expect(tx.flujo_conversacion.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          id_flujo: ids.flujo,
+          nombre: 'Árbol grupal',
+          modalidad: 'GRUPAL',
+          estado: 'BORRADOR',
+          version: 1,
+          creado_por: ids.actor,
+        }),
+      });
+      expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
+        auditoria('CREAR_FLUJO'),
+      );
+    });
+
+    it('persiste la publicación de un flujo existente y la audita', async () => {
+      await repo.guardarFlujo(flujoGrupal.publicar(fecha), ids.actor);
+
+      expect(tx.flujo_conversacion.create).not.toHaveBeenCalled();
+      expect(tx.flujo_conversacion.update).toHaveBeenCalledWith({
+        where: { id_flujo: ids.flujo },
+        data: {
+          nombre: 'Árbol grupal',
+          estado: 'PUBLICADO',
+          fecha_publicacion: fecha,
+          fecha_archivado: null,
+        },
+      });
+      expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
+        auditoria('PUBLICAR'),
+      );
+    });
+
+    it('guarda varios flujos en una sola transacción, en el orden recibido', async () => {
+      const publicado = flujoGrupal.publicar(fecha);
+      const archivado = publicado.archivar(fecha);
+
+      await repo.guardarFlujos(
+        [archivado, flujoGrupal.publicar(fecha)],
+        ids.actor,
+      );
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(
+        tx.auditoria_arboles.create.mock.calls.map(
+          ([arg]) => arg.data.accion as string,
+        ),
+      ).toEqual(['ARCHIVAR', 'PUBLICAR']);
+    });
+
+    it.each([
+      [
+        'versión duplicada',
+        'Unique constraint failed uq_flujo_version_personalizada',
+        VersionPersonalizadaDuplicadaException,
+      ],
+      [
+        'publicado grupal',
+        'Unique constraint failed uq_flujo_publicado_grupal',
+        FlujoGrupalPublicadoExistenteException,
+      ],
+      [
+        'publicado personalizado',
+        'Unique constraint failed uq_flujo_publicado_personalizada',
+        FlujoPersonalizadoPublicadoExistenteException,
+      ],
+    ])(
+      'traduce el conflicto de unicidad: %s',
+      async (_caso, mensaje, excepcion) => {
+        tx.flujo_conversacion.update.mockRejectedValue(
+          errorPrisma('P2002', mensaje),
+        );
+
+        await expect(
+          repo.guardarFlujo(flujoGrupal.publicar(fecha), ids.actor),
+        ).rejects.toBeInstanceOf(excepcion);
+      },
     );
-    expect(tx.auditoria_arboles.create).not.toHaveBeenCalled();
-  });
 
-  it('propaga los errores de consulta sin confundirlos con la ausencia de un grupal publicado', async () => {
-    const error = new Error('Consulta no disponible');
-    tx.flujo_conversacion.findFirst.mockRejectedValueOnce(error);
+    it('reintenta la transacción serializable cuando Prisma informa P2034', async () => {
+      tx.flujo_conversacion.findUnique.mockResolvedValue(null);
+      prisma.$transaction
+        .mockRejectedValueOnce(errorPrisma('P2034'))
+        .mockImplementation(
+          async (op: (cliente: typeof tx) => Promise<unknown>) => op(tx),
+        );
 
-    await expect(repository.buscarPublicadoGrupal()).rejects.toBe(error);
-  });
+      await repo.guardarFlujo(flujoGrupal, ids.actor);
 
-  it('crea un nodo válido dentro de una transacción', async () => {
-    tx.tipo_nodo.findUnique.mockResolvedValue({ id_tipo_nodo: idTipo });
-    tx.nodos.create.mockResolvedValue(nodoRow(idNodoA, true));
-
-    const resultado = await repository.crearNodo({
-      idFlujo,
-      idTipoNodo: idTipo,
-      contenido: { texto: 'Inicio' },
-      esNodoInicial: true,
-      orden: 1,
-      idContenidoCronograma: null,
-      creadoPor: idAdministrador,
+      expect(prisma.$transaction).toHaveBeenCalledTimes(2);
     });
 
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(resultado.idNodo).toBe(idNodoA);
-    expect(tx.auditoria_arboles.create).toHaveBeenCalledWith({
-      data: {
-        id_flujo: idFlujo,
-        id_actor: idAdministrador,
-        accion: 'CREAR_NODO',
-        id_objeto: idNodoA,
-      },
-    });
-    const llamadasCrearNodo = tx.nodos.create.mock.calls as unknown as Array<
-      [{ data: { id_flujo: string } }]
-    >;
-    expect(llamadasCrearNodo[0][0]).toMatchObject({
-      data: { id_flujo: idFlujo },
+    it('propaga un error desconocido sin traducirlo', async () => {
+      const fallo = new Error('conexión perdida');
+      tx.flujo_conversacion.findUnique.mockRejectedValue(fallo);
+
+      await expect(repo.guardarFlujo(flujoGrupal, ids.actor)).rejects.toBe(
+        fallo,
+      );
     });
   });
 
-  it('traduce la colisión del nodo inicial a HTTP 409', async () => {
-    tx.tipo_nodo.findUnique.mockResolvedValue({ id_tipo_nodo: idTipo });
-    tx.nodos.create.mockRejectedValue({
-      code: 'P2002',
-      meta: { constraint: 'uq_nodo_inicial_por_flujo' },
+  describe('guardarNodo', () => {
+    it('crea el nodo nuevo con su identificador y audita CREAR_NODO', async () => {
+      tx.nodos.findUnique.mockResolvedValue(null);
+
+      await repo.guardarNodo(nodo, ids.actor);
+
+      expect(tx.nodos.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          id_nodo: ids.nodoA,
+          id_flujo: ids.flujo,
+          id_tipo_nodo: ids.tipo,
+          es_nodo_inicial: true,
+          orden: 1,
+          id_contenido_cronograma: null,
+        }),
+      });
+      expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
+        auditoria('CREAR_NODO', ids.flujo, ids.nodoA),
+      );
     });
 
-    await expect(
-      repository.crearNodo({
-        idFlujo,
-        idTipoNodo: idTipo,
-        contenido: { texto: 'Inicio duplicado' },
-        esNodoInicial: true,
-        orden: 1,
-        idContenidoCronograma: null,
-        creadoPor: idAdministrador,
-      }),
-    ).rejects.toBeInstanceOf(NodoInicialDuplicadoException);
-  });
+    it('actualiza el nodo existente, permite limpiar campos y audita EDITAR_NODO', async () => {
+      tx.nodos.findUnique.mockResolvedValue({ id_nodo: ids.nodoA });
+      const editado = nodo.actualizar({ orden: null });
 
-  it('crea atómicamente una transición y su regla de validación', async () => {
-    tx.flujo_conversacion.findUnique
-      .mockResolvedValueOnce({ estado: EstadoFlujoConversacional.BORRADOR })
-      .mockResolvedValueOnce(flujoRow);
-    tx.nodos.findMany
-      .mockResolvedValueOnce([
-        { id_nodo: idNodoA, id_flujo: idFlujo },
-        { id_nodo: idNodoB, id_flujo: idFlujo },
-      ])
-      .mockResolvedValueOnce([nodoRow(idNodoA, true), nodoRow(idNodoB)]);
-    tx.reglas_nodos.findMany.mockResolvedValue([]);
-    tx.reglas_validaciones.create.mockResolvedValue(validacionRow);
-    tx.reglas_nodos.create.mockResolvedValue(transicionRow(idNodoA, idNodoB));
+      await repo.guardarNodo(editado, ids.actor);
 
-    const resultado = await repository.crearTransicion({
-      idFlujo,
-      creadoPor: idAdministrador,
-      idNodoOrigen: idNodoA,
-      idNodoDestino: idNodoB,
-      operadorCondicion: OperadorCondicion.IGUALDAD,
-      valorCondicion: true,
-      ordenEvaluacion: 1,
-      reglaValidacion: {
-        tipoDato: TipoDatoValidacion.TEXTO,
-        obligatorio: true,
-        valorMin: null,
-        valorMax: null,
-        formatoRegex: null,
-        valoresPermitidos: [],
-        mensajeError: 'Respuesta requerida',
-      },
+      expect(tx.nodos.create).not.toHaveBeenCalled();
+      expect(tx.nodos.update).toHaveBeenCalledWith({
+        where: { id_nodo: ids.nodoA },
+        data: expect.objectContaining({
+          orden: null,
+          fecha_actualizacion: editado.fechaActualizacion,
+        }),
+      });
+      expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
+        auditoria('EDITAR_NODO', ids.flujo, ids.nodoA),
+      );
     });
 
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(tx.reglas_validaciones.create).toHaveBeenCalledTimes(1);
-    expect(tx.reglas_nodos.create).toHaveBeenCalledTimes(1);
-    expect(resultado.idNodoDestino).toBe(idNodoB);
-    expect(tx.auditoria_arboles.create).toHaveBeenCalledWith({
-      data: {
-        id_flujo: idFlujo,
-        id_actor: idAdministrador,
-        accion: 'CREAR_TRANSICION',
-        id_objeto: transicionRow(idNodoA, idNodoB).id_regla,
-      },
+    it('traduce el nodo inicial duplicado y la FK de tipo inexistente', async () => {
+      tx.nodos.findUnique.mockResolvedValue(null);
+      tx.nodos.create.mockRejectedValueOnce(
+        errorPrisma('P2002', 'uq_nodo_inicial_por_flujo'),
+      );
+      await expect(repo.guardarNodo(nodo, ids.actor)).rejects.toBeInstanceOf(
+        NodoInicialDuplicadoException,
+      );
+
+      tx.nodos.create.mockRejectedValueOnce(
+        errorPrisma('P2003', 'fk_nodo_tipo'),
+      );
+      await expect(repo.guardarNodo(nodo, ids.actor)).rejects.toBeInstanceOf(
+        TipoNodoNoEncontradoException,
+      );
+      expect(tx.auditoria_arboles.create).not.toHaveBeenCalled();
     });
   });
 
-  it('no persiste parcialmente si el nodo destino no pertenece al flujo', async () => {
-    tx.nodos.findMany.mockResolvedValue([{ id_nodo: idNodoA }]);
+  describe('guardarTransicion', () => {
+    it('guarda la regla junto con la transición nueva y audita CREAR_TRANSICION', async () => {
+      tx.reglas_nodos.findUnique.mockResolvedValue(null);
 
-    await expect(
-      repository.crearTransicion({
-        idFlujo,
-        creadoPor: idAdministrador,
-        idNodoOrigen: idNodoA,
-        idNodoDestino: idNodoB,
-        operadorCondicion: OperadorCondicion.IGUALDAD,
-        valorCondicion: true,
-        ordenEvaluacion: 1,
-        reglaValidacion: {
-          tipoDato: TipoDatoValidacion.TEXTO,
-          obligatorio: true,
-          valorMin: null,
-          valorMax: null,
-          formatoRegex: null,
-          valoresPermitidos: [],
-          mensajeError: 'Respuesta requerida',
-        },
-      }),
-    ).rejects.toBeInstanceOf(NodoDestinoNoEncontradoException);
-    expect(tx.reglas_validaciones.create).not.toHaveBeenCalled();
-    expect(tx.reglas_nodos.create).not.toHaveBeenCalled();
+      await repo.guardarTransicion(transicion, ids.actor);
+
+      expect(tx.reglas_validaciones.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id_regla_validacion: ids.regla },
+        }),
+      );
+      expect(tx.reglas_nodos.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          id_regla: ids.transicion,
+          id_regla_validacion: ids.regla,
+          id_nodo_origen: ids.nodoA,
+          id_nodo_destino: ids.nodoB,
+          orden_evaluacion: 1,
+        }),
+      });
+      expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
+        auditoria('CREAR_TRANSICION', ids.flujo, ids.transicion),
+      );
+    });
+
+    it('actualiza la transición existente y audita EDITAR_TRANSICION', async () => {
+      tx.reglas_nodos.findUnique.mockResolvedValue({
+        id_regla: ids.transicion,
+      });
+
+      await repo.guardarTransicion(
+        transicion.actualizar({ ordenEvaluacion: 2 }),
+        ids.actor,
+      );
+
+      expect(tx.reglas_nodos.create).not.toHaveBeenCalled();
+      expect(tx.reglas_nodos.update).toHaveBeenCalledWith({
+        where: { id_regla: ids.transicion },
+        data: expect.objectContaining({ orden_evaluacion: 2 }),
+      });
+      expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
+        auditoria('EDITAR_TRANSICION', ids.flujo, ids.transicion),
+      );
+    });
+
+    it('traduce el orden de evaluación duplicado sin auditar', async () => {
+      tx.reglas_nodos.findUnique.mockResolvedValue(null);
+      tx.reglas_nodos.create.mockRejectedValue(errorPrisma('P2002'));
+
+      await expect(
+        repo.guardarTransicion(transicion, ids.actor),
+      ).rejects.toBeInstanceOf(OrdenTransicionDuplicadoException);
+      expect(tx.auditoria_arboles.create).not.toHaveBeenCalled();
+    });
   });
 
-  it('rechaza el ciclo antes de escribir la regla y la transición', async () => {
-    tx.flujo_conversacion.findUnique
-      .mockResolvedValueOnce({ estado: EstadoFlujoConversacional.BORRADOR })
-      .mockResolvedValueOnce(flujoRow);
-    tx.nodos.findMany
-      .mockResolvedValueOnce([
-        { id_nodo: idNodoA, id_flujo: idFlujo },
-        { id_nodo: idNodoB, id_flujo: idFlujo },
-      ])
-      .mockResolvedValueOnce([nodoRow(idNodoA, true), nodoRow(idNodoB)]);
-    tx.reglas_nodos.findMany.mockResolvedValue([
-      transicionRow(idNodoB, idNodoA),
-    ]);
+  describe('guardarArbolClonado', () => {
+    it('persiste flujo, nodos, reglas y transiciones y audita el origen', async () => {
+      const origen = new ArbolConversacional(
+        flujoGrupal.publicar(fecha),
+        [
+          nodo,
+          nodo.copiarEn(ids.flujo, ids.actor).actualizar({
+            esNodoInicial: false,
+          }),
+        ],
+        [],
+      );
+      const clon = origen.clonar(2, ids.actor);
 
-    await expect(
-      repository.crearTransicion({
-        idFlujo,
-        creadoPor: idAdministrador,
-        idNodoOrigen: idNodoA,
-        idNodoDestino: idNodoB,
-        operadorCondicion: OperadorCondicion.IGUALDAD,
-        valorCondicion: true,
-        ordenEvaluacion: 1,
-        reglaValidacion: {
-          tipoDato: TipoDatoValidacion.TEXTO,
-          obligatorio: true,
-          valorMin: null,
-          valorMax: null,
-          formatoRegex: null,
-          valoresPermitidos: [],
-          mensajeError: 'Respuesta requerida',
-        },
-      }),
-    ).rejects.toBeInstanceOf(CicloConversacionalNoPermitidoException);
-    expect(tx.reglas_validaciones.create).not.toHaveBeenCalled();
-    expect(tx.reglas_nodos.create).not.toHaveBeenCalled();
+      await repo.guardarArbolClonado(clon, ids.flujo, ids.actor);
+
+      expect(tx.flujo_conversacion.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          id_flujo: clon.flujo.idFlujo,
+          estado: 'BORRADOR',
+          version: 2,
+        }),
+      });
+      expect(tx.nodos.create).toHaveBeenCalledTimes(2);
+      expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
+        auditoria('CLONAR_VERSION', clon.flujo.idFlujo, ids.flujo),
+      );
+    });
+  });
+
+  describe('guardarReglaValidacion', () => {
+    it('persiste la regla y su evento propio, sin flujo, en la misma transacción', async () => {
+      await repo.guardarReglaValidacion(regla, ids.actor);
+
+      expect(tx.reglas_validaciones.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          id_regla_validacion: ids.regla,
+          tipo_dato: 'NUMERICO',
+          valor_min: 1,
+          valor_max: 5,
+          mensaje_error: 'Fuera de rango',
+        }),
+      });
+      expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
+        auditoria('CREAR_REGLA_VALIDACION', null, ids.regla),
+      );
+    });
+
+    it('propaga un fallo de auditoría para que la creación se revierta', async () => {
+      const fallo = new Error('auditoría no disponible');
+      tx.auditoria_arboles.create.mockRejectedValue(fallo);
+
+      await expect(repo.guardarReglaValidacion(regla, ids.actor)).rejects.toBe(
+        fallo,
+      );
+    });
+  });
+
+  it('convierte los límites decimales de una regla sin alterar su valor', async () => {
+    tx.reglas_validaciones.findUnique.mockResolvedValue({
+      ...reglaRow,
+      valor_min: new Prisma.Decimal('1.5'),
+      valor_max: null,
+    });
+
+    const encontrada = await repo.buscarReglaValidacion(ids.regla);
+
+    expect(encontrada?.valorMin).toBe(1.5);
+    expect(encontrada?.valorMax).toBeNull();
   });
 });

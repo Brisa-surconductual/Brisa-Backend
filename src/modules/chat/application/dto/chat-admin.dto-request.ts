@@ -1,22 +1,28 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsDefined,
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsNotEmptyObject,
   IsObject,
   IsString,
   IsUUID,
   MaxLength,
   Min,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import {
-  ModalidadConversacional,
-  OperadorCondicion,
+  ActualizarReglaValidacionDtoRequest,
+  ReglaValidacionDtoRequest,
+} from './arbol-conversacional.dto-request';
+import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
+import { OperadorCondicion } from '../../domain/enums/operador-condicional.enum';
+import {
   TipoCravingClinico,
   TipoDependenciaClinica,
-} from '../../domain/enums/arbol-conversacional.enums';
+} from '../../domain/enums/perfil-clinico.enum';
 
 export class CrearFlujoConversacionalDtoRequest {
   @Transform(({ value }: { value: unknown }) =>
@@ -47,15 +53,33 @@ export class CrearFlujoConversacionalDtoRequest {
   tipo_craving?: TipoCravingClinico | null;
 }
 
-export class CrearTransicionReutilizableDtoRequest {
+/**
+ * La regla de validación se indica con `id_regla_validacion` (regla existente)
+ * o con `regla_validacion` (regla nueva embebida), exclusivamente una de las dos.
+ */
+export class CrearTransicionConversacionalDtoRequest {
   @IsUUID()
   id_nodo_origen!: string;
 
   @IsUUID()
   id_nodo_destino!: string;
 
+  @ValidateIf(
+    (dto: CrearTransicionConversacionalDtoRequest) =>
+      dto.regla_validacion === undefined,
+  )
   @IsUUID()
-  id_regla_validacion!: string;
+  id_regla_validacion?: string;
+
+  @ValidateIf(
+    (dto: CrearTransicionConversacionalDtoRequest) =>
+      dto.id_regla_validacion === undefined,
+  )
+  @IsDefined()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ReglaValidacionDtoRequest)
+  regla_validacion?: ReglaValidacionDtoRequest;
 
   @IsEnum(OperadorCondicion)
   operador_condicion!: OperadorCondicion;
@@ -69,7 +93,11 @@ export class CrearTransicionReutilizableDtoRequest {
   orden_evaluacion!: number;
 }
 
-export class ActualizarTransicionReutilizableDtoRequest {
+/**
+ * La regla de validación se puede sustituir (`id_regla_validacion`) o editar
+ * (`regla_validacion`), nunca ambas cosas a la vez. El origen no se modifica.
+ */
+export class ActualizarTransicionConversacionalDtoRequest {
   @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsUUID()
   id_nodo_destino?: string;
@@ -77,6 +105,13 @@ export class ActualizarTransicionReutilizableDtoRequest {
   @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsUUID()
   id_regla_validacion?: string;
+
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
+  @IsObject()
+  @IsNotEmptyObject()
+  @ValidateNested()
+  @Type(() => ActualizarReglaValidacionDtoRequest)
+  regla_validacion?: ActualizarReglaValidacionDtoRequest;
 
   @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsEnum(OperadorCondicion)
