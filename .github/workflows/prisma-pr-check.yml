@@ -63,5 +63,5 @@ jobs:
             --script \
             --exit-code
 
-      - name: Test applying migrations to ephemeral DB
+      - name: Test applying migrations_backup to ephemeral DB
         run: npx prisma migrate deploy --schema prisma/schema.prisma

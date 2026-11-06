@@ -157,7 +157,7 @@ pg_restore -U <usuario> -d surconductual nombre-del-backup.dump
 
 #### Opción B · Aplicar las migraciones (recomendada)
 
-Úsala cuando tu `DATABASE_URL` ya apunta a la base de datos compartida de Supabase (el caso normal para el día a día del equipo). El historial de migraciones versionado en `prisma/migrations/` ya refleja el estado real de esa base de datos, así que no hace falta crear ni restaurar nada — solo confirmar que tu entorno está alineado:
+Úsala cuando tu `DATABASE_URL` ya apunta a la base de datos compartida de Supabase (el caso normal para el día a día del equipo). El historial de migraciones versionado en `prisma/migrations_backup` ya refleja el estado real de esa base de datos, así que no hace falta crear ni restaurar nada — solo confirmar que tu entorno está alineado:
 
 ```bash
 pnpm dlx prisma migrate deploy
@@ -441,13 +441,13 @@ personal. No requiere migración ni dependencias nuevas.
 
 ## Flujo de trabajo con Prisma
 
-Este proyecto usa **migraciones versionadas de Prisma** (`prisma migrate`). El esquema `schema.prisma` es la fuente de verdad: todo cambio de estructura se hace primero ahí, y luego se convierte en una migración versionada que queda registrada en `prisma/migrations/` y se aplica de forma reproducible sobre la base de datos compartida.
+Este proyecto usa **migraciones versionadas de Prisma** (`prisma migrate`). El esquema `schema.prisma` es la fuente de verdad: todo cambio de estructura se hace primero ahí, y luego se convierte en una migración versionada que queda registrada en `prisma/migrations_backup` y se aplica de forma reproducible sobre la base de datos compartida.
 
 **La base de datos de Supabase nunca se edita a mano** (ni desde el SQL Editor del panel, ni con `psql` manual, ni con herramientas externas) para cambios de estructura. Todo pasa por este flujo.
 
 ### Si solo vas a trabajar con el esquema tal como está
 
-No necesitas hacer nada especial más allá de lo descrito en la [Guía de inicio rápido](#5-configurar-la-base-de-datos): cada vez que hagas `git pull` y veas una carpeta nueva en `prisma/migrations/`, corre:
+No necesitas hacer nada especial más allá de lo descrito en la [Guía de inicio rápido](#5-configurar-la-base-de-datos): cada vez que hagas `git pull` y veas una carpeta nueva en `prisma/migrations_backup`, corre:
 
 ```bash
 pnpm dlx prisma generate
@@ -464,13 +464,13 @@ Esto es suficiente porque la migración ya fue aplicada una sola vez, contra la 
    pnpm dlx prisma migrate dev --name descripcion_corta_del_cambio
    ```
    Este comando compara tu `schema.prisma` contra el historial de migraciones existente, genera el SQL de diferencia, te lo muestra para revisión (presta especial atención si incluye algo potencialmente destructivo, como un `DROP COLUMN`), lo aplica contra la base de datos real, y regenera el cliente de Prisma automáticamente.
-4. Commitea la carpeta nueva de `prisma/migrations/<timestamp>_descripcion_corta_del_cambio/` junto con tu cambio de código — es parte del repositorio, no se ignora en git.
+4. Commitea la carpeta nueva de `prisma/migrations_backup` junto con tu cambio de código — es parte del repositorio, no se ignora en git.
 5. Avisa al equipo que ya se aplicó, para que cada quien corra `git pull` seguido de `pnpm dlx prisma generate`.
 
 ### Reglas del equipo
 
 - **Nunca se editan tablas, columnas o constraints directamente en Supabase.** Todo cambio de esquema pasa por `schema.prisma` + `prisma migrate dev`.
-- **No se usa `prisma db push`** para cambios de esquema del día a día — no deja registro en `prisma/migrations/` y desincroniza el historial del equipo.
+- **No se usa `prisma db push`** para cambios de esquema del día a día — no deja registro en `prisma/migrations_backup` y desincroniza el historial del equipo.
 - **Solo una persona migra a la vez.** Confirma con el equipo antes de correr `migrate dev` contra la base de datos compartida.
 - Si un comando de migración falla a mitad de camino, no sigas intentando comandos al azar — revisa el mensaje de error completo y coordina con el equipo antes de forzar cualquier `migrate resolve`.
 - La configuración de conexión para migraciones (incluida la shadow database) vive en `prisma.config.ts`, ya versionado — no debe modificarse sin coordinarlo con el equipo, ya que afecta a todos por igual.

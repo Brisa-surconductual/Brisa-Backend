@@ -126,7 +126,7 @@ async function main() {
   ]) {
     await client.query(
       fs.readFileSync(
-        path.join(root, 'prisma/migrations', migration, 'migration.sql'),
+        path.join(root, 'prisma/migrations_backup', migration, 'migration.sql'),
         'utf8',
       ),
     );
