@@ -1,4 +1,4 @@
-name: Deploy migrations_backup to Test
+name: Deploy migrations to Test
 
 on:
   push:
@@ -10,12 +10,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-migrations_backup-test
+  group: deploy-migrations-test
   cancel-in-progress: false
 
 jobs:
   deploy-test:
-    name: Apply migrations_backup to Test DB
+    name: Apply migrations to Test DB
     runs-on: ubuntu-latest
 
     # Opcional: puedes usar GitHub Environment llamado "test"
@@ -40,5 +40,5 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate --schema prisma/schema.prisma
 
-      - name: Apply Prisma migrations_backup
+      - name: Apply Prisma migrations
         run: npx prisma migrate deploy --schema prisma/schema.prisma

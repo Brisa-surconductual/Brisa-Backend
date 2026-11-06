@@ -41,5 +41,5 @@ jobs:
         run: npx prisma generate
 
       # 5. Ejecutar las migraciones en la base de datos
-      - name: Apply database migrations_backup
+      - name: Apply database migrations
         run: npx prisma migrate deploy

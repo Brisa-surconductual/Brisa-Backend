@@ -8,8 +8,8 @@ datasource db {
   schemas  = ["chat", "cronograma", "usuario"]
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model consentimientos {
   id_consentimiento      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   version_consentimiento String     @db.VarChar(20)
@@ -23,8 +23,8 @@ model consentimientos {
   @@schema("usuario")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model linea_base {
   id_linea_base         String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_usuario            String                 @unique(map: "uq_linea_base_usuario") @db.Uuid
@@ -46,7 +46,7 @@ model linea_base {
   @@schema("usuario")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model linea_base_historial {
   id_historial       BigInt     @id @default(autoincrement())
   id_linea_base      String     @db.Uuid
@@ -61,8 +61,8 @@ model linea_base_historial {
   @@schema("usuario")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model sesiones {
   id_sesion                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_usuario                 String                 @db.Uuid
@@ -83,7 +83,7 @@ model sesiones {
   @@schema("usuario")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model solicitudes_recuperacion {
   id_solicitud       String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correo_electronico String              @db.VarChar(255)
@@ -100,9 +100,9 @@ model solicitudes_recuperacion {
   @@schema("usuario")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
-/// This model contains an expression index which requires additional setup for migrations_backup. Visit https://pris.ly/d/expression-indexes for more info.
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model usuarios {
   id_usuario                                                                        String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correo_electronico                                                                String                     @unique(map: "uq_usuarios_correo") @db.VarChar(255)
@@ -140,7 +140,7 @@ model usuarios {
   @@schema("usuario")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model contenidos {
   id_contenido          String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre_contenido      String                 @db.VarChar(255)
@@ -154,8 +154,8 @@ model contenidos {
   @@schema("cronograma")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model contenidos_cronograma {
   id_contenido_cronograma     String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_contenido                String              @unique(map: "uq_contenido_unico_en_cronograma") @db.Uuid
@@ -175,8 +175,8 @@ model contenidos_cronograma {
   @@schema("cronograma")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model cronogramas {
   id_cronograma       String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre_cronograma   String                 @db.VarChar(150)
@@ -192,7 +192,7 @@ model cronogramas {
   @@schema("cronograma")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model cronogramas_usuario {
   id_cronograma_usuario  String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_usuario             String                   @unique(map: "uq_cronograma_usuario_unico") @db.Uuid
@@ -207,8 +207,8 @@ model cronogramas_usuario {
   @@schema("cronograma")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model eventos_contenido {
   id_evento                 BigInt                      @id @default(autoincrement())
   id_contenido_cronograma   String                      @db.Uuid
@@ -254,9 +254,9 @@ model entregas_evento_contenido {
   @@schema("cronograma")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This table contains exclusion constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/exclusion-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model pausas_administrativas {
   id_pausa                                                            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_usuario                                                          String              @db.Uuid
@@ -276,7 +276,7 @@ model pausas_administrativas {
   @@schema("cronograma")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model recursos_contenido {
   id_recurso               String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_contenido             String                     @db.Uuid
@@ -325,9 +325,9 @@ model recursos_modulos_destino {
   @@schema("cronograma")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This table contains exclusion constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/exclusion-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model unidades_temporales {
   id_unidad_temporal     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_cronograma          String                  @db.Uuid
@@ -355,8 +355,8 @@ model estado_conectividad {
   @@schema("chat")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model estado_sesiones {
   id_sesion           String             @id @db.Uuid
   estado_actual       estado_sesion_enum @default(ACTIVA)
@@ -385,8 +385,8 @@ model exportaciones {
   @@schema("chat")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model flujo_conversacion {
   id_flujo          String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre            String                 @db.VarChar(150)
@@ -457,7 +457,7 @@ model interacciones {
   @@schema("chat")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model nodos {
   id_nodo                                                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_flujo                                               String             @unique(map: "uq_nodo_inicial_por_flujo", where: raw("(es_nodo_inicial = true)")) @db.Uuid
@@ -485,7 +485,7 @@ model nodos {
   @@schema("chat")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model perfil_clinico {
   id_usuario                String                 @id @db.Uuid
   tipo_dependencia          tipo_dependencia_enum?
@@ -515,7 +515,7 @@ model punto_control {
   @@schema("chat")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model reglas_nodos {
   id_regla                                  String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_flujo                                  String                  @db.Uuid
@@ -535,7 +535,7 @@ model reglas_nodos {
   @@schema("chat")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model reglas_validaciones {
   id_regla_validacion String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tipo_dato           tipo_dato_validacion_enum
@@ -550,7 +550,7 @@ model reglas_validaciones {
   @@schema("chat")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model respuestas {
   id_respuesta           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_interaccion         String              @db.Uuid
@@ -570,8 +570,8 @@ model respuestas {
   @@schema("chat")
 }
 
-/// This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model chat_sesiones {
   id_sesion                String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_usuario               String                     @db.Uuid
@@ -597,7 +597,7 @@ model chat_sesiones {
   @@schema("chat")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model sincronizaciones {
   id_sincronizacion              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_usuario                     String               @db.Uuid
@@ -641,7 +641,7 @@ model tipo_respuesta {
   @@schema("chat")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model tipo_terapia {
   id_tipo_terapia                                           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_usuario                                                String         @unique(map: "uq_tipoterapia_vigente_por_usuario", where: raw("(fecha_vigencia_hasta IS NULL)")) @db.Uuid
