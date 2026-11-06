@@ -12,6 +12,7 @@ import {
 } from '../../../domain/exceptions';
 import { ContenidoNodoNoDisponibleException } from '../../exceptions/contenido-nodo-no-disponible.exception';
 import { ConsultarNodoActualUseCase } from './consultar-nodo-actual.use-case';
+import { presentadorNodoPrueba } from '../../support/testing/presentacion-nodo.fixture';
 
 describe('ConsultarNodoActualUseCase (RF-26)', () => {
   const sesiones = {
@@ -29,6 +30,7 @@ describe('ConsultarNodoActualUseCase (RF-26)', () => {
   const caso = new ConsultarNodoActualUseCase(
     sesiones,
     arboles as unknown as ArbolConversacionalRepository,
+    presentadorNodoPrueba(),
   );
   const fecha = new Date('2026-11-05T14:00:00Z');
   const contenido = {
@@ -93,16 +95,25 @@ describe('ConsultarNodoActualUseCase (RF-26)', () => {
   it('devuelve solo el nodo persistido, conservando texto, orden y elementos visuales', async () => {
     const antes = JSON.stringify(contenido);
     const resultado = await caso.execute('sesion', 'usuario');
-    expect(resultado).toEqual({
-      nodo_actual: {
-        id_nodo: 'nodo-actual',
-        tipo_nodo: 'MENSAJE',
-        contenido,
-        es_nodo_inicial: false,
+    expect(resultado).toMatchObject({
+      idSesion: 'sesion',
+      estadoSesion: 'ACTIVA',
+      nodo: {
+        idNodo: 'nodo-actual',
+        tipoNodo: 'MENSAJE',
         orden: 2,
+        esTerminal: true,
+        entrada: null,
       },
     });
-    expect(resultado.nodo_actual.contenido).toBe(contenido);
+    expect(resultado.nodo.bloques.map((b) => b.tipo)).toEqual([
+      'TEXTO',
+      'INSTRUCCION',
+      'IMAGEN',
+      'IMAGEN',
+    ]);
+    expect(resultado.nodo.bloques[0].texto).toBe(contenido.texto);
+    expect(resultado.nodo.bloques[1].texto).toBe(contenido.instrucciones);
     expect(JSON.stringify(contenido)).toBe(antes);
     expect(sesiones.buscarPorIdYUsuario).toHaveBeenCalledWith(
       'sesion',
@@ -124,11 +135,11 @@ describe('ConsultarNodoActualUseCase (RF-26)', () => {
       expect(actual.idNodoActual).toBe('nodo-actual');
     },
   );
-  it('no impone una estructura de contenido ni valida respuestas', async () => {
+  it('informa contenido no disponible si el JSON está vacío', async () => {
     arboles.buscarNodo.mockResolvedValue(nodo({}));
-    await expect(caso.execute('sesion', 'usuario')).resolves.toMatchObject({
-      nodo_actual: { contenido: {} },
-    });
+    await expect(caso.execute('sesion', 'usuario')).rejects.toBeInstanceOf(
+      ContenidoNodoNoDisponibleException,
+    );
   });
   it('oculta tanto una sesión inexistente como una ajena', async () => {
     sesiones.buscarPorIdYUsuario.mockResolvedValue(null);
@@ -183,7 +194,7 @@ describe('ConsultarNodoActualUseCase (RF-26)', () => {
       await expect(caso.execute('sesion', 'usuario')).rejects.toMatchObject({
         status: 500,
         response: {
-          codigo: 'CONTENIDO_NODO_NO_DISPONIBLE',
+          codigo: 'CONTENIDO_NO_DISPONIBLE',
           message: 'El contenido del nodo no está disponible.',
         },
       });

@@ -17,6 +17,8 @@ import { ArbolConversacionalRepository } from '../../../domain/repositories/arbo
 import { SesionConversacionalRepository } from '../../../domain/repositories/sesion-conversacional.repository';
 import { DomainExceptionFilter } from '../../filters/domain-exception.filter';
 import { NodoActualController } from './nodo-actual.controller';
+import { PresentarNodoActualService } from '../../../application/services/presentar-nodo-actual.service';
+import { presentadorNodoPrueba } from '../../../application/support/testing/presentacion-nodo.fixture';
 
 describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
   const idSesion = '26000000-0000-4000-8000-000000000001';
@@ -51,6 +53,8 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
     buscarUltimaReanudable: jest.fn(),
   };
   const arboles = { buscarNodo: jest.fn() };
+  const lecturas = { consultarReglas: jest.fn(), consultarRecursos: jest.fn() };
+  const firmar = { lectura: jest.fn() };
   let app: INestApplication<App>;
   let autenticacion: {
     usuario: { id_usuario: string; rol: Rol };
@@ -62,6 +66,10 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
       controllers: [NodoActualController],
       providers: [
         ConsultarNodoActualUseCase,
+        {
+          provide: PresentarNodoActualService,
+          useValue: presentadorNodoPrueba(lecturas, firmar),
+        },
         { provide: SesionConversacionalRepository, useValue: sesiones },
         { provide: ArbolConversacionalRepository, useValue: arboles },
       ],
@@ -84,6 +92,8 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
   });
   beforeEach(() => {
     jest.resetAllMocks();
+    lecturas.consultarReglas.mockResolvedValue([]);
+    lecturas.consultarRecursos.mockResolvedValue([]);
     autenticacion = {
       usuario: { id_usuario: idUsuario, rol: Rol.ESTUDIANTE },
       sesion: { alcance_sesion: AlcanceSesion.COMPLETA },
@@ -122,14 +132,27 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
       .expect(200)
       .expect('Cache-Control', 'no-store')
       .expect({
-        data: {
-          nodo_actual: {
-            id_nodo: idNodo,
-            tipo_nodo: 'MENSAJE',
-            contenido,
-            es_nodo_inicial: false,
-            orden: 2,
-          },
+        idSesion,
+        estadoSesion: 'PAUSADA',
+        nodo: {
+          idNodo,
+          tipoNodo: 'MENSAJE',
+          orden: 2,
+          esTerminal: true,
+          entrada: null,
+          bloques: [
+            { orden: 1, tipo: 'TEXTO', texto: contenido.texto },
+            { orden: 2, tipo: 'INSTRUCCION', texto: contenido.instrucciones },
+            ...contenido.multimedia.map((m, i) => ({
+              orden: i + 3,
+              tipo: m.tipo,
+              url: m.url,
+              expiraEn: null,
+              mimeType: null,
+              textoAlternativo: null,
+              duracionSegundos: null,
+            })),
+          ],
         },
       });
     expect(arboles.buscarNodo).toHaveBeenCalledWith(idNodo);
@@ -191,8 +214,9 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
       .get(`/chat/sesiones/${idSesion}/nodo-actual`)
       .expect(404);
     expect(result.body).toMatchObject({
-      codigo: 'NODO_NO_ENCONTRADO',
-      message: 'No se pudo recuperar el contenido del chat.',
+      statusCode: 404,
+      codigo: 'NODO_INEXISTENTE',
+      mensaje: 'No se pudo recuperar el contenido del chat.',
     });
   });
   it('informa ERROR_CONFIGURACION sin reiniciar la conversación', async () => {
@@ -222,9 +246,167 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
       .get(`/chat/sesiones/${idSesion}/nodo-actual`)
       .expect(500);
     expect(result.body).toMatchObject({
-      codigo: 'CONTENIDO_NODO_NO_DISPONIBLE',
-      message: 'El contenido del nodo no está disponible.',
+      statusCode: 500,
+      codigo: 'CONTENIDO_NO_DISPONIBLE',
+      mensaje: 'El contenido del nodo no está disponible.',
     });
     expect(result.text).not.toContain('PostgreSQL');
+  });
+  it('expone la ruta /api y conserva el alias usado por el proxy', async () => {
+    const conApi = await request(app.getHttpServer())
+      .get(`/api/chat/sesiones/${idSesion}/nodo-actual`)
+      .expect(200);
+    const sinApi = await request(app.getHttpServer())
+      .get(`/chat/sesiones/${idSesion}/nodo-actual`)
+      .expect(200);
+    expect(conApi.body).toEqual(sinApi.body);
+  });
+  it('respeta exactamente el sobre de error confirmado para una sesión ajena', async () => {
+    const r = await request(app.getHttpServer())
+      .get(
+        '/api/chat/sesiones/26000000-0000-4000-8000-000000000099/nodo-actual',
+      )
+      .expect(404);
+    expect(r.body).toEqual({
+      statusCode: 404,
+      codigo: 'SESION_NO_ENCONTRADA',
+      mensaje: 'No se pudo recuperar el contenido del chat.',
+    });
+  });
+  it('normaliza también errores de autenticación', async () => {
+    autenticacion = null;
+    const r = await request(app.getHttpServer())
+      .get(`/api/chat/sesiones/${idSesion}/nodo-actual`)
+      .expect(401);
+    expect(r.body as unknown).toMatchObject({
+      statusCode: 401,
+      codigo: null,
+    });
+    expect(r.body as unknown).not.toHaveProperty('message');
+    expect(typeof (r.body as { mensaje: unknown }).mensaje).toBe('string');
+  });
+  it('entrega exactamente el contrato confirmado, con imagen firmada y escala', async () => {
+    const idRecurso = '26000000-0000-4000-8000-000000000010';
+    const datos = {
+      bloques: [
+        { orden: 3, tipo: 'IMAGEN', idRecurso },
+        { orden: 1, tipo: 'TEXTO', texto: 'Pregunta' },
+        { orden: 2, tipo: 'INSTRUCCION', texto: 'Instrucción' },
+      ],
+      entrada: {
+        tipo: 'ESCALA',
+        min: 1,
+        max: 10,
+        paso: 1,
+        etiquetas: { min: 'Nada', max: 'Muchísimo' },
+      },
+    };
+    arboles.buscarNodo.mockResolvedValue(
+      new NodoConversacional(
+        idNodo,
+        idFlujo,
+        'tipo',
+        'PREGUNTA',
+        datos,
+        false,
+        4,
+        'contenido',
+        'actor',
+        fecha,
+        fecha,
+      ),
+    );
+    sesiones.buscarPorIdYUsuario.mockResolvedValue(
+      new SesionConversacional(
+        idSesion,
+        idUsuario,
+        idFlujo,
+        1,
+        ModalidadConversacional.GRUPAL,
+        null,
+        null,
+        idNodo,
+        'ACTIVA',
+        fecha,
+        fecha,
+      ),
+    );
+    lecturas.consultarReglas.mockResolvedValue([
+      { obligatorio: true, valorMin: 1, valorMax: 10, valoresPermitidos: [] },
+    ]);
+    lecturas.consultarRecursos.mockResolvedValue([
+      {
+        idRecurso,
+        tipo: 'IMAGEN',
+        orden: 1,
+        texto: null,
+        claveAlmacenamiento: 'cronograma/recursos/contenido/objeto',
+        mimeType: 'image/webp',
+        textoAlternativo: 'Imagen',
+        duracionSegundos: null,
+      },
+    ]);
+    firmar.lectura.mockResolvedValue({
+      url: 'https://bucket.example.test/imagen?firma=nueva',
+      expiraEn: '2099-11-06T17:10:00.000Z',
+    });
+    const r = await request(app.getHttpServer())
+      .get(`/api/chat/sesiones/${idSesion}/nodo-actual`)
+      .expect(200);
+    expect(r.body).toEqual({
+      idSesion,
+      estadoSesion: 'ACTIVA',
+      nodo: {
+        idNodo,
+        tipoNodo: 'PREGUNTA',
+        orden: 4,
+        esTerminal: false,
+        bloques: [
+          { orden: 1, tipo: 'TEXTO', texto: 'Pregunta' },
+          { orden: 2, tipo: 'INSTRUCCION', texto: 'Instrucción' },
+          {
+            orden: 3,
+            tipo: 'IMAGEN',
+            url: 'https://bucket.example.test/imagen?firma=nueva',
+            expiraEn: '2099-11-06T17:10:00.000Z',
+            mimeType: 'image/webp',
+            textoAlternativo: 'Imagen',
+            duracionSegundos: null,
+          },
+        ],
+        entrada: {
+          tipo: 'ESCALA',
+          obligatorio: true,
+          min: 1,
+          max: 10,
+          paso: 1,
+          opciones: null,
+          etiquetas: { min: 'Nada', max: 'Muchísimo' },
+          maxCaracteres: null,
+        },
+      },
+    });
+    expect(firmar.lectura).toHaveBeenCalledWith(
+      'cronograma/recursos/contenido/objeto',
+    );
+    expect(datos.bloques[0].orden).toBe(3);
+  });
+  it('no firma una referencia privada ajena al contenido del nodo', async () => {
+    arboles.buscarNodo.mockResolvedValue(
+      nodo.actualizar({
+        contenido: {
+          bloques: [{ orden: 1, tipo: 'VIDEO', idRecurso: 'ajeno' }],
+        },
+      }),
+    );
+    const r = await request(app.getHttpServer())
+      .get(`/api/chat/sesiones/${idSesion}/nodo-actual`)
+      .expect(500);
+    expect(r.body).toEqual({
+      statusCode: 500,
+      codigo: 'CONTENIDO_NO_DISPONIBLE',
+      mensaje: 'El contenido del nodo no está disponible.',
+    });
+    expect(firmar.lectura).not.toHaveBeenCalled();
   });
 });

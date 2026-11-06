@@ -62,10 +62,6 @@ export class NodoActualDtoResponse {
   }
 }
 
-export class ConsultaNodoActualDtoResponse {
-  nodo_actual!: NodoActualDtoResponse;
-}
-
 export class UbicacionTemporalSesionDtoResponse {
   id_unidad_temporal!: string | null;
   nombre_unidad!: string | null;

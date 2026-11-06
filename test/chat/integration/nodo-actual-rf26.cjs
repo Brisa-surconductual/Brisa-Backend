@@ -29,6 +29,22 @@ const { PrismaArbolConversacionalRepository } = source(
   'infrastructure/persistence/prisma-arbol-conversacional.repository.ts',
 );
 const { PrismaService } = require('../../../prisma/prisma.service.ts');
+const { PrismaPresentacionNodoActualRepository } = source(
+  'infrastructure/persistence/prisma-presentacion-nodo-actual.repository.ts',
+);
+const { PresentarNodoActualService } = source(
+  'application/services/presentar-nodo-actual.service.ts',
+);
+const { PresentarBloquesNodoActualService } = source(
+  'application/services/presentar-bloques-nodo-actual.service.ts',
+);
+const { PrepararEntradaNodoActualService } = source(
+  'application/services/preparar-entrada-nodo-actual.service.ts',
+);
+const { S3FirmarRecursoNodoAdapter } = source(
+  'infrastructure/storage/s3-firmar-recurso-nodo.adapter.ts',
+);
+const { S3Client } = require('@aws-sdk/client-s3');
 const connection = process.env.RF26_TEST_DATABASE_URL;
 assert.ok(
   connection,
@@ -43,6 +59,11 @@ assert.match(url.pathname, /^\/brisa_rf26_test_[a-z0-9_]+$/);
 process.env.DATABASE_URL = connection;
 const prisma = new PrismaService();
 const sql = new Client({ connectionString: connection });
+process.env.AWS_S3_BUCKET = 'brisa-rf26-pruebas';
+const s3 = new S3Client({
+  region: 'us-east-1',
+  credentials: { accessKeyId: randomUUID(), secretAccessKey: randomUUID() },
+});
 const ids = Object.fromEntries(
   [
     'usuario',
@@ -96,6 +117,13 @@ async function leer(idSesion, idUsuario = ids.usuario) {
         const caso = new ConsultarNodoActualUseCase(
           new PrismaSesionConversacionalRepository(tx),
           new PrismaArbolConversacionalRepository(tx),
+          new PresentarNodoActualService(
+            new PrismaPresentacionNodoActualRepository(tx),
+            new PresentarBloquesNodoActualService(
+              new S3FirmarRecursoNodoAdapter(s3),
+            ),
+            new PrepararEntradaNodoActualService(),
+          ),
         );
         return caso.execute(idSesion, idUsuario);
       },
@@ -187,15 +215,14 @@ async function main() {
     );
   await seed();
   const respuesta = await leer(ids.sesion);
-  assert.deepEqual(respuesta, {
-    nodo_actual: {
-      id_nodo: ids.actual,
-      tipo_nodo: 'MENSAJE',
-      contenido,
-      es_nodo_inicial: false,
-      orden: 2,
-    },
-  });
+  assert.equal(respuesta.idSesion, ids.sesion);
+  assert.equal(respuesta.estadoSesion, 'PAUSADA');
+  assert.equal(respuesta.nodo.idNodo, ids.actual);
+  assert.deepEqual(
+    respuesta.nodo.bloques.map((b) => b.tipo),
+    ['TEXTO', 'INSTRUCCION', 'IMAGEN', 'IMAGEN'],
+  );
+  assert.equal(respuesta.nodo.bloques[0].texto, contenido.texto);
   pass(
     'recupera solo el nodo actual y su JSON en una transacción SQL READ ONLY',
   );
@@ -214,7 +241,7 @@ async function main() {
   pass('una sesión inexistente no inicia ni reinicia conversaciones');
   await assert.rejects(
     leer(ids.sesionInconsistente),
-    (error) => error.codigo === 'NODO_NO_ENCONTRADO',
+    (error) => error.codigo === 'NODO_INEXISTENTE',
   );
   pass('no devuelve contenido de otro flujo ante un puntero inconsistente');
   await assert.rejects(
@@ -227,7 +254,7 @@ async function main() {
     [ids.siguiente, ids.sesion],
   );
   const avanzada = await leer(ids.sesion);
-  assert.equal(avanzada.nodo_actual.id_nodo, ids.siguiente);
+  assert.equal(avanzada.nodo.idNodo, ids.siguiente);
   pass(
     'una lectura posterior sigue el puntero persistido, sin recorrer transiciones',
   );
@@ -250,8 +277,11 @@ async function main() {
     "UPDATE chat.nodos SET contenido='{}'::jsonb WHERE id_nodo=$1",
     [ids.siguiente],
   );
-  assert.deepEqual((await leer(ids.sesion)).nodo_actual.contenido, {});
-  pass('conserva un objeto vacío sin imponer validaciones de otra historia');
+  await assert.rejects(
+    leer(ids.sesion),
+    (error) => error.getResponse?.().codigo === 'CONTENIDO_NO_DISPONIBLE',
+  );
+  pass('un objeto vacío no produce un mensaje vacío en el contrato');
   await sql.query(
     "UPDATE chat.nodos SET contenido='null'::jsonb WHERE id_nodo=$1",
     [ids.siguiente],
@@ -260,9 +290,66 @@ async function main() {
     leer(ids.sesion),
     (error) =>
       error.getStatus?.() === 500 &&
-      error.getResponse().codigo === 'CONTENIDO_NODO_NO_DISPONIBLE',
+      error.getResponse().codigo === 'CONTENIDO_NO_DISPONIBLE',
   );
   pass('trata JSON null como contenido no disponible');
+  const idContenido = randomUUID(),
+    idRecurso = randomUUID(),
+    idModulo = randomUUID();
+  await sql.query(
+    'INSERT INTO cronograma.contenidos(id_contenido) VALUES($1)',
+    [idContenido],
+  );
+  await sql.query(
+    "INSERT INTO cronograma.modulos_sistema VALUES($1,'CHAT','Chat',true)",
+    [idModulo],
+  );
+  await sql.query(
+    "INSERT INTO cronograma.recursos_contenido VALUES($1,$2,'IMAGEN',1,null,$3,'image/webp','Imagen de prueba',null)",
+    [
+      idRecurso,
+      idContenido,
+      `cronograma/recursos/${idContenido}/${randomUUID()}`,
+    ],
+  );
+  await sql.query(
+    'INSERT INTO cronograma.recursos_modulos_destino(id_recurso,id_modulo) VALUES($1,$2)',
+    [idRecurso, idModulo],
+  );
+  await sql.query(
+    'UPDATE chat.nodos SET contenido=$1::jsonb,id_contenido_cronograma=$2 WHERE id_nodo=$3',
+    [
+      JSON.stringify({ bloques: [{ orden: 1, tipo: 'IMAGEN', idRecurso }] }),
+      idContenido,
+      ids.siguiente,
+    ],
+  );
+  const privado = await leer(ids.sesion);
+  assert.ok(
+    new URL(privado.nodo.bloques[0].url).searchParams.has('X-Amz-Signature'),
+  );
+  assert.ok(Date.parse(privado.nodo.bloques[0].expiraEn) > Date.now());
+  pass(
+    'consulta recursos asignados a Chat y firma una URL GET sin escribir en la transacción',
+  );
+  await sql.query(
+    'UPDATE chat.sesiones SET id_nodo_actual=$1 WHERE id_sesion=$2',
+    [ids.siguiente, ids.sesionAjena],
+  );
+  const deOtro = await leer(ids.sesionAjena, ids.otroUsuario);
+  assert.equal(deOtro.nodo.bloques[0].tipo, 'IMAGEN');
+  pass(
+    'dos estudiantes autorizados pueden leer el mismo recurso desde sus propias sesiones',
+  );
+  await sql.query(
+    'UPDATE cronograma.modulos_sistema SET activo=false WHERE id_modulo=$1',
+    [idModulo],
+  );
+  await assert.rejects(
+    leer(ids.sesion),
+    (error) => error.getResponse?.().codigo === 'CONTENIDO_NO_DISPONIBLE',
+  );
+  pass('un recurso sin módulo Chat activo no se firma');
   console.log(
     JSON.stringify({
       passed: checks,
@@ -278,6 +365,7 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
+    s3.destroy();
     await prisma.$disconnect();
     await sql.end();
   });

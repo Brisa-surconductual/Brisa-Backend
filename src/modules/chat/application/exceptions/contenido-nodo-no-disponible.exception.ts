@@ -5,7 +5,7 @@ export class ContenidoNodoNoDisponibleException extends InternalServerErrorExcep
     super({
       statusCode: 500,
       error: 'Internal Server Error',
-      codigo: 'CONTENIDO_NODO_NO_DISPONIBLE',
+      codigo: 'CONTENIDO_NO_DISPONIBLE',
       message: 'El contenido del nodo no está disponible.',
     });
   }

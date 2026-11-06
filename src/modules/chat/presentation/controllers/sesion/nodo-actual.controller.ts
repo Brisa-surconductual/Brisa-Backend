@@ -1,22 +1,29 @@
-import { Controller, Get, Header, Param, ParseUUIDPipe } from '@nestjs/common';
-import { ConsultaNodoActualDtoResponse } from '../../../application/dto/sesion-conversacional.dto-response';
+import {
+  Controller,
+  Get,
+  Header,
+  Param,
+  ParseUUIDPipe,
+  UseFilters,
+} from '@nestjs/common';
+import { PresentacionNodoActualDtoResponse } from '../../../application/dto/presentacion-nodo-actual.dto-response';
 import { ConsultarNodoActualUseCase } from '../../../application/use-cases/sesion/consultar-nodo-actual.use-case';
 import { AccesoEstudiante } from '../../decorators/acceso.decorators';
 import { IdUsuarioSesion } from '../../decorators/id-usuario-sesion.decorator';
-import { RespuestaHttp } from '../../interceptors/respuesta-http.interceptor';
+import { ErrorContratoChatFilter } from '../../filters/error-contrato-chat.filter';
 
-@Controller('/chat/sesiones')
+@Controller(['/api/chat/sesiones', '/chat/sesiones'])
 @AccesoEstudiante()
+@UseFilters(ErrorContratoChatFilter)
 export class NodoActualController {
   constructor(private readonly consultar: ConsultarNodoActualUseCase) {}
 
-  @Get('/:id_sesion/nodo-actual')
+  @Get('/:idSesion/nodo-actual')
   @Header('Cache-Control', 'no-store')
-  @RespuestaHttp({ envolver: true })
   obtener(
-    @Param('id_sesion', new ParseUUIDPipe()) idSesion: string,
+    @Param('idSesion', new ParseUUIDPipe()) idSesion: string,
     @IdUsuarioSesion() idUsuario: string,
-  ): Promise<ConsultaNodoActualDtoResponse> {
+  ): Promise<PresentacionNodoActualDtoResponse> {
     return this.consultar.execute(idSesion, idUsuario);
   }
 }

@@ -4,7 +4,7 @@ export class SesionConversacionalNoEncontradaException extends DomainException {
   readonly tipo = 'NO_ENCONTRADO';
 
   constructor() {
-    super('No se encontró la sesión de chat.', 'SESION_NO_ENCONTRADA');
+    super('No se pudo recuperar el contenido del chat.', 'SESION_NO_ENCONTRADA');
   }
 }
 

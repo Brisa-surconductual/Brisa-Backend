@@ -4,7 +4,7 @@ export class NodoActualNoEncontradoException extends DomainException {
   readonly tipo = 'NO_ENCONTRADO';
 
   constructor() {
-    super('No se pudo recuperar el contenido del chat.', 'NODO_NO_ENCONTRADO');
+    super('No se pudo recuperar el contenido del chat.', 'NODO_INEXISTENTE');
   }
 }
 
