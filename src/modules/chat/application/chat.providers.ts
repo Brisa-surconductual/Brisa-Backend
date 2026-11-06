@@ -21,8 +21,10 @@ import { ConsultarElegibilidadModalidadUseCase } from './use-cases/modalidad/con
 import { HabilitarModalidadPersonalizadaUseCase } from './use-cases/modalidad/habilitar-modalidad-personalizada.use-case';
 import { DeterminarContextoConversacionalUseCase } from './use-cases/sesion/determinar-contexto-conversacional.use-case';
 import { IniciarOReanudarSesionUseCase } from './use-cases/sesion/iniciar-o-reanudar-sesion.use-case';
+import { ConsultarNodoActualUseCase } from './use-cases/sesion/consultar-nodo-actual.use-case';
 
 export const ChatApplicationProviders = [
+  ConsultarNodoActualUseCase,
   IniciarOReanudarSesionUseCase,
   DeterminarContextoConversacionalUseCase,
   ConsultarElegibilidadModalidadUseCase,

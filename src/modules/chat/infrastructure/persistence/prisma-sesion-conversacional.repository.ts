@@ -10,6 +10,18 @@ import { SesionConversacionalMapper } from '../mappers/sesion-conversacional.map
 export class PrismaSesionConversacionalRepository implements SesionConversacionalRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async buscarPorIdYUsuario(
+    idSesion: string,
+    idUsuario: string,
+  ): Promise<SesionConversacional | null> {
+    const sesion = await this.prisma.chat_sesiones.findFirst({
+      where: { id_sesion: idSesion, id_usuario: idUsuario },
+      include: { estado_sesiones: true },
+    });
+    if (sesion === null || sesion.estado_sesiones === null) return null;
+    return SesionConversacionalMapper.toDomain(sesion);
+  }
+
   async buscarUltimaReanudable(
     idUsuario: string,
   ): Promise<SesionConversacional | null> {
