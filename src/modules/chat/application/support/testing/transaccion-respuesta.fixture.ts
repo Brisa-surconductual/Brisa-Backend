@@ -45,7 +45,12 @@ export function transaccionRespuestaPrueba() {
         .mockResolvedValue(undefined),
     },
     perfil: {
-      guardar: jest.fn().mockResolvedValue(undefined),
+      capturarDimension: jest.fn().mockResolvedValue({
+        aplicado: true,
+        dimension: 'TIPO_DEPENDENCIA',
+        valorVigente: 'ABSTINENCIA_FISICA',
+        perfilCompleto: false,
+      }),
     },
   };
 }

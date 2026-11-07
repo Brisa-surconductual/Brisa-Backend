@@ -29,6 +29,7 @@ import {
 } from '../../../domain/exceptions/respuesta.exceptions';
 import { OperadorCondicion as Op } from '../../../domain/enums/operador-condicional.enum';
 import { TipoDatoValidacion as Dato } from '../../../domain/enums/tipo-dato-validacion-enum';
+import { ModalidadConversacional } from '../../../domain/enums/modalidad-conversacional-enum';
 import { FormatoRespuestaAdapter } from '../../../infrastructure/validation/formato-respuesta.adapter';
 import { DomainExceptionFilter } from '../../filters/domain-exception.filter';
 import { RespuestasConversacionalesController } from './respuestas-conversacionales.controller';
@@ -309,7 +310,7 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
     const r = await post(body()).expect(200);
     expect(r.body).toEqual(original);
     expect(tx.contexto.buscarNodo).not.toHaveBeenCalled();
-    expect(tx.perfil.guardar).not.toHaveBeenCalled();
+    expect(tx.perfil.capturarDimension).not.toHaveBeenCalled();
     expect(tx.registro.guardar).not.toHaveBeenCalled();
   });
   it.each([
@@ -340,4 +341,108 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
       expect(tx.registro.guardar).toHaveBeenCalledTimes(1);
     },
   );
+
+  describe('RF-27B captura clínica dentro del POST', () => {
+    const configurar = () => {
+      const n = nodoRespuesta({ tipo: 'OPCION_UNICA' });
+      n.contenido.capturaPerfil = { dimension: 'TIPO_DEPENDENCIA' };
+      tx.contexto.buscarNodo.mockResolvedValueOnce(n);
+      tx.contexto.buscarTransiciones.mockResolvedValue([
+        transicionRespuesta(
+          { campo: 'es_valida', valor: true },
+          Op.IGUALDAD,
+          reglaRespuesta({
+            tipoDato: Dato.SELECCION,
+            valoresPermitidos: ['ABSTINENCIA_FISICA', 'TOLERANCIA'],
+          }),
+        ),
+      ]);
+      return {
+        ...body(),
+        tipoEntrada: 'OPCION_UNICA',
+        valor: 'ABSTINENCIA_FISICA',
+      };
+    };
+
+    it.each([true, false])(
+      'continúa con aplicado=%s sin exponer el resultado clínico al frontend',
+      async (aplicado) => {
+        const datos = configurar();
+        tx.perfil.capturarDimension.mockResolvedValue({
+          aplicado,
+          dimension: 'TIPO_DEPENDENCIA',
+          valorVigente: aplicado ? 'ABSTINENCIA_FISICA' : 'TOLERANCIA',
+          perfilCompleto: false,
+        });
+        const r = await post(datos).expect(200);
+        expect(tx.perfil.capturarDimension).toHaveBeenCalledWith({
+          idUsuario: ids.usuario,
+          idSesion: ids.sesion,
+          idNodo: ids.nodo,
+          dimension: 'TIPO_DEPENDENCIA',
+          valor: 'ABSTINENCIA_FISICA',
+          modalidadSesion: ModalidadConversacional.GRUPAL,
+        });
+        expect(tx.registro.guardar).toHaveBeenCalledTimes(1);
+        expect(r.body as unknown).toEqual({
+          idRespuesta: ids.interaccion,
+          resultado: 'VALIDA',
+          transicion: {
+            idNodoOrigen: ids.nodo,
+            idNodoDestino: ids.destino,
+            esTerminal: false,
+          },
+          estadoSesion: 'ACTIVA',
+        });
+      },
+    );
+
+    it.each(['POSITIVO', 'BAJA', 'TOLERANCIA ', 'OTRO'])(
+      'valor clínico inválido %s responde 400 sin capturar ni avanzar',
+      async (valor) => {
+        const r = await post({ ...configurar(), valor }).expect(400);
+        expect(r.body as unknown).toMatchObject({
+          codigo: 'VALOR_NO_PERMITIDO',
+          campo: 'valor',
+        });
+        expect(tx.perfil.capturarDimension).not.toHaveBeenCalled();
+        expect(tx.registro.guardar).not.toHaveBeenCalled();
+      },
+    );
+
+    it('usa la modalidad fijada en la sesión y rechaza PERSONALIZADA con 409', async () => {
+      const datos = configurar();
+      tx.contexto.bloquearSesion.mockResolvedValue({
+        estadoActual: 'ACTIVA',
+        idNodoActual: ids.nodo,
+        idFlujoConversacional: ids.flujo,
+        modalidadActiva: ModalidadConversacional.PERSONALIZADA,
+      });
+      const r = await post(datos).expect(409);
+      expect(r.body as unknown).toMatchObject({
+        codigo: 'CAPTURA_FUERA_DE_GRUPAL',
+      });
+      expect(tx.perfil.capturarDimension).not.toHaveBeenCalled();
+      expect(tx.registro.guardar).not.toHaveBeenCalled();
+    });
+
+    it('propaga ERROR_PERFIL sin datos privados ni avance', async () => {
+      const datos = configurar();
+      tx.perfil.capturarDimension.mockRejectedValue(
+        new Error('detalle privado de Supabase'),
+      );
+      const r = await post(datos).expect(500);
+      expect(r.body as unknown).toMatchObject({
+        statusCode: 500,
+        codigo: 'ERROR_PERFIL',
+      });
+      expect(JSON.stringify(r.body)).not.toContain('Supabase');
+      expect(tx.registro.guardar).not.toHaveBeenCalled();
+    });
+
+    it('una respuesta ordinaria nunca intenta capturar el perfil', async () => {
+      await post(body()).expect(200);
+      expect(tx.perfil.capturarDimension).not.toHaveBeenCalled();
+    });
+  });
 });

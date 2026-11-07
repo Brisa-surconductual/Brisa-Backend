@@ -10,10 +10,8 @@ import {
   RespuestaConversacionalNoEncontradaException,
 } from '../../../domain/exceptions/respuesta.exceptions';
 import { MotorRespuestaConversacional } from '../../../domain/policies/motor-respuesta-conversacional.policy';
-import {
-  CapturaPerfilRespuesta,
-  CapturaPerfilRespuestaPolicy,
-} from '../../../domain/policies/captura-perfil-respuesta.policy';
+import { CapturaPerfilRespuestaPolicy } from '../../../domain/policies/captura-perfil-respuesta.policy';
+import { SolicitudCapturaDimensionPerfil } from '../../../domain/repositories/perfil-clinico.repository';
 import { ProcesarRespuestaDtoRequest } from '../../dto/procesar-respuesta.dto-request';
 import {
   ResultadoRespuesta,
@@ -111,13 +109,13 @@ export class ProcesarRespuestaUseCase {
         };
         const ahora = new Date();
         if (captura !== null)
-          await this.guardarPerfil(
-            tx,
+          await this.capturarPerfil(tx, {
             idUsuario,
-            captura,
-            new Date(dto.capturadaEn),
-            ahora,
-          );
+            idSesion,
+            idNodo: nodo.idNodo,
+            modalidadSesion: sesion.modalidadActiva,
+            ...captura,
+          });
         await tx.registro.guardar({
           solicitud: {
             idSesion,
@@ -152,16 +150,14 @@ export class ProcesarRespuestaUseCase {
     }
   }
 
-  private async guardarPerfil(
+  private async capturarPerfil(
     tx: TransaccionRespuesta,
-    idUsuario: string,
-    captura: CapturaPerfilRespuesta,
-    fecha: Date,
-    ahora: Date,
+    solicitud: SolicitudCapturaDimensionPerfil,
   ): Promise<void> {
     try {
-      await tx.perfil.guardar(idUsuario, captura, fecha, ahora);
-    } catch {
+      await tx.perfil.capturarDimension(solicitud);
+    } catch (error: unknown) {
+      if (error instanceof DomainException) throw error;
       throw new InternalServerErrorException({
         codigo: 'ERROR_PERFIL',
         mensaje:

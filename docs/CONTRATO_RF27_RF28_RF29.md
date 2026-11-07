@@ -109,17 +109,21 @@ Sin una ruta aplicable se responde SIN_TRANSICION, sin guardar ni avanzar.
 ## Captura clínica RF-27B
 
 La designación del nodo es configuración del árbol, no un campo enviado por
-el estudiante. Decisión técnica sobre el JSON existente de HU-03:
+el estudiante. El contrato interno RF-27B se activa mediante `contenido.capturaPerfil`:
 
 ```json
 {
   "texto": "Selecciona tu tipo de dependencia",
   "entrada": { "tipo": "OPCION_UNICA" },
-  "captura_perfil": "tipo_dependencia"
+  "capturaPerfil": { "dimension": "TIPO_DEPENDENCIA" }
 }
 ```
 
-`captura_perfil` admite tipo_dependencia o tipo_craving.
+Las dimensiones son `TIPO_DEPENDENCIA` y `TIPO_CRAVING`. Como decisión técnica
+sobre el JSON del nodo, se admite el objeto anterior o el literal de dimensión
+directamente en `capturaPerfil`. La lectura conserva el formato anterior
+`captura_perfil: "tipo_dependencia" | "tipo_craving"`, sin modificar árboles
+persistidos. Si ambos formatos están presentes, deben designar la misma dimensión.
 Las opciones clínicas proceden de los enums reales:
 
 - Dependencia: ABSTINENCIA_FISICA, TOLERANCIA.
@@ -127,10 +131,66 @@ Las opciones clínicas proceden de los enums reales:
 
 Solo se permite selección única y modalidad GRUPAL de la sesión.
 No se infiere perfil a partir de una selección normal ni de texto libre.
-Una recaptura explícita actualiza únicamente su dimensión y fecha, preservando
-la otra. `perfil_completo` es GENERATED ALWAYS en PostgreSQL: nunca se escribe
+Este contrato conserva el primer valor de cada dimensión. Una captura posterior,
+incluso con otro valor válido, devuelve `aplicado: false` y no modifica el valor
+ni sus fechas; la respuesta se procesa y el flujo continúa normalmente.
+Esto sustituye el comportamiento de recaptura de la implementación anterior.
+El RF original contempla una actualización explícita mediante nodos de recaptura
+o corrección administrativa; esa operación no está definida por este contrato
+y no se habilita automáticamente en un nodo de captura ordinario.
+
+`perfil_completo` es GENERATED ALWAYS en PostgreSQL: nunca se escribe
 desde Prisma y queda verdadero solo cuando ambas dimensiones están presentes.
 El perfil de la sesión y la modalidad fijados al iniciarla no se sustituyen.
+
+El puerto `PerfilClinicoRepository.capturarDimension` recibe internamente:
+
+```json
+{
+  "idUsuario": "uuid",
+  "idSesion": "uuid",
+  "idNodo": "uuid",
+  "dimension": "TIPO_DEPENDENCIA",
+  "valor": "ABSTINENCIA_FISICA",
+  "modalidadSesion": "GRUPAL"
+}
+```
+
+Su resultado no se añade a la respuesta pública del POST:
+
+```json
+{
+  "aplicado": true,
+  "dimension": "TIPO_DEPENDENCIA",
+  "valorVigente": "ABSTINENCIA_FISICA",
+  "perfilCompleto": false
+}
+```
+
+Se ejecuta con el cliente Prisma de la misma transacción del POST, después de
+validar la respuesta y el destino y antes de confirmar la interacción. El usuario,
+sesión y nodo proceden del contexto ya autenticado y verificado. No se crea un
+endpoint independiente. Las fechas clínicas corresponden a la primera captura
+aceptada por el servidor; `capturadaEn` del POST permanece en los registros de
+respuesta e historial.
+
+La persistencia usa `INSERT ... ON CONFLICT ... DO UPDATE ... WHERE` para completar
+únicamente dimensiones nulas. El bloqueo de fila de PostgreSQL impide sobrescribir
+el primer valor incluso entre sesiones concurrentes. La segunda dimensión conserva
+la primera y su fecha; una captura ignorada no actualiza `fecha_actualizacion`.
+No requiere cambios de esquema ni migraciones nuevas.
+
+Errores propagados por el POST:
+
+| HTTP | Código                  | Efecto                                               |
+| ---- | ----------------------- | ---------------------------------------------------- |
+| 400  | VALOR_NO_PERMITIDO      | Valor ajeno a la dimensión; sin escritura ni avance  |
+| 409  | CAPTURA_FUERA_DE_GRUPAL | Se usa la modalidad de la sesión, sin captura        |
+| 500  | ERROR_PERFIL            | Fallo de persistencia; rollback de toda la respuesta |
+
+La integración de RF-27B está encadenada a `feat/chat-respuestas-rf27-rf28-rf29`,
+que aporta el POST y sus dos migraciones. El destino final es `test`; esta corrección
+no integra ni modifica esa rama ni elimina la dependencia ya declarada de RF-26.
 
 ## Idempotencia, concurrencia y atomicidad
 
@@ -193,7 +253,8 @@ La prueba de la base del proyecto utiliza fixtures artificiales dentro de una
 transacción que se revierte y comprueba que no quedan registros de prueba.
 No sustituye una prueba visual del frontend ni la integración pendiente de RF-26.
 
-Ambas migraciones se aplicaron el 6 de noviembre de 2026 en la base de
+Resultados de la intervención anterior RF-27/28/29: ambas migraciones se
+aplicaron el 6 de noviembre de 2026 en la base de
 config/.env y quedaron registradas con Prisma, con checksums coincidentes.
 La verificación sobre esa base aprobó 12 comprobaciones y confirmó rollback
 con cero registros artificiales restantes. La integración local aprobó 51
@@ -202,3 +263,15 @@ opcional de RF-24 omitida); y el HTTP administrativo, 203 pruebas. Tras ajustar
 la prioridad de obligatoriedad se aprobaron las 106 pruebas específicas del
 motor, formatos y HTTP. Estos resultados corresponden a ejecuciones locales,
 no a un análisis de SonarCloud ni a un despliegue del código.
+
+Verificación de la corrección RF-27B, ejecutada el 6 de noviembre de 2026:
+
+- 143 pruebas específicas aprobadas (políticas clínicas, motor, formato y HTTP).
+- 217 pruebas de regresión de chat y seguridad aprobadas; una integración
+  opcional de RF-24 omitida al no habilitar su configuración independiente.
+- 62 comprobaciones de integración con PostgreSQL local aprobadas, incluyendo
+  el resultado exacto del puerto, conservación del valor y fechas originales,
+  capturas concurrentes de la misma dimensión, avance desde sesiones diferentes,
+  idempotencia, rechazo de acceso ajeno y rollback ante fallos de perfil e historial.
+- La base local se detuvo limpiamente al terminar. Esta corrección no ejecutó
+  escrituras ni migraciones sobre Supabase.
