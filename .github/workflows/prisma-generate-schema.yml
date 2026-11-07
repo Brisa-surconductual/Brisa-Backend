@@ -63,7 +63,7 @@ jobs:
 
       - name: Introspect DB into schema.prisma
         run: |
-          npx prisma db pull --schema prisma/schema.prisma --force
+          npx prisma db pull --schema prisma/schema.prisma
           npx prisma format --schema prisma/schema.prisma
           npx prisma validate --schema prisma/schema.prisma
 

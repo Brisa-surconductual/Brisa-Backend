@@ -60,5 +60,5 @@ jobs:
       - name: Introspect resulting DB (db pull) into temp schema
         run: |
           cp prisma/schema.prisma /tmp/schema.generated.prisma
-          npx prisma db pull --schema /tmp/schema.generated.prisma --force
+          npx prisma db pull --schema /tmp/schema.generated.prisma
           npx prisma validate --schema /tmp/schema.generated.prisma
