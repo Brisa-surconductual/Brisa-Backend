@@ -59,7 +59,7 @@ const passed = (label) => {
 };
 const migration = (folder) =>
   readFileSync(
-    resolve(root, 'prisma/migrations', folder, 'migration.sql'),
+    resolve(root, 'prisma/migrations_backup', folder, 'migration.sql'),
     'utf8',
   );
 

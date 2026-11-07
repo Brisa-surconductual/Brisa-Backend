@@ -15,37 +15,37 @@ export type PrismaPromise<T> = $Public.PrismaPromise<T>
 
 /**
  * Model consentimientos
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+ * This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
+ * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
  */
 export type consentimientos = $Result.DefaultSelection<Prisma.$consentimientosPayload>
 /**
  * Model linea_base
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+ * This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
+ * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
  */
 export type linea_base = $Result.DefaultSelection<Prisma.$linea_basePayload>
 /**
  * Model linea_base_historial
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+ * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
  */
 export type linea_base_historial = $Result.DefaultSelection<Prisma.$linea_base_historialPayload>
 /**
  * Model sesiones
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+ * This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
+ * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
  */
 export type sesiones = $Result.DefaultSelection<Prisma.$sesionesPayload>
 /**
  * Model solicitudes_recuperacion
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+ * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
  */
 export type solicitudes_recuperacion = $Result.DefaultSelection<Prisma.$solicitudes_recuperacionPayload>
 /**
  * Model usuarios
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+ * This table contains check constraints and requires additional setup for migrations_backup. Visit https://pris.ly/d/check-constraints for more info.
+ * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations_backup: Read more: https://pris.ly/d/database-comments
+ * This model contains an expression index which requires additional setup for migrations_backup. Visit https://pris.ly/d/expression-indexes for more info.
  */
 export type usuarios = $Result.DefaultSelection<Prisma.$usuariosPayload>
 
