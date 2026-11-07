@@ -3,7 +3,6 @@ CREATE SCHEMA IF NOT EXISTS "chat";
 
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "cronograma";
-   git commit -m "fix: generar baseline migration limpia con flag -o de prisma"
 
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "usuario";
