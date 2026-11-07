@@ -7,3 +7,4 @@ export * from './regla-validacion.exceptions';
 export * from './contexto.exceptions';
 export * from './modalidad.exceptions';
 export * from './sesion.exceptions';
+export * from './respuesta.exceptions';

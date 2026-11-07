@@ -7,8 +7,10 @@ import { NodosConversacionalesController } from './controllers/nodo/nodos-conver
 import { ReglasValidacionController } from './controllers/regla-validacion/reglas-validacion.controller';
 import { SesionesConversacionalesController } from './controllers/sesion/sesiones-conversacionales.controller';
 import { TransicionesConversacionalesController } from './controllers/transicion/transiciones-conversacionales.controller';
+import { RespuestasConversacionalesController } from './controllers/sesion/respuestas-conversacionales.controller';
 
 export const ChatPresentationProviders = [
+  RespuestasConversacionalesController,
   SesionesConversacionalesController,
   ModalidadProgramaController,
   ContenidoVigenteChatController,
