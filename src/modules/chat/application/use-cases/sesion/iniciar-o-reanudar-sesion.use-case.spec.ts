@@ -30,6 +30,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   const fecha = new Date('2026-10-19T12:00:00Z');
 
   const sesiones = {
+    buscarPorIdYUsuario: jest.fn(),
     buscarUltimaReanudable: jest.fn(),
     guardar: jest.fn(),
   };

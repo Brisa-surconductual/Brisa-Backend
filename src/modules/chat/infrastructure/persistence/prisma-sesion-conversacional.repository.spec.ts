@@ -27,6 +27,46 @@ describe('PrismaSesionConversacionalRepository', () => {
     findFirst.mockReset();
   });
 
+  it.each(['ACTIVA', 'PAUSADA', 'COMPLETADA'])(
+    'consulta por identificador y propietario, incluso en estado %s',
+    async (estado) => {
+      findFirst.mockResolvedValue({
+        ...sesionBase,
+        estado_sesiones: { estado_actual: estado },
+      });
+      const resultado = await repository.buscarPorIdYUsuario(
+        sesionBase.id_sesion,
+        sesionBase.id_usuario,
+      );
+      expect(findFirst).toHaveBeenCalledWith({
+        where: {
+          id_sesion: sesionBase.id_sesion,
+          id_usuario: sesionBase.id_usuario,
+        },
+        include: { estado_sesiones: true },
+      });
+      expect(resultado?.estadoActual).toBe(estado);
+      expect(resultado?.idNodoActual).toBe(sesionBase.id_nodo_actual);
+    },
+  );
+
+  it('retorna null cuando la sesión solicitada no pertenece al usuario', async () => {
+    findFirst.mockResolvedValue(null);
+    await expect(
+      repository.buscarPorIdYUsuario('sesion-ajena', sesionBase.id_usuario),
+    ).resolves.toBeNull();
+  });
+
+  it('no considera disponible una sesión sin registro de estado', async () => {
+    findFirst.mockResolvedValue({ ...sesionBase, estado_sesiones: null });
+    await expect(
+      repository.buscarPorIdYUsuario(
+        sesionBase.id_sesion,
+        sesionBase.id_usuario,
+      ),
+    ).resolves.toBeNull();
+  });
+
   it('recupera una sesión ACTIVA', async () => {
     findFirst.mockResolvedValue({
       ...sesionBase,

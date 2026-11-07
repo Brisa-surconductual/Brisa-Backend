@@ -11,8 +11,19 @@ import { PrismaSesionConversacionalRepository } from './persistence/prisma-sesio
 
 import { ModalidadProgramaRepository } from '../domain/repositories/modalidad-programa.repository';
 import { PrismaModalidadProgramaRepository } from './persistence/prisma-modalidad-programa.repository';
+import {
+  PresentacionNodoActualPort,
+  FirmarRecursoNodoPort,
+} from '../application/ports/presentacion-nodo-actual.port';
+import { PrismaPresentacionNodoActualRepository } from './persistence/prisma-presentacion-nodo-actual.repository';
+import { S3FirmarRecursoNodoAdapter } from './storage/s3-firmar-recurso-nodo.adapter';
 
 export const ChatInfrastructureProviders = [
+  {
+    provide: PresentacionNodoActualPort,
+    useClass: PrismaPresentacionNodoActualRepository,
+  },
+  { provide: FirmarRecursoNodoPort, useClass: S3FirmarRecursoNodoAdapter },
   {
     provide: ModalidadProgramaRepository,
     useClass: PrismaModalidadProgramaRepository,
