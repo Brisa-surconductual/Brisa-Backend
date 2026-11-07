@@ -1,13 +1,9 @@
-﻿Already up to date
-Done in 782ms using pnpm v11.12.0
-Already up to date
-Done in 983ms using pnpm v11.12.0
-Ôùç injected env (20) from config\.env // tip: Ôîÿ enable debugging { debug: true }
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "chat";
 
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "cronograma";
+   git commit -m "fix: generar baseline migration limpia con flag -o de prisma"
 
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "usuario";
@@ -898,4 +894,3 @@ ALTER TABLE "chat"."tipo_terapia" ADD CONSTRAINT "fk_tipoterapia_admin" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "chat"."tipo_terapia" ADD CONSTRAINT "fk_tipoterapia_usuario" FOREIGN KEY ("id_usuario") REFERENCES "usuario"."usuarios"("id_usuario") ON DELETE CASCADE ON UPDATE NO ACTION;
-
