@@ -57,7 +57,7 @@ async function verificar() {
         fs.readFileSync(
           path.join(
             __dirname,
-            '../../prisma/migrations/20261006120000_gestion_recursos_contenido/migration.sql',
+            '../../prisma/migrations_backup/20261006120000_gestion_recursos_contenido/migration.sql',
           ),
           'utf8',
         ),

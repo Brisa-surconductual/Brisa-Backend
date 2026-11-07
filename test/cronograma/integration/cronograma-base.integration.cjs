@@ -87,7 +87,7 @@ const pass = (message) => {
 };
 const migration = (name) =>
   readFileSync(
-    resolve(__dirname, '../../../prisma/migrations', name, 'migration.sql'),
+    resolve(__dirname, '../../../prisma/migrations_backup', name, 'migration.sql'),
     'utf8',
   );
 async function main() {
