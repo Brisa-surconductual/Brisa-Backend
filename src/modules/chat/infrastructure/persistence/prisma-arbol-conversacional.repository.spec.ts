@@ -100,7 +100,7 @@ describe('PrismaArbolConversacionalRepository', () => {
     contenido: { texto: id },
     es_nodo_inicial: id === ids.nodoA,
     orden: 1,
-    id_contenido_cronograma: null,
+    id_contenido: null,
     creado_por: ids.actor,
     fecha_creacion: fecha,
     fecha_actualizacion: fecha,
@@ -121,12 +121,13 @@ describe('PrismaArbolConversacionalRepository', () => {
     id_flujo: ids.flujo,
     id_nodo_origen: ids.nodoA,
     id_nodo_destino: ids.nodoB,
-    id_regla_validacion: ids.regla,
     operador_condicion: 'IGUALDAD',
     valor_condicion: 'si',
     orden_evaluacion: 1,
     fecha_creacion: fecha,
-    reglas_validaciones: reglaRow,
+    nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos: {
+      reglas_validaciones: reglaRow,
+    },
   };
 
   const tx = {
@@ -395,7 +396,7 @@ describe('PrismaArbolConversacionalRepository', () => {
           id_tipo_nodo: ids.tipo,
           es_nodo_inicial: true,
           orden: 1,
-          id_contenido_cronograma: null,
+          id_contenido: null,
         }),
       });
       expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
@@ -452,10 +453,13 @@ describe('PrismaArbolConversacionalRepository', () => {
           where: { id_regla_validacion: ids.regla },
         }),
       );
+      expect(tx.nodos.update).toHaveBeenCalledWith({
+        where: { id_nodo: ids.nodoA },
+        data: { id_regla_validacion: ids.regla },
+      });
       expect(tx.reglas_nodos.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           id_regla: ids.transicion,
-          id_regla_validacion: ids.regla,
           id_nodo_origen: ids.nodoA,
           id_nodo_destino: ids.nodoB,
           orden_evaluacion: 1,

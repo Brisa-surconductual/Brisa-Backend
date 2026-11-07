@@ -38,7 +38,10 @@ import { CatalogosConversacionalesMapper } from '../mappers/catalogos-conversaci
 import { FlujoConversacionalMapper } from '../mappers/flujo-conversacional.mapper';
 import { NodoConversacionalMapper } from '../mappers/nodo-conversacional.mapper';
 import { ReglaValidacionMapper } from '../mappers/regla-validacion.mapper';
-import { TransicionConversacionalMapper } from '../mappers/transicion-conversacional.mapper';
+import {
+  INCLUIR_REGLA_DE_NODO_ORIGEN,
+  TransicionConversacionalMapper,
+} from '../mappers/transicion-conversacional.mapper';
 
 @Injectable()
 export class PrismaArbolConversacionalRepository implements ArbolConversacionalRepository {
@@ -70,7 +73,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
   ): Promise<TransicionConversacional | null> {
     const transicion = await this.prisma.reglas_nodos.findUnique({
       where: { id_regla: idTransicion },
-      include: { reglas_validaciones: true },
+      include: INCLUIR_REGLA_DE_NODO_ORIGEN,
     });
     return transicion === null
       ? null
@@ -184,7 +187,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
   }
 
   contarUsosReglaValidacion(idReglaValidacion: string): Promise<number> {
-    return this.prisma.reglas_nodos.count({
+    return this.prisma.nodos.count({
       where: { id_regla_validacion: idReglaValidacion },
     });
   }
@@ -267,6 +270,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
         }
         for (const transicion of arbol.transiciones) {
           await this.persistirRegla(tx, transicion.reglaValidacion);
+          await this.asignarReglaANodoOrigen(tx, transicion);
           await tx.reglas_nodos.create({
             data: TransicionConversacionalMapper.toCreateData(transicion),
           });
@@ -323,6 +327,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     try {
       await this.ejecutarTransaccion(async (tx) => {
         await this.persistirRegla(tx, transicion.reglaValidacion);
+        await this.asignarReglaANodoOrigen(tx, transicion);
         const existente = await tx.reglas_nodos.findUnique({
           where: { id_regla: transicion.idTransicion },
           select: { id_regla: true },
@@ -419,6 +424,19 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     });
   }
 
+  /** La regla de validación se guarda en el nodo origen de la transición. */
+  private async asignarReglaANodoOrigen(
+    tx: Prisma.TransactionClient,
+    transicion: TransicionConversacional,
+  ): Promise<void> {
+    await tx.nodos.update({
+      where: { id_nodo: transicion.idNodoOrigen },
+      data: {
+        id_regla_validacion: transicion.reglaValidacion.idReglaValidacion,
+      },
+    });
+  }
+
   private async cargarArbol(
     cliente: Prisma.TransactionClient,
     idFlujo: string,
@@ -436,7 +454,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       }),
       cliente.reglas_nodos.findMany({
         where: { id_flujo: idFlujo },
-        include: { reglas_validaciones: true },
+        include: INCLUIR_REGLA_DE_NODO_ORIGEN,
         orderBy: [{ id_nodo_origen: 'asc' }, { orden_evaluacion: 'asc' }],
       }),
     ]);

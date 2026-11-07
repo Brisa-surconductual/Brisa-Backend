@@ -125,12 +125,13 @@ describe('Mappers del árbol conversacional', () => {
       id_flujo: ids.flujo,
       id_nodo_origen: ids.nodoA,
       id_nodo_destino: ids.nodoB,
-      id_regla_validacion: ids.regla,
       operador_condicion: 'IGUALDAD',
       valor_condicion: { valor: 'si' },
       orden_evaluacion: 1,
       fecha_creacion: fecha,
-      reglas_validaciones: filaRegla,
+      nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos: {
+        reglas_validaciones: filaRegla,
+      },
     } as never);
 
     expect(transicion).toMatchObject({
@@ -142,7 +143,6 @@ describe('Mappers del árbol conversacional', () => {
       TransicionConversacionalMapper.toCreateData(transicion),
     ).toMatchObject({
       id_regla: ids.transicion,
-      id_regla_validacion: ids.regla,
       valor_condicion: { valor: 'si' },
     });
     expect(

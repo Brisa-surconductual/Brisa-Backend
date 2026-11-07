@@ -16,7 +16,7 @@ export class NodoConversacionalMapper {
       fila.contenido as Record<string, unknown>,
       fila.es_nodo_inicial,
       fila.orden,
-      fila.id_contenido_cronograma,
+      fila.id_contenido,
       fila.creado_por,
       fila.fecha_creacion,
       fila.fecha_actualizacion,
@@ -33,7 +33,7 @@ export class NodoConversacionalMapper {
       contenido: nodo.contenido as Prisma.InputJsonValue,
       es_nodo_inicial: nodo.esNodoInicial,
       orden: nodo.orden,
-      id_contenido_cronograma: nodo.idContenidoCronograma,
+      id_contenido: nodo.idContenidoCronograma,
       creado_por: nodo.creadoPor,
       fecha_creacion: nodo.fechaCreacion,
       fecha_actualizacion: nodo.fechaActualizacion,
@@ -48,7 +48,7 @@ export class NodoConversacionalMapper {
       contenido: nodo.contenido as Prisma.InputJsonValue,
       es_nodo_inicial: nodo.esNodoInicial,
       orden: nodo.orden,
-      id_contenido_cronograma: nodo.idContenidoCronograma,
+      id_contenido: nodo.idContenidoCronograma,
       fecha_actualizacion: nodo.fechaActualizacion,
     };
   }
