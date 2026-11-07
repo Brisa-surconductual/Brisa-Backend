@@ -453,7 +453,7 @@ CREATE TABLE "chat"."perfil_clinico" (
     "tipo_craving" "chat"."tipo_craving_enum",
     "fecha_captura_dependencia" TIMESTAMPTZ(6),
     "fecha_captura_craving" TIMESTAMPTZ(6),
-    "perfil_completo" BOOLEAN DEFAULT ((tipo_dependencia IS NOT NULL) AND (tipo_craving IS NOT NULL)),
+    "perfil_completo" BOOLEAN GENERATED ALWAYS AS ((tipo_dependencia IS NOT NULL) AND (tipo_craving IS NOT NULL)) STORED,
     "fecha_actualizacion" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "perfil_clinico_pkey" PRIMARY KEY ("id_usuario")
