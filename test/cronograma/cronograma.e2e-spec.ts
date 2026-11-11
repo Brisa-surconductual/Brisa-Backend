@@ -7,6 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { RolesGuard } from '../../src/shared/presentation/guards/role-guard';
+import { AsignarCronogramaUsuarioUseCase } from '../../src/modules/cronograma/application/use-cases/cronograma/asignar-cronograma.use-case';
 import { ActualizarDisponibilidadContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/contenido/actualizar-disponibilidad-contenido.use-case';
 import { AsociarContenidoUnidadTemporalUseCase } from '../../src/modules/cronograma/application/use-cases/asociasion-unidad-temporal-contenido/asociar-contenido-unidad-temporal.use-case';
 import { ActualizarContenidoUseCase } from '../../src/modules/cronograma/application/use-cases/contenido/actualizar-contenido.use-case';
@@ -94,6 +95,7 @@ describe('Cronograma - endpoints propios (e2e)', () => {
           ObtenerCronogramasUseCase,
           ObtenerUnidadesTemporalesUseCase,
           ConsultarPausasAdministraivasUseCase,
+          AsignarCronogramaUsuarioUseCase,
         ].map((provide) => ({ provide, useValue: { execute: jest.fn() } })),
         {
           provide: ActualizarRecursoContenidoUseCase,

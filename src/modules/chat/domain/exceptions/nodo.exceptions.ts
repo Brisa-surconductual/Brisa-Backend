@@ -1,5 +1,13 @@
 import { DomainException } from './domain.exception';
 
+export class NodoActualNoEncontradoException extends DomainException {
+  readonly tipo = 'NO_ENCONTRADO';
+
+  constructor() {
+    super('No se pudo recuperar el contenido del chat.', 'NODO_INEXISTENTE');
+  }
+}
+
 export class NodoFueraDeFlujoException extends DomainException {
   readonly tipo = 'NO_PROCESABLE';
 

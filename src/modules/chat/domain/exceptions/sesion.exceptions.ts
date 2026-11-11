@@ -1,5 +1,24 @@
 import { DomainException } from './domain.exception';
 
+export class SesionConversacionalNoEncontradaException extends DomainException {
+  readonly tipo = 'NO_ENCONTRADO';
+
+  constructor() {
+    super('No se pudo recuperar el contenido del chat.', 'SESION_NO_ENCONTRADA');
+  }
+}
+
+export class SesionErrorConfiguracionException extends DomainException {
+  readonly tipo = 'CONFLICTO';
+
+  constructor() {
+    super(
+      'La sesión de chat tiene un error de configuración del árbol conversacional.',
+      'SESION_ERROR_CONFIGURACION',
+    );
+  }
+}
+
 export class SesionNoReanudableException extends DomainException {
   readonly tipo = 'CONFLICTO';
 

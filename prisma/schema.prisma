@@ -459,29 +459,36 @@ model interacciones {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model nodos {
-  id_nodo                                                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  id_flujo                                               String             @unique(map: "uq_nodo_inicial_por_flujo", where: raw("(es_nodo_inicial = true)")) @db.Uuid
-  id_tipo_nodo                                           String             @db.Uuid
-  contenido                                              Json
-  es_nodo_inicial                                        Boolean            @default(false)
-  orden                                                  Int?
-  id_contenido_cronograma                                String?            @db.Uuid
-  creado_por                                             String             @db.Uuid
-  fecha_creacion                                         DateTime           @default(now()) @db.Timestamptz(6)
-  fecha_actualizacion                                    DateTime           @default(now()) @db.Timestamptz(6)
-  historial_nodos_historial_nodos_id_nodoTonodos         historial_nodos[]  @relation("historial_nodos_id_nodoTonodos")
-  historial_nodos_historial_nodos_id_nodo_destinoTonodos historial_nodos[]  @relation("historial_nodos_id_nodo_destinoTonodos")
-  interacciones                                          interacciones[]
-  contenidos                                             contenidos?        @relation(fields: [id_contenido_cronograma], references: [id_contenido], onUpdate: NoAction, map: "fk_nodo_contenido_cronograma")
-  usuarios                                               usuarios           @relation(fields: [creado_por], references: [id_usuario], onUpdate: NoAction, map: "fk_nodo_creado_por")
-  flujo_conversacion                                     flujo_conversacion @relation(fields: [id_flujo], references: [id_flujo], onDelete: Cascade, onUpdate: NoAction, map: "fk_nodo_flujo")
-  tipo_nodo                                              tipo_nodo          @relation(fields: [id_tipo_nodo], references: [id_tipo_nodo], onUpdate: NoAction, map: "fk_nodo_tipo")
-  punto_control                                          punto_control[]
-  reglas_nodos_reglas_nodos_id_nodo_destinoTonodos       reglas_nodos[]     @relation("reglas_nodos_id_nodo_destinoTonodos")
-  reglas_nodos_reglas_nodos_id_nodo_origenTonodos        reglas_nodos[]     @relation("reglas_nodos_id_nodo_origenTonodos")
-  respuestas                                             respuestas[]
-  sesiones                                               chat_sesiones[]
+  id_nodo                                                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_flujo                                                  String               @unique(map: "uq_nodo_inicial_por_flujo", where: raw("(es_nodo_inicial = true)")) @db.Uuid
+  id_tipo_nodo                                              String               @db.Uuid
+  contenido                                                 Json
+  es_nodo_inicial                                           Boolean              @default(false)
+  orden                                                     Int?
+  id_contenido                                              String?              @db.Uuid
+  creado_por                                                String               @db.Uuid
+  fecha_creacion                                            DateTime             @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion                                       DateTime             @default(now()) @db.Timestamptz(6)
+  id_tipo_entrada                                           String?              @db.Uuid
+  id_regla_validacion                                       String?              @db.Uuid
+  historial_nodos_historial_nodos_id_nodoTonodos            historial_nodos[]    @relation("historial_nodos_id_nodoTonodos")
+  historial_nodos_historial_nodos_id_nodo_destinoTonodos    historial_nodos[]    @relation("historial_nodos_id_nodo_destinoTonodos")
+  interacciones                                             interacciones[]
+  contenidos                                                contenidos?          @relation(fields: [id_contenido], references: [id_contenido], onUpdate: NoAction, map: "fk_nodo_contenido")
+  usuarios                                                  usuarios             @relation(fields: [creado_por], references: [id_usuario], onUpdate: NoAction, map: "fk_nodo_creado_por")
+  flujo_conversacion                                        flujo_conversacion   @relation(fields: [id_flujo], references: [id_flujo], onDelete: Cascade, onUpdate: NoAction, map: "fk_nodo_flujo")
+  reglas_validaciones                                       reglas_validaciones? @relation(fields: [id_regla_validacion], references: [id_regla_validacion], onDelete: NoAction, onUpdate: NoAction, map: "fk_nodo_regla_validacion")
+  tipo_nodo                                                 tipo_nodo            @relation(fields: [id_tipo_nodo], references: [id_tipo_nodo], onUpdate: NoAction, map: "fk_nodo_tipo")
+  tipo_entrada                                              tipo_entrada?        @relation(fields: [id_tipo_entrada], references: [id_tipo_entrada], onDelete: NoAction, onUpdate: NoAction, map: "fk_nodo_tipo_entrada")
+  punto_control                                             punto_control[]
+  reglas_nodos_reglas_nodos_id_nodo_destino_id_flujoTonodos reglas_nodos[]       @relation("reglas_nodos_id_nodo_destino_id_flujoTonodos")
+  reglas_nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos  reglas_nodos[]       @relation("reglas_nodos_id_nodo_origen_id_flujoTonodos")
+  respuestas                                                respuestas[]
+  sesiones                                                  chat_sesiones[]
 
+  @@unique([id_nodo, id_flujo], map: "uq_nodos_id_flujo")
+  @@index([id_regla_validacion], map: "idx_nodos_regla_validacion")
+  @@index([id_tipo_entrada], map: "idx_nodos_tipo_entrada")
   @@schema("chat")
 }
 
@@ -517,21 +524,21 @@ model punto_control {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model reglas_nodos {
-  id_regla                                  String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  id_flujo                                  String                  @db.Uuid
-  id_nodo_origen                            String                  @db.Uuid
-  id_nodo_destino                           String                  @db.Uuid
-  id_regla_validacion                       String                  @db.Uuid
-  operador_condicion                        operador_condicion_enum
-  valor_condicion                           Json
-  orden_evaluacion                          Int
-  fecha_creacion                            DateTime                @default(now()) @db.Timestamptz(6)
-  flujo_conversacion                        flujo_conversacion      @relation(fields: [id_flujo], references: [id_flujo], onDelete: Cascade, onUpdate: NoAction, map: "fk_regla_flujo")
-  nodos_reglas_nodos_id_nodo_destinoTonodos nodos                   @relation("reglas_nodos_id_nodo_destinoTonodos", fields: [id_nodo_destino], references: [id_nodo], onUpdate: NoAction, map: "fk_regla_nodo_destino")
-  nodos_reglas_nodos_id_nodo_origenTonodos  nodos                   @relation("reglas_nodos_id_nodo_origenTonodos", fields: [id_nodo_origen], references: [id_nodo], onDelete: Cascade, onUpdate: NoAction, map: "fk_regla_nodo_origen")
-  reglas_validaciones                       reglas_validaciones     @relation(fields: [id_regla_validacion], references: [id_regla_validacion], onUpdate: NoAction, map: "fk_regla_validacion")
+  id_regla                                           String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_flujo                                           String                  @db.Uuid
+  id_nodo_origen                                     String                  @db.Uuid
+  id_nodo_destino                                    String                  @db.Uuid
+  operador_condicion                                 operador_condicion_enum
+  valor_condicion                                    Json
+  orden_evaluacion                                   Int
+  fecha_creacion                                     DateTime                @default(now()) @db.Timestamptz(6)
+  flujo_conversacion                                 flujo_conversacion      @relation(fields: [id_flujo], references: [id_flujo], onDelete: Cascade, onUpdate: NoAction, map: "fk_regla_flujo")
+  nodos_reglas_nodos_id_nodo_destino_id_flujoTonodos nodos                   @relation("reglas_nodos_id_nodo_destino_id_flujoTonodos", fields: [id_nodo_destino, id_flujo], references: [id_nodo, id_flujo], onDelete: NoAction, onUpdate: NoAction, map: "fk_regla_nodo_destino")
+  nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos  nodos                   @relation("reglas_nodos_id_nodo_origen_id_flujoTonodos", fields: [id_nodo_origen, id_flujo], references: [id_nodo, id_flujo], onDelete: NoAction, onUpdate: NoAction, map: "fk_regla_nodo_origen")
 
   @@unique([id_nodo_origen, orden_evaluacion], map: "uq_regla_orden_por_nodo")
+  @@unique([id_nodo_origen, orden_evaluacion], map: "uq_reglas_nodos_origen_orden")
+  @@index([id_nodo_destino, id_flujo], map: "idx_reglas_nodos_destino")
   @@schema("chat")
 }
 
@@ -545,7 +552,7 @@ model reglas_validaciones {
   formato_regex       String?
   valores_permitidos  String[]
   mensaje_error       String
-  reglas_nodos        reglas_nodos[]
+  nodos               nodos[]
 
   @@schema("chat")
 }
@@ -589,11 +596,12 @@ model chat_sesiones {
   historial_nodos          historial_nodos[]
   interacciones            interacciones[]
   flujo_conversacion       flujo_conversacion?        @relation(fields: [id_flujo_conversacional], references: [id_flujo], onUpdate: NoAction, map: "fk_sesion_flujo")
-  nodos                    nodos?                     @relation(fields: [id_nodo_actual], references: [id_nodo], onUpdate: NoAction, map: "fk_sesion_nodo_actual")
+  nodos                    nodos?                     @relation(fields: [id_nodo_actual, id_flujo_conversacional], references: [id_nodo, id_flujo], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_nodo_actual")
   usuarios                 usuarios                   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_sesion_usuario")
   sincronizaciones         sincronizaciones[]
 
   @@index([id_usuario], map: "ix_sesiones_usuario")
+  @@index([id_nodo_actual, id_flujo_conversacional], map: "idx_sesiones_nodo_actual")
   @@map("sesiones")
   @@schema("chat")
 }
@@ -620,6 +628,7 @@ model sincronizaciones {
 model tipo_entrada {
   id_tipo_entrada String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre          String       @unique @db.VarChar(50)
+  nodos           nodos[]
   respuestas      respuestas[]
 
   @@schema("chat")
@@ -843,6 +852,7 @@ enum operador_condicion_enum {
   IGUALDAD
   RANGO
   CATEGORIA
+  SIEMPRE
 
   @@schema("chat")
 }

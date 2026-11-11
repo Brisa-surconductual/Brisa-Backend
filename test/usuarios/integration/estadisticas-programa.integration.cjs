@@ -49,7 +49,7 @@ async function main() {
   assert.equal(tables.rows[0].total, 0, 'La base debe estar vacía.');
   await sql.query(
     readFileSync(
-      resolve(__dirname, '../../../prisma/migrations/0_init/migration.sql'),
+      resolve(__dirname, '../../../prisma/migrations_backup/0_init/migration.sql'),
       'utf8',
     ),
   );
