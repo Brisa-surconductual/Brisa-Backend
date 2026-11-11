@@ -566,9 +566,9 @@ model respuestas {
   id_tipo_respuesta       String?             @db.Uuid
   id_estado_conectividad  String              @db.Uuid
   valor_respuesta         Json
-  resultado_procesamiento Json?
   es_valida               Boolean             @default(true)
   fecha_captura           DateTime            @default(now()) @db.Timestamptz(6)
+  resultado_procesamiento Json?
   estado_conectividad     estado_conectividad @relation(fields: [id_estado_conectividad], references: [id_estado_conectividad], onUpdate: NoAction, map: "fk_respuesta_conectividad")
   interacciones           interacciones       @relation(fields: [id_interaccion], references: [id_interaccion], onDelete: Cascade, onUpdate: NoAction, map: "fk_respuesta_interaccion")
   nodos                   nodos               @relation(fields: [id_nodo], references: [id_nodo], onUpdate: NoAction, map: "fk_respuesta_nodo")
