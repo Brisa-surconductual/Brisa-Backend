@@ -2,7 +2,7 @@ import { NodoConversacional } from '../../domain/entities/flujo/nodo-conversacio
 import { TransicionConversacional } from '../../domain/entities/flujo/transicion-conversacional.entity';
 import { SesionConversacional } from '../../domain/entities/sesion/sesion-conversacional.entity';
 import { DecisionRespuesta } from '../../domain/policies/motor-respuesta-conversacional.policy';
-import { CapturaPerfilRespuesta } from '../../domain/policies/captura-perfil-respuesta.policy';
+import { PerfilClinicoRepository } from '../../domain/repositories/perfil-clinico.repository';
 import { ResultadoRespuesta } from '../dto/procesar-respuesta.dto-response';
 
 export interface SolicitudRespuesta {
@@ -33,18 +33,10 @@ export interface RegistroRespuestaTransaccion {
   ): Promise<{ idSesion: string; resultado: unknown } | null>;
   guardar(registro: RegistroDeRespuesta): Promise<void>;
 }
-export interface PerfilRespuestaTransaccion {
-  guardar(
-    idUsuario: string,
-    captura: CapturaPerfilRespuesta,
-    fechaCaptura: Date,
-    ahora: Date,
-  ): Promise<void>;
-}
 export interface TransaccionRespuesta {
   contexto: ContextoRespuestaTransaccion;
   registro: RegistroRespuestaTransaccion;
-  perfil: PerfilRespuestaTransaccion;
+  perfil: PerfilClinicoRepository;
 }
 
 /** Aplicación coordina el negocio; el adaptador asegura una única transacción. */

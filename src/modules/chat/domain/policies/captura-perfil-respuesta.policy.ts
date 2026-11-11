@@ -1,46 +1,36 @@
 import { NodoConversacional } from '../entities/flujo/nodo-conversacional.entity';
 import { ModalidadConversacional } from '../enums/modalidad-conversacional-enum';
-import {
-  TipoCravingClinico,
-  TipoDependenciaClinica,
-} from '../enums/perfil-clinico.enum';
+import { DimensionPerfilClinico } from '../enums/perfil-clinico.enum';
 import { TipoEntradaRespuesta } from '../enums/tipo-entrada-respuesta.enum';
 import {
-  ConflictoRespuestaConversacionalException,
   RespuestaUsuarioInvalida,
   configuracionRespuestaInvalida as configuracion,
 } from '../exceptions/respuesta.exceptions';
 import { CapturarRespuesta } from './capturar-respuesta.policy';
 import { respuestaVacia } from './configuracion-entrada-respuesta';
+import { DimensionPerfilCapturada } from '../repositories/perfil-clinico.repository';
+import { CapturarDimensionPerfilPolicy } from './capturar-dimension-perfil.policy';
 
-export type CapturaPerfilRespuesta =
-  | { dimension: 'tipo_dependencia'; valor: TipoDependenciaClinica }
-  | { dimension: 'tipo_craving'; valor: TipoCravingClinico };
+export type CapturaPerfilRespuesta = DimensionPerfilCapturada;
 
 /** RF-27B: solo el árbol designa qué nodo captura cada dimensión. */
 export class CapturaPerfilRespuestaPolicy {
+  private readonly perfil = new CapturarDimensionPerfilPolicy();
+
   comprobarModalidad(
     nodo: NodoConversacional,
     modalidad: ModalidadConversacional,
   ): void {
-    if (
-      nodo.contenido.captura_perfil != null &&
-      modalidad !== ModalidadConversacional.GRUPAL
-    )
-      throw new ConflictoRespuestaConversacionalException(
-        'La captura de perfil clínico solo aplica durante la modalidad de terapia grupal.',
-        'CAPTURA_FUERA_DE_GRUPAL',
-      );
+    if (this.dimension(nodo) !== null)
+      this.perfil.comprobarModalidad(modalidad);
   }
 
   capturar(
     nodo: NodoConversacional,
     valor: unknown,
   ): CapturaPerfilRespuesta | null {
-    const dimension = nodo.contenido.captura_perfil;
+    const dimension = this.dimension(nodo);
     if (dimension == null) return null;
-    if (dimension !== 'tipo_dependencia' && dimension !== 'tipo_craving')
-      return configuracion('Dimensión clínica no configurada.');
     if (
       new CapturarRespuesta().entrada(nodo).tipo !==
       TipoEntradaRespuesta.OPCION_UNICA
@@ -51,17 +41,32 @@ export class CapturaPerfilRespuestaPolicy {
         'Este campo es obligatorio.',
         'RESPUESTA_OBLIGATORIA',
       );
-    const valores: string[] =
-      dimension === 'tipo_dependencia'
-        ? Object.values(TipoDependenciaClinica)
-        : Object.values(TipoCravingClinico);
-    if (typeof valor !== 'string' || !valores.includes(valor))
-      throw new RespuestaUsuarioInvalida(
-        'La respuesta seleccionada no es válida para esta pregunta.',
-        'VALOR_NO_PERMITIDO',
+    return this.perfil.validarValor(dimension, valor);
+  }
+
+  private dimension(nodo: NodoConversacional): DimensionPerfilClinico | null {
+    const { capturaPerfil, captura_perfil: anterior } = nodo.contenido;
+    if (capturaPerfil == null && anterior == null) return null;
+    const dimension =
+      typeof capturaPerfil === 'object' && !Array.isArray(capturaPerfil)
+        ? (capturaPerfil as { dimension?: unknown } | null)?.dimension
+        : capturaPerfil;
+    const legado =
+      anterior === 'tipo_dependencia'
+        ? DimensionPerfilClinico.TIPO_DEPENDENCIA
+        : anterior === 'tipo_craving'
+          ? DimensionPerfilClinico.TIPO_CRAVING
+          : null;
+    if (
+      (anterior != null && legado === null) ||
+      (capturaPerfil != null &&
+        dimension !== DimensionPerfilClinico.TIPO_DEPENDENCIA &&
+        dimension !== DimensionPerfilClinico.TIPO_CRAVING) ||
+      (capturaPerfil != null && legado !== null && dimension !== legado)
+    )
+      return configuracion(
+        'Dimensión clínica no configurada o contradictoria.',
       );
-    return dimension === 'tipo_dependencia'
-      ? { dimension, valor: valor as TipoDependenciaClinica }
-      : { dimension, valor: valor as TipoCravingClinico };
+    return (dimension ?? legado) as DimensionPerfilClinico;
   }
 }

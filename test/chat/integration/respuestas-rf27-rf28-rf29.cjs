@@ -43,8 +43,9 @@ const { FormatoRespuestaAdapter } = source(
 );
 const prisma = new PrismaService();
 const sql = new Client({ connectionString: connection });
+const persistencia = new PrismaProcesarRespuestaRepository(prisma);
 const caso = new ProcesarRespuestaUseCase(
-  new PrismaProcesarRespuestaRepository(prisma),
+  persistencia,
   new FormatoRespuestaAdapter(),
 );
 const usuario = randomUUID(),
@@ -89,6 +90,7 @@ async function crear({
   destinoAjeno = false,
   destinoTerminal = false,
   captura = null,
+  capturaLegada = false,
 } = {}) {
   const flujo = randomUUID(),
     nodo = randomUUID(),
@@ -110,7 +112,17 @@ async function crear({
     texto: 'Contenido intacto',
     instrucciones: 'Instrucción',
     entrada: { tipo_entrada: tipo },
-    ...(captura !== null && { captura_perfil: captura }),
+    ...(captura !== null &&
+      (capturaLegada
+        ? { captura_perfil: captura }
+        : {
+            capturaPerfil: {
+              dimension:
+                captura === 'tipo_dependencia'
+                  ? 'TIPO_DEPENDENCIA'
+                  : 'TIPO_CRAVING',
+            },
+          })),
   };
   await q(
     `INSERT INTO chat.nodos(id_nodo,id_flujo,id_tipo_nodo,contenido,creado_por) VALUES($1,$2,$3,$4,$5)`,
@@ -769,15 +781,14 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       'captura dependencia sin inventar craving ni marcar el perfil completo',
       async () => {
         const e = await clinica('tipo_dependencia', 'TOLERANCIA');
+        const inicio = Date.now();
         await enviar(e);
         const p = await perfil();
         assert.equal(p.tipo_dependencia, 'TOLERANCIA');
         assert.equal(p.tipo_craving, null);
         assert.equal(p.perfil_completo, false);
-        assert.equal(
-          p.fecha_captura_dependencia.toISOString(),
-          '2026-11-06T16:49:00.000Z',
-        );
+        assert.ok(p.fecha_captura_dependencia.getTime() >= inicio);
+        assert.ok(p.fecha_captura_dependencia.getTime() <= Date.now());
         assert.equal(p.fecha_captura_craving, null);
       },
     );
@@ -798,21 +809,18 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       },
     );
     await check(
-      'recaptura explícita cambia solo la dimensión configurada',
+      'una captura posterior conserva el valor original, sus fechas y la otra dimensión',
       async () => {
         const antes = await perfil(),
           e = await clinica('tipo_dependencia', 'ABSTINENCIA_FISICA');
         e.dto.capturadaEn = '2026-11-06T12:00:00-05:00';
         await enviar(e);
         const p = await perfil();
-        assert.equal(p.tipo_dependencia, 'ABSTINENCIA_FISICA');
+        assert.equal(p.tipo_dependencia, 'TOLERANCIA');
         assert.equal(p.tipo_craving, 'POSITIVO');
         assert.equal(p.perfil_completo, true);
-        assert.deepEqual(p.fecha_captura_craving, antes.fecha_captura_craving);
-        assert.equal(
-          p.fecha_captura_dependencia.toISOString(),
-          '2026-11-06T17:00:00.000Z',
-        );
+        assert.deepEqual(p, antes);
+        assert.equal((await snapshot(e.sesion)).id_nodo_actual, e.destino);
       },
     );
     await check(
@@ -883,6 +891,9 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       'un fallo posterior a la captura también revierte el perfil generado',
       async () => {
         const e = await clinica('tipo_craving', 'NEGATIVO');
+        await q('DELETE FROM chat.perfil_clinico WHERE id_usuario=$1', [
+          usuario,
+        ]);
         await q(
           `CREATE FUNCTION chat.rf27_fallar_historial() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'fallo local posterior al perfil'; END $$`,
         );
@@ -910,6 +921,184 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
         assert.equal(p.tipo_dependencia, 'TOLERANCIA');
         assert.equal(p.tipo_craving, 'NEGATIVO');
         assert.equal(p.perfil_completo, true);
+      },
+    );
+
+    const capturar = (e, dimension, valor, modalidadSesion = 'GRUPAL') =>
+      persistencia.ejecutar((tx) =>
+        tx.perfil.capturarDimension({
+          idUsuario: usuario,
+          idSesion: e.sesion,
+          idNodo: e.nodo,
+          dimension,
+          valor,
+          modalidadSesion,
+        }),
+      );
+    await check(
+      'el puerto devuelve exactamente el contrato interno de primera captura',
+      async () => {
+        await q('DELETE FROM chat.perfil_clinico WHERE id_usuario=$1', [
+          usuario,
+        ]);
+        const e = await clinica('tipo_dependencia', 'ABSTINENCIA_FISICA');
+        const r = await capturar(e, 'TIPO_DEPENDENCIA', 'ABSTINENCIA_FISICA');
+        assert.deepEqual(r, {
+          aplicado: true,
+          dimension: 'TIPO_DEPENDENCIA',
+          valorVigente: 'ABSTINENCIA_FISICA',
+          perfilCompleto: false,
+        });
+        assert.equal((await perfil()).tipo_craving, null);
+      },
+    );
+    await check(
+      'una dimensión existente devuelve aplicado false sin alterar el perfil',
+      async () => {
+        const antes = await perfil();
+        const e = await clinica('tipo_dependencia', 'TOLERANCIA');
+        const r = await capturar(e, 'TIPO_DEPENDENCIA', 'TOLERANCIA');
+        assert.deepEqual(r, {
+          aplicado: false,
+          dimension: 'TIPO_DEPENDENCIA',
+          valorVigente: 'ABSTINENCIA_FISICA',
+          perfilCompleto: false,
+        });
+        assert.deepEqual(await perfil(), antes);
+        const respuesta = await enviar(e);
+        assert.equal(respuesta.transicion.idNodoDestino, e.destino);
+        assert.deepEqual(await perfil(), antes);
+        assert.equal(Object.hasOwn(respuesta, 'perfilCompleto'), false);
+      },
+    );
+    await check(
+      'capturar la segunda dimensión devuelve perfilCompleto true',
+      async () => {
+        const antes = await perfil();
+        const e = await clinica('tipo_craving', 'NEGATIVO');
+        assert.deepEqual(await capturar(e, 'TIPO_CRAVING', 'NEGATIVO'), {
+          aplicado: true,
+          dimension: 'TIPO_CRAVING',
+          valorVigente: 'NEGATIVO',
+          perfilCompleto: true,
+        });
+        assert.deepEqual(
+          (await perfil()).fecha_captura_dependencia,
+          antes.fecha_captura_dependencia,
+        );
+      },
+    );
+    await check(
+      'repetir el mismo valor devuelve aplicado false y conserva todas las fechas',
+      async () => {
+        const antes = await perfil();
+        const e = await clinica('tipo_craving', 'NEGATIVO');
+        const r = await capturar(e, 'TIPO_CRAVING', 'NEGATIVO');
+        assert.equal(r.aplicado, false);
+        assert.equal(r.perfilCompleto, true);
+        assert.deepEqual(await perfil(), antes);
+      },
+    );
+    await check(
+      'dos capturas concurrentes de una dimensión conservan un único valor original',
+      async () => {
+        await q('DELETE FROM chat.perfil_clinico WHERE id_usuario=$1', [
+          usuario,
+        ]);
+        const a = await clinica('tipo_dependencia', 'TOLERANCIA');
+        const b = await clinica('tipo_dependencia', 'ABSTINENCIA_FISICA');
+        const resultados = await Promise.all([
+          capturar(a, 'TIPO_DEPENDENCIA', 'TOLERANCIA'),
+          capturar(b, 'TIPO_DEPENDENCIA', 'ABSTINENCIA_FISICA'),
+        ]);
+        assert.equal(resultados.filter((r) => r.aplicado).length, 1);
+        const p = await perfil();
+        for (const r of resultados)
+          assert.equal(r.valorVigente, p.tipo_dependencia);
+        assert.equal(p.perfil_completo, false);
+      },
+    );
+    await check(
+      'dos respuestas concurrentes de sesiones distintas avanzan sin sobrescribir el perfil',
+      async () => {
+        await q('DELETE FROM chat.perfil_clinico WHERE id_usuario=$1', [
+          usuario,
+        ]);
+        const a = await clinica('tipo_craving', 'POSITIVO');
+        const b = await clinica('tipo_craving', 'NEGATIVO');
+        const resultados = await Promise.all([enviar(a), enviar(b)]);
+        assert.equal(resultados.length, 2);
+        assert.equal((await snapshot(a.sesion)).id_nodo_actual, a.destino);
+        assert.equal((await snapshot(b.sesion)).id_nodo_actual, b.destino);
+        const antes = await perfil();
+        await enviar(
+          await clinica(
+            'tipo_craving',
+            antes.tipo_craving === 'POSITIVO' ? 'NEGATIVO' : 'POSITIVO',
+          ),
+        );
+        assert.deepEqual(await perfil(), antes);
+      },
+    );
+    await check(
+      'el reenvío idempotente de captura no actualiza el perfil ni las fechas',
+      async () => {
+        const e = await clinica('tipo_dependencia', 'TOLERANCIA');
+        const r = await enviar(e);
+        const antes = await snapshot(e.sesion);
+        assert.deepEqual(await enviar(e), r);
+        assert.deepEqual(await snapshot(e.sesion), antes);
+      },
+    );
+    await check(
+      'una sesión ajena no permite capturar ni alterar el perfil de otro usuario',
+      async () => {
+        const e = await clinica('tipo_craving', 'POSITIVO');
+        await sinCambios(e, 'SESION_NO_ENCONTRADA', () =>
+          caso.execute(e.sesion, otroUsuario, e.dto),
+        );
+      },
+    );
+    await check(
+      'los nodos con metadata anterior siguen funcionando y conservan el primer valor',
+      async () => {
+        const antes = await perfil();
+        const e = await crear({
+          tipo: 'OPCION_UNICA',
+          tipoDato: 'SELECCION',
+          permitido: ['NEGATIVO'],
+          valor: 'NEGATIVO',
+          operador: 'IGUALDAD',
+          condicion: { valor: 'NEGATIVO' },
+          captura: 'tipo_craving',
+          capturaLegada: true,
+        });
+        await enviar(e);
+        assert.deepEqual(await perfil(), antes);
+      },
+    );
+    await check(
+      'el puerto rechaza un valor de otra dimensión antes de tocar la base',
+      async () => {
+        const antes = await perfil();
+        const e = await clinica('tipo_dependencia', 'TOLERANCIA');
+        await rechaza(
+          capturar(e, 'TIPO_DEPENDENCIA', 'POSITIVO'),
+          'VALOR_NO_PERMITIDO',
+        );
+        assert.deepEqual(await perfil(), antes);
+      },
+    );
+    await check(
+      'el puerto también impide capturas en modalidad personalizada',
+      async () => {
+        const antes = await perfil();
+        const e = await clinica('tipo_dependencia', 'TOLERANCIA');
+        await rechaza(
+          capturar(e, 'TIPO_DEPENDENCIA', 'TOLERANCIA', 'PERSONALIZADA'),
+          'CAPTURA_FUERA_DE_GRUPAL',
+        );
+        assert.deepEqual(await perfil(), antes);
       },
     );
     process.stdout.write(
