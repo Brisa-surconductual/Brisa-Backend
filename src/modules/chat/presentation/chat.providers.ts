@@ -8,8 +8,10 @@ import { ReglasValidacionController } from './controllers/regla-validacion/regla
 import { SesionesConversacionalesController } from './controllers/sesion/sesiones-conversacionales.controller';
 import { NodoActualController } from './controllers/sesion/nodo-actual.controller';
 import { TransicionesConversacionalesController } from './controllers/transicion/transiciones-conversacionales.controller';
+import { RespuestasConversacionalesController } from './controllers/sesion/respuestas-conversacionales.controller';
 
 export const ChatPresentationProviders = [
+  RespuestasConversacionalesController,
   NodoActualController,
   SesionesConversacionalesController,
   ModalidadProgramaController,

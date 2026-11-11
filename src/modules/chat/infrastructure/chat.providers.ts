@@ -12,6 +12,18 @@ import { PrismaSesionConversacionalRepository } from './persistence/prisma-sesio
 import { ModalidadProgramaRepository } from '../domain/repositories/modalidad-programa.repository';
 import { PrismaModalidadProgramaRepository } from './persistence/prisma-modalidad-programa.repository';
 import {
+  ComprobarFormatoRespuestaPort,
+  ProcesarRespuestaPort,
+} from '../application/ports/procesar-respuesta.port';
+import { PrismaProcesarRespuestaRepository } from './persistence/prisma-procesar-respuesta.repository';
+import { FormatoRespuestaAdapter } from './validation/formato-respuesta.adapter';
+
+export const ChatInfrastructureProviders = [
+  {
+    provide: ProcesarRespuestaPort,
+    useClass: PrismaProcesarRespuestaRepository,
+  },
+  { provide: ComprobarFormatoRespuestaPort, useClass: FormatoRespuestaAdapter },
   PresentacionNodoActualPort,
   FirmarRecursoNodoPort,
 } from '../application/ports/presentacion-nodo-actual.port';
