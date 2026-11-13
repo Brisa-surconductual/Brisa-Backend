@@ -70,7 +70,11 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
   ): Promise<TransicionConversacional | null> {
     const transicion = await this.prisma.reglas_nodos.findUnique({
       where: { id_regla: idTransicion },
-      include: { reglas_validaciones: true },
+      include: {
+        nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos: {
+          include: { reglas_validaciones: true },
+        },
+      },
     });
     return transicion === null
       ? null
@@ -184,7 +188,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
   }
 
   contarUsosReglaValidacion(idReglaValidacion: string): Promise<number> {
-    return this.prisma.reglas_nodos.count({
+    return this.prisma.nodos.count({
       where: { id_regla_validacion: idReglaValidacion },
     });
   }
@@ -267,6 +271,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
         }
         for (const transicion of arbol.transiciones) {
           await this.persistirRegla(tx, transicion.reglaValidacion);
+          await this.asociarReglaAlNodoOrigen(tx, transicion);
           await tx.reglas_nodos.create({
             data: TransicionConversacionalMapper.toCreateData(transicion),
           });
@@ -323,6 +328,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     try {
       await this.ejecutarTransaccion(async (tx) => {
         await this.persistirRegla(tx, transicion.reglaValidacion);
+        await this.asociarReglaAlNodoOrigen(tx, transicion);
         const existente = await tx.reglas_nodos.findUnique({
           where: { id_regla: transicion.idTransicion },
           select: { id_regla: true },
@@ -419,6 +425,22 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     });
   }
 
+  /**
+   * La FK a `reglas_validaciones` vive en el nodo origen, no en la transición
+   * (un nodo tiene una sola regla; una regla puede estar en muchos nodos). Si
+   * otra transición del mismo nodo origen tenía una regla distinta, esta
+   * asociación la reemplaza.
+   */
+  private async asociarReglaAlNodoOrigen(
+    tx: Prisma.TransactionClient,
+    transicion: TransicionConversacional,
+  ): Promise<void> {
+    await tx.nodos.update({
+      where: { id_nodo: transicion.idNodoOrigen },
+      data: { id_regla_validacion: transicion.reglaValidacion.idReglaValidacion },
+    });
+  }
+
   private async cargarArbol(
     cliente: Prisma.TransactionClient,
     idFlujo: string,
@@ -436,7 +458,11 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       }),
       cliente.reglas_nodos.findMany({
         where: { id_flujo: idFlujo },
-        include: { reglas_validaciones: true },
+        include: {
+          nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos: {
+            include: { reglas_validaciones: true },
+          },
+        },
         orderBy: [{ id_nodo_origen: 'asc' }, { orden_evaluacion: 'asc' }],
       }),
     ]);

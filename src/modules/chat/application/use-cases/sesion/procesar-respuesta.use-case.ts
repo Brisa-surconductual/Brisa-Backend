@@ -2,6 +2,7 @@ import {
   HttpException,
   Injectable,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { DomainException } from '../../../domain/exceptions/domain.exception';
 import {
@@ -25,6 +26,7 @@ import {
 
 @Injectable()
 export class ProcesarRespuestaUseCase {
+  private readonly logger = new Logger(ProcesarRespuestaUseCase.name);
   private readonly motor = new MotorRespuestaConversacional();
   private readonly perfil = new CapturaPerfilRespuestaPolicy();
 
@@ -144,6 +146,10 @@ export class ProcesarRespuestaUseCase {
               ? 'El nodo destino no es válido.'
               : 'No se pudo determinar la siguiente acción en la conversación.',
         });
+      this.logger.error(
+        'Fallo inesperado al procesar la respuesta.',
+        error instanceof Error ? error.stack : error,
+      );
       throw new InternalServerErrorException(
         'No fue posible procesar la respuesta en este momento.',
       );

@@ -16,7 +16,7 @@ import { AccesoEstudiante } from '../../decorators/acceso.decorators';
 import { IdUsuarioSesion } from '../../decorators/id-usuario-sesion.decorator';
 import { ErrorRespuestaChatFilter } from '../../filters/error-respuesta-chat.filter';
 
-@Controller(['/api/chat/sesiones', '/chat/sesiones'])
+@Controller( '/chat/sesiones')
 @AccesoEstudiante()
 @UseFilters(ErrorRespuestaChatFilter)
 export class RespuestasConversacionalesController {

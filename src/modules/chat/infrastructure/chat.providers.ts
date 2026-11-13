@@ -8,34 +8,30 @@ import { AsignacionCronogramaChatRepository } from '../domain/repositories/asign
 import { SesionConversacionalRepository } from '../domain/repositories/sesion-conversacional.repository';
 import { PrismaAsignacionCronogramaChatRepository } from './persistence/prisma-asignacion-cronograma-chat.repository';
 import { PrismaSesionConversacionalRepository } from './persistence/prisma-sesion-conversacional.repository';
-
 import { ModalidadProgramaRepository } from '../domain/repositories/modalidad-programa.repository';
 import { PrismaModalidadProgramaRepository } from './persistence/prisma-modalidad-programa.repository';
-import {
-  ComprobarFormatoRespuestaPort,
-  ProcesarRespuestaPort,
-} from '../application/ports/procesar-respuesta.port';
+import { ComprobarFormatoRespuestaPort, ProcesarRespuestaPort, } from '../application/ports/procesar-respuesta.port';
 import { PrismaProcesarRespuestaRepository } from './persistence/prisma-procesar-respuesta.repository';
 import { FormatoRespuestaAdapter } from './validation/formato-respuesta.adapter';
+import { PrismaPresentacionNodoActualRepository } from './persistence/prisma-presentacion-nodo-actual.repository';
+import { S3FirmarRecursoNodoAdapter } from './storage/s3-firmar-recurso-nodo.adapter';
+import { FirmarRecursoNodoPort, PresentacionNodoActualPort, } from '../application/ports/presentacion-nodo-actual.port';
 
 export const ChatInfrastructureProviders = [
   {
     provide: ProcesarRespuestaPort,
     useClass: PrismaProcesarRespuestaRepository,
   },
-  { provide: ComprobarFormatoRespuestaPort, useClass: FormatoRespuestaAdapter },
-  PresentacionNodoActualPort,
-  FirmarRecursoNodoPort,
-} from '../application/ports/presentacion-nodo-actual.port';
-import { PrismaPresentacionNodoActualRepository } from './persistence/prisma-presentacion-nodo-actual.repository';
-import { S3FirmarRecursoNodoAdapter } from './storage/s3-firmar-recurso-nodo.adapter';
-
-export const ChatInfrastructureProviders = [
+  { provide: ComprobarFormatoRespuestaPort, 
+    useClass: FormatoRespuestaAdapter 
+  },
   {
     provide: PresentacionNodoActualPort,
     useClass: PrismaPresentacionNodoActualRepository,
   },
-  { provide: FirmarRecursoNodoPort, useClass: S3FirmarRecursoNodoAdapter },
+  { provide: FirmarRecursoNodoPort, 
+    useClass: S3FirmarRecursoNodoAdapter 
+  },
   {
     provide: ModalidadProgramaRepository,
     useClass: PrismaModalidadProgramaRepository,
