@@ -50,6 +50,16 @@ export class NodoActualDtoResponse {
   contenido!: Record<string, unknown>;
   es_nodo_inicial!: boolean;
   orden!: number | null;
+
+  static desde(nodo: NodoConversacional): NodoActualDtoResponse {
+    return {
+      id_nodo: nodo.idNodo,
+      tipo_nodo: nodo.nombreTipoNodo,
+      contenido: nodo.contenido,
+      es_nodo_inicial: nodo.esNodoInicial,
+      orden: nodo.orden,
+    };
+  }
 }
 
 export class UbicacionTemporalSesionDtoResponse {
@@ -84,13 +94,7 @@ export class InicioSesionConversacionalDtoResponse {
         fecha_inicio: sesion.fechaInicio,
         fecha_ultima_interaccion: sesion.fechaUltimaInteraccion,
       },
-      nodo_actual: {
-        id_nodo: nodo.idNodo,
-        tipo_nodo: nodo.nombreTipoNodo,
-        contenido: nodo.contenido,
-        es_nodo_inicial: nodo.esNodoInicial,
-        orden: nodo.orden,
-      },
+      nodo_actual: NodoActualDtoResponse.desde(nodo),
       ubicacion_temporal: {
         id_unidad_temporal: ubicacion.id_unidad_temporal,
         nombre_unidad: ubicacion.nombre_unidad,

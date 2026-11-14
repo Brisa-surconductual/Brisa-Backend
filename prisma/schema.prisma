@@ -559,20 +559,21 @@ model reglas_validaciones {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model respuestas {
-  id_respuesta           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  id_interaccion         String              @db.Uuid
-  id_nodo                String              @db.Uuid
-  id_tipo_entrada        String              @db.Uuid
-  id_tipo_respuesta      String?             @db.Uuid
-  id_estado_conectividad String              @db.Uuid
-  valor_respuesta        Json
-  es_valida              Boolean             @default(true)
-  fecha_captura          DateTime            @default(now()) @db.Timestamptz(6)
-  estado_conectividad    estado_conectividad @relation(fields: [id_estado_conectividad], references: [id_estado_conectividad], onUpdate: NoAction, map: "fk_respuesta_conectividad")
-  interacciones          interacciones       @relation(fields: [id_interaccion], references: [id_interaccion], onDelete: Cascade, onUpdate: NoAction, map: "fk_respuesta_interaccion")
-  nodos                  nodos               @relation(fields: [id_nodo], references: [id_nodo], onUpdate: NoAction, map: "fk_respuesta_nodo")
-  tipo_entrada           tipo_entrada        @relation(fields: [id_tipo_entrada], references: [id_tipo_entrada], onUpdate: NoAction, map: "fk_respuesta_tipo_entrada")
-  tipo_respuesta         tipo_respuesta?     @relation(fields: [id_tipo_respuesta], references: [id_tipo_respuesta], onDelete: Restrict, onUpdate: NoAction, map: "fk_respuesta_tipo_respuesta")
+  id_respuesta            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_interaccion          String              @db.Uuid
+  id_nodo                 String              @db.Uuid
+  id_tipo_entrada         String              @db.Uuid
+  id_tipo_respuesta       String?             @db.Uuid
+  id_estado_conectividad  String              @db.Uuid
+  valor_respuesta         Json
+  es_valida               Boolean             @default(true)
+  fecha_captura           DateTime            @default(now()) @db.Timestamptz(6)
+  resultado_procesamiento Json?
+  estado_conectividad     estado_conectividad @relation(fields: [id_estado_conectividad], references: [id_estado_conectividad], onUpdate: NoAction, map: "fk_respuesta_conectividad")
+  interacciones           interacciones       @relation(fields: [id_interaccion], references: [id_interaccion], onDelete: Cascade, onUpdate: NoAction, map: "fk_respuesta_interaccion")
+  nodos                   nodos               @relation(fields: [id_nodo], references: [id_nodo], onUpdate: NoAction, map: "fk_respuesta_nodo")
+  tipo_entrada            tipo_entrada        @relation(fields: [id_tipo_entrada], references: [id_tipo_entrada], onUpdate: NoAction, map: "fk_respuesta_tipo_entrada")
+  tipo_respuesta          tipo_respuesta?     @relation(fields: [id_tipo_respuesta], references: [id_tipo_respuesta], onDelete: Restrict, onUpdate: NoAction, map: "fk_respuesta_tipo_respuesta")
 
   @@schema("chat")
 }

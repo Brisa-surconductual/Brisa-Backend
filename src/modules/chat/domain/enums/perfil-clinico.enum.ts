@@ -7,3 +7,8 @@ export enum TipoCravingClinico {
   POSITIVO = 'POSITIVO',
   NEGATIVO = 'NEGATIVO',
 }
+
+export enum DimensionPerfilClinico {
+  TIPO_DEPENDENCIA = 'TIPO_DEPENDENCIA',
+  TIPO_CRAVING = 'TIPO_CRAVING',
+}

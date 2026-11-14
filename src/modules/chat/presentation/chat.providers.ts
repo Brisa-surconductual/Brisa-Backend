@@ -6,9 +6,13 @@ import { ModalidadProgramaController } from './controllers/modalidad/modalidad-p
 import { NodosConversacionalesController } from './controllers/nodo/nodos-conversacionales.controller';
 import { ReglasValidacionController } from './controllers/regla-validacion/reglas-validacion.controller';
 import { SesionesConversacionalesController } from './controllers/sesion/sesiones-conversacionales.controller';
+import { NodoActualController } from './controllers/sesion/nodo-actual.controller';
 import { TransicionesConversacionalesController } from './controllers/transicion/transiciones-conversacionales.controller';
+import { RespuestasConversacionalesController } from './controllers/sesion/respuestas-conversacionales.controller';
 
 export const ChatPresentationProviders = [
+  RespuestasConversacionalesController,
+  NodoActualController,
   SesionesConversacionalesController,
   ModalidadProgramaController,
   ContenidoVigenteChatController,

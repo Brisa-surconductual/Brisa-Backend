@@ -10,6 +10,7 @@ import { AutorizarConsumoEventoContenidoService } from './application/service/au
 import { CalcularUbicacionTemporalUsuarioUseCase } from './application/use-cases/cronograma/calcular-ubicacion-temporal-usuario.use-case';
 import { ModuloInternoAuthGuard } from './presentation/guards/modulo-interno-auth.guard';
 import { ConsultaContenidoVigentePort } from './application/ports/consulta-contenido-vigente.port';
+import { S3_CLIENT } from './infrastructure/storage/s3-client.provider';
 
 @Module({
   imports: [PrismaModule, UsersModule],
@@ -23,6 +24,7 @@ import { ConsultaContenidoVigentePort } from './application/ports/consulta-conte
   ],
 
   exports: [
+    S3_CLIENT,
     InicializarCronogramaUsuarioUseCase,
     AutorizarConsumoEventoContenidoService,
     CalcularUbicacionTemporalUsuarioUseCase,

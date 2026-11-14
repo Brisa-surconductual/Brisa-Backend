@@ -21,8 +21,18 @@ import { ConsultarElegibilidadModalidadUseCase } from './use-cases/modalidad/con
 import { HabilitarModalidadPersonalizadaUseCase } from './use-cases/modalidad/habilitar-modalidad-personalizada.use-case';
 import { DeterminarContextoConversacionalUseCase } from './use-cases/sesion/determinar-contexto-conversacional.use-case';
 import { IniciarOReanudarSesionUseCase } from './use-cases/sesion/iniciar-o-reanudar-sesion.use-case';
+import { ProcesarRespuestaUseCase } from './use-cases/sesion/procesar-respuesta.use-case';
+import { ConsultarNodoActualUseCase } from './use-cases/sesion/consultar-nodo-actual.use-case';
+import { PresentarNodoActualService } from './services/presentar-nodo-actual.service';
+import { PresentarBloquesNodoActualService } from './services/presentar-bloques-nodo-actual.service';
+import { PrepararEntradaNodoActualService } from './services/preparar-entrada-nodo-actual.service';
 
 export const ChatApplicationProviders = [
+  ProcesarRespuestaUseCase,
+  PresentarNodoActualService,
+  PresentarBloquesNodoActualService,
+  PrepararEntradaNodoActualService,
+  ConsultarNodoActualUseCase,
   IniciarOReanudarSesionUseCase,
   DeterminarContextoConversacionalUseCase,
   ConsultarElegibilidadModalidadUseCase,
