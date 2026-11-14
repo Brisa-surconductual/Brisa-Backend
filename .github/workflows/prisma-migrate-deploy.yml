@@ -1,13 +1,10 @@
 name: Deploy Prisma Migrations to Main
 
-# Dispara el workflow cada vez que hay un push (o merge) a master o develop.
-# Ambas ramas comparten la misma base de datos del equipo (secreto
-# DATABASE_URL): develop es donde se integra el trabajo diario.
+# Esto dispara el workflow cada vez que hay un push (o merge) a la rama main
 on:
   push:
     branches:
       - master
-      - develop
   # Opcional: Permite ejecutarlo manualmente desde la pestaña Actions de GitHub si algo falla
   workflow_dispatch:
 
