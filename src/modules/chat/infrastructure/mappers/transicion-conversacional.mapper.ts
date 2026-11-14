@@ -4,16 +4,18 @@ import { OperadorCondicion } from '../../domain/enums/operador-condicional.enum'
 import { ReglaValidacionMapper } from './regla-validacion.mapper';
 
 /**
- * Fila de la transición junto con la regla de validación del nodo origen.
- * En la BD la regla no está en `reglas_nodos`: pertenece al nodo origen
- * (`nodos.id_regla_validacion`), que es quien la expone a sus transiciones.
+ * La regla de validación vive en el nodo origen (`nodos.id_regla_validacion`);
+ * la transición la obtiene a través de él.
  */
+export const INCLUIR_REGLA_DE_NODO_ORIGEN = {
+  nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos: {
+    include: { reglas_validaciones: true },
+  },
+} satisfies Prisma.reglas_nodosInclude;
+
+/** Fila de la transición junto con su regla de validación. */
 export type TransicionConReglaFila = Prisma.reglas_nodosGetPayload<{
-  include: {
-    nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos: {
-      include: { reglas_validaciones: true };
-    };
-  };
+  include: typeof INCLUIR_REGLA_DE_NODO_ORIGEN;
 }>;
 
 export class TransicionConversacionalMapper {
@@ -23,7 +25,7 @@ export class TransicionConversacionalMapper {
         .reglas_validaciones;
     if (regla === null) {
       throw new Error(
-        'El nodo origen de la transición no tiene una regla de validación asociada.',
+        `El nodo origen de la transición ${fila.id_regla} no tiene regla de validación`,
       );
     }
     return new TransicionConversacional(
