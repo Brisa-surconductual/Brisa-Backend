@@ -2,13 +2,14 @@ name: Generate Prisma Schema
 
 # schema.prisma es un artefacto AUTOGENERADO: nadie lo edita a mano.
 # Los devs solo escriben SQL en prisma/migrations/*/migration.sql.
-# Al hacer merge (push) a test o master, se aplican las migraciones a una DB
-# efimera, se hace `prisma db pull` y se commitea el schema resultante.
+# Al hacer merge (push) a develop, test o master, se aplican las migraciones
+# a una DB efimera, se hace `prisma db pull` y se commitea el schema resultante.
 on:
   push:
     branches:
       - test
       - master
+      - develop
     paths:
       - 'prisma/migrations/**'
   workflow_dispatch:

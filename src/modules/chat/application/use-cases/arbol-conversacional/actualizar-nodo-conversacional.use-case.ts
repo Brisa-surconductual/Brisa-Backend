@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  ContenidoCronogramaNoEncontradoException,
   FlujoConversacionalNoEncontradoException,
   NodoConversacionalNoEncontradoException,
   TipoNodoNoEncontradoException,
@@ -38,6 +39,13 @@ export class ActualizarNodoConversacionalUseCase {
           ? undefined
           : await this.repository.buscarTipoNodo(dto.id_tipo_nodo);
       if (tipo === null) throw new TipoNodoNoEncontradoException();
+
+      if (typeof dto.id_contenido_cronograma === 'string') {
+        const existe = await this.repository.existeContenidoCronograma(
+          dto.id_contenido_cronograma,
+        );
+        if (!existe) throw new ContenidoCronogramaNoEncontradoException();
+      }
 
       const nodo = existente.actualizar(
         {

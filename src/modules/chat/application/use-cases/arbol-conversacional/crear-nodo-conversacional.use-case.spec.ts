@@ -1,6 +1,7 @@
 import { TipoNodoConversacional } from '../../../domain/entities/catalogos/tipo-nodo.entity';
 import { EstadoFlujoConversacional } from '../../../domain/enums/estado-flujo-conversacional.enum';
 import {
+  ContenidoCronogramaNoEncontradoException,
   FlujoConversacionalNoEditableException,
   FlujoConversacionalNoEncontradoException,
   TipoNodoNoEncontradoException,
@@ -73,5 +74,32 @@ describe('CrearNodoConversacionalUseCase (RF-25)', () => {
     await expect(
       useCase.execute(ids.flujo, dto, ids.actor),
     ).rejects.toBeInstanceOf(FlujoConversacionalNoEncontradoException);
+  });
+
+  it('rechaza un contenido de cronograma inexistente', async () => {
+    repository.existeContenidoCronograma.mockResolvedValue(false);
+
+    await expect(
+      useCase.execute(
+        ids.flujo,
+        { ...dto, id_contenido_cronograma: 'cc-inexistente' },
+        ids.actor,
+      ),
+    ).rejects.toBeInstanceOf(ContenidoCronogramaNoEncontradoException);
+    expect(repository.guardarNodo).not.toHaveBeenCalled();
+  });
+
+  it('acepta un contenido de cronograma existente', async () => {
+    repository.existeContenidoCronograma.mockResolvedValue(true);
+
+    await useCase.execute(
+      ids.flujo,
+      { ...dto, id_contenido_cronograma: 'cc-1' },
+      ids.actor,
+    );
+
+    expect(repository.existeContenidoCronograma).toHaveBeenCalledWith('cc-1');
+    const [guardado] = repository.guardarNodo.mock.calls[0];
+    expect(guardado).toMatchObject({ idContenidoCronograma: 'cc-1' });
   });
 });

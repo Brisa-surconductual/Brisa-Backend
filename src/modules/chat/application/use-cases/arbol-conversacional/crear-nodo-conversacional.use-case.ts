@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { NodoConversacional } from '../../../domain/entities/flujo/nodo-conversacional.entity';
 import {
+  ContenidoCronogramaNoEncontradoException,
   FlujoConversacionalNoEncontradoException,
   TipoNodoNoEncontradoException,
 } from '../../../domain/exceptions';
@@ -26,6 +27,13 @@ export class CrearNodoConversacionalUseCase {
 
       const tipo = await this.repository.buscarTipoNodo(dto.id_tipo_nodo);
       if (tipo === null) throw new TipoNodoNoEncontradoException();
+
+      if (dto.id_contenido_cronograma) {
+        const existe = await this.repository.existeContenidoCronograma(
+          dto.id_contenido_cronograma,
+        );
+        if (!existe) throw new ContenidoCronogramaNoEncontradoException();
+      }
 
       const nodo = NodoConversacional.crear(
         idFlujo,
