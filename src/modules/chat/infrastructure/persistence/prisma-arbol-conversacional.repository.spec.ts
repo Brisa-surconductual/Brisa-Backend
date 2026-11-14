@@ -13,6 +13,7 @@ import {
 } from '../../domain/enums/perfil-clinico.enum';
 import { TipoDatoValidacion } from '../../domain/enums/tipo-dato-validacion-enum';
 import {
+  ContenidoCronogramaNoEncontradoException,
   FlujoGrupalPublicadoExistenteException,
   FlujoPersonalizadoPublicadoExistenteException,
   NodoInicialDuplicadoException,
@@ -100,7 +101,7 @@ describe('PrismaArbolConversacionalRepository', () => {
     contenido: { texto: id },
     es_nodo_inicial: id === ids.nodoA,
     orden: 1,
-    id_contenido: null,
+    id_contenido_cronograma: null,
     creado_por: ids.actor,
     fecha_creacion: fecha,
     fecha_actualizacion: fecha,
@@ -160,6 +161,7 @@ describe('PrismaArbolConversacionalRepository', () => {
     },
     tipo_nodo: { findUnique: jest.fn(), findMany: jest.fn() },
     tipo_entrada: { findMany: jest.fn() },
+    contenidos_cronograma: { findUnique: jest.fn(), findMany: jest.fn() },
     auditoria_arboles: { create: jest.fn(), findMany: jest.fn() },
   };
   const prisma = { ...tx, $transaction: jest.fn() };
@@ -396,7 +398,7 @@ describe('PrismaArbolConversacionalRepository', () => {
           id_tipo_nodo: ids.tipo,
           es_nodo_inicial: true,
           orden: 1,
-          id_contenido: null,
+          id_contenido_cronograma: null,
         }),
       });
       expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
@@ -438,7 +440,57 @@ describe('PrismaArbolConversacionalRepository', () => {
       await expect(repo.guardarNodo(nodo, ids.actor)).rejects.toBeInstanceOf(
         TipoNodoNoEncontradoException,
       );
+
+      tx.nodos.create.mockRejectedValueOnce(
+        errorPrisma('P2003', 'fk_nodo_contenido_cronograma'),
+      );
+      await expect(repo.guardarNodo(nodo, ids.actor)).rejects.toBeInstanceOf(
+        ContenidoCronogramaNoEncontradoException,
+      );
       expect(tx.auditoria_arboles.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('existeContenidoCronograma', () => {
+    it('es true cuando la asociación existe', async () => {
+      tx.contenidos_cronograma.findUnique.mockResolvedValue({
+        id_contenido_cronograma: 'cc-1',
+      });
+
+      await expect(repo.existeContenidoCronograma('cc-1')).resolves.toBe(true);
+    });
+
+    it('es false cuando no existe', async () => {
+      tx.contenidos_cronograma.findUnique.mockResolvedValue(null);
+
+      await expect(repo.existeContenidoCronograma('cc-1')).resolves.toBe(false);
+    });
+  });
+
+  describe('listarContenidosCronograma', () => {
+    it('mapea el contenido y la unidad temporal asociada', async () => {
+      tx.contenidos_cronograma.findMany.mockResolvedValue([
+        {
+          id_contenido_cronograma: 'cc-1',
+          id_contenido: 'c-1',
+          id_unidad_temporal: 'ut-1',
+          contenidos: { nombre_contenido: 'Video 1' },
+          unidades_temporales: { nombre_unidad: 'Semana 1', orden_unidad: 1 },
+        },
+      ]);
+
+      const items = await repo.listarContenidosCronograma();
+
+      expect(items).toEqual([
+        expect.objectContaining({
+          idContenidoCronograma: 'cc-1',
+          idContenido: 'c-1',
+          nombreContenido: 'Video 1',
+          idUnidadTemporal: 'ut-1',
+          nombreUnidad: 'Semana 1',
+          ordenUnidad: 1,
+        }),
+      ]);
     });
   });
 

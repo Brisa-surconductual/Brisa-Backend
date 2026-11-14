@@ -65,6 +65,8 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     listarTiposNodo: jest.fn(),
     listarTiposEntrada: jest.fn(),
     listarReglasValidacion: jest.fn(),
+    listarContenidosCronograma: jest.fn(),
+    existeContenidoCronograma: jest.fn(),
     guardarFlujo: jest.fn(),
     guardarFlujos: jest.fn(),
     guardarArbolClonado: jest.fn(),

@@ -10,12 +10,19 @@ export class ConsultarCatalogosChatUseCase {
 
   execute(): Promise<CatalogosChatDtoResponse> {
     return ejecutarSeguro(async () => {
-      const [tiposNodo, tiposEntrada, reglas] = await Promise.all([
-        this.repository.listarTiposNodo(),
-        this.repository.listarTiposEntrada(),
-        this.repository.listarReglasValidacion(),
-      ]);
-      return CatalogosChatDtoResponse.crear(tiposNodo, tiposEntrada, reglas);
+      const [tiposNodo, tiposEntrada, reglas, contenidosCronograma] =
+        await Promise.all([
+          this.repository.listarTiposNodo(),
+          this.repository.listarTiposEntrada(),
+          this.repository.listarReglasValidacion(),
+          this.repository.listarContenidosCronograma(),
+        ]);
+      return CatalogosChatDtoResponse.crear(
+        tiposNodo,
+        tiposEntrada,
+        reglas,
+        contenidosCronograma,
+      );
     });
   }
 }

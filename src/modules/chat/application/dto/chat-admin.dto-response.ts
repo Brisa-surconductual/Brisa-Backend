@@ -1,4 +1,5 @@
 import { ReglaValidacion } from '../../domain/entities/reglas-validacion/reglas-validacion.entity';
+import { ContenidoCronogramaConversacional } from '../../domain/entities/catalogos/contenido-cronograma.entity';
 import { TipoEntradaConversacional } from '../../domain/entities/catalogos/tipo-entrada.entity';
 import { EstadoFlujoConversacional } from '../../domain/enums/estado-flujo-conversacional.enum';
 import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
@@ -104,10 +105,33 @@ export class TipoEntradaDtoResponse {
   }
 }
 
+export class ContenidoCronogramaDtoResponse {
+  id_contenido_cronograma!: string;
+  id_contenido!: string;
+  nombre_contenido!: string;
+  id_unidad_temporal!: string;
+  nombre_unidad!: string;
+  orden_unidad!: number;
+
+  static crear(
+    item: ContenidoCronogramaConversacional,
+  ): ContenidoCronogramaDtoResponse {
+    return {
+      id_contenido_cronograma: item.idContenidoCronograma,
+      id_contenido: item.idContenido,
+      nombre_contenido: item.nombreContenido,
+      id_unidad_temporal: item.idUnidadTemporal,
+      nombre_unidad: item.nombreUnidad,
+      orden_unidad: item.ordenUnidad,
+    };
+  }
+}
+
 export class CatalogosChatDtoResponse {
   tipos_nodo!: TipoNodoDtoResponse[];
   tipos_entrada!: TipoEntradaDtoResponse[];
   reglas_validacion!: ReglaValidacionDtoResponse[];
+  contenidos_cronograma!: ContenidoCronogramaDtoResponse[];
   enums!: {
     modalidad: ModalidadConversacional[];
     tipo_dependencia: TipoDependenciaClinica[];
@@ -121,6 +145,7 @@ export class CatalogosChatDtoResponse {
     tiposNodo: TipoNodoConversacional[],
     tiposEntrada: TipoEntradaConversacional[],
     reglas: ReglaValidacion[],
+    contenidosCronograma: ContenidoCronogramaConversacional[],
   ): CatalogosChatDtoResponse {
     return {
       tipos_nodo: tiposNodo.map((tipo) => TipoNodoDtoResponse.crear(tipo)),
@@ -129,6 +154,9 @@ export class CatalogosChatDtoResponse {
       ),
       reglas_validacion: reglas.map((regla) =>
         ReglaValidacionDtoResponse.crear(regla),
+      ),
+      contenidos_cronograma: contenidosCronograma.map((item) =>
+        ContenidoCronogramaDtoResponse.crear(item),
       ),
       enums: {
         modalidad: Object.values(ModalidadConversacional),

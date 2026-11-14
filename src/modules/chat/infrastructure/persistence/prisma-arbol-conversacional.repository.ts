@@ -2,6 +2,7 @@ import { HttpException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { AuditoriaArbolConversacional } from '../../domain/entities/catalogos/auditoria-arbol-conversacional.entity';
+import { ContenidoCronogramaConversacional } from '../../domain/entities/catalogos/contenido-cronograma.entity';
 import { TipoEntradaConversacional } from '../../domain/entities/catalogos/tipo-entrada.entity';
 import { TipoNodoConversacional } from '../../domain/entities/catalogos/tipo-nodo.entity';
 import { ArbolConversacional } from '../../domain/entities/flujo/arbol-conversacional.entity';
@@ -227,6 +228,36 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       orderBy: { id_regla_validacion: 'asc' },
     });
     return reglas.map((regla) => ReglaValidacionMapper.toDomain(regla));
+  }
+
+  async listarContenidosCronograma(): Promise<
+    ContenidoCronogramaConversacional[]
+  > {
+    const filas = await this.prisma.contenidos_cronograma.findMany({
+      include: {
+        contenidos: { select: { nombre_contenido: true } },
+        unidades_temporales: {
+          select: { nombre_unidad: true, orden_unidad: true },
+        },
+      },
+      orderBy: [
+        { unidades_temporales: { orden_unidad: 'asc' } },
+        { orden_contenido: 'asc' },
+      ],
+    });
+    return filas.map((fila) =>
+      CatalogosConversacionalesMapper.contenidoCronogramaToDomain(fila),
+    );
+  }
+
+  async existeContenidoCronograma(
+    idContenidoCronograma: string,
+  ): Promise<boolean> {
+    const fila = await this.prisma.contenidos_cronograma.findUnique({
+      where: { id_contenido_cronograma: idContenidoCronograma },
+      select: { id_contenido_cronograma: true },
+    });
+    return fila !== null;
   }
 
   // ── Persistencia ─────────────────────────────────────────────────────────

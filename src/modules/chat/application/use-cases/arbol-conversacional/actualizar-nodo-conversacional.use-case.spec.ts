@@ -1,5 +1,6 @@
 import { EstadoFlujoConversacional } from '../../../domain/enums/estado-flujo-conversacional.enum';
 import {
+  ContenidoCronogramaNoEncontradoException,
   FlujoConversacionalNoEditableException,
   NodoConversacionalNoEncontradoException,
 } from '../../../domain/exceptions';
@@ -64,5 +65,31 @@ describe('ActualizarNodoConversacionalUseCase (RF-25)', () => {
       useCase.execute(ids.nodoB, { orden: 3 }, ids.actor),
     ).rejects.toBeInstanceOf(FlujoConversacionalNoEditableException);
     expect(repository.guardarNodo).not.toHaveBeenCalled();
+  });
+
+  it('rechaza un contenido de cronograma inexistente', async () => {
+    repository.existeContenidoCronograma.mockResolvedValue(false);
+
+    await expect(
+      useCase.execute(
+        ids.nodoB,
+        { id_contenido_cronograma: 'cc-inexistente' },
+        ids.actor,
+      ),
+    ).rejects.toBeInstanceOf(ContenidoCronogramaNoEncontradoException);
+    expect(repository.guardarNodo).not.toHaveBeenCalled();
+  });
+
+  it('permite limpiar el contenido asociado enviando null, sin validar', async () => {
+    const respuesta = await useCase.execute(
+      ids.nodoB,
+      { id_contenido_cronograma: null },
+      ids.actor,
+    );
+
+    expect(repository.existeContenidoCronograma).not.toHaveBeenCalled();
+    const [guardado] = repository.guardarNodo.mock.calls[0];
+    expect(guardado).toMatchObject({ idContenidoCronograma: null });
+    expect(respuesta.id_nodo).toBe(ids.nodoB);
   });
 });
