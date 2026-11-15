@@ -668,7 +668,6 @@ model tipo_respuesta {
 model tipo_terapia {
   id_tipo_terapia                                           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_usuario                                                String         @unique(map: "uq_tipoterapia_vigente_por_usuario", where: raw("(fecha_vigencia_hasta IS NULL)")) @db.Uuid
-  id_programa                                               Int
   modalidad                                                 modalidad_enum
   fecha_vigencia_desde                                      DateTime       @default(now()) @db.Timestamptz(6)
   fecha_vigencia_hasta                                      DateTime?      @db.Timestamptz(6)
