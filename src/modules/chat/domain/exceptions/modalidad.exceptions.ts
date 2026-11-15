@@ -24,7 +24,7 @@ export class SinAsignacionesVigentesException extends DomainException {
 
   constructor() {
     super(
-      'El programa no tiene asignaciones de modalidad vigentes.',
+      'No hay asignaciones de modalidad vigentes.',
       'SIN_ASIGNACIONES_VIGENTES',
     );
   }
@@ -45,10 +45,7 @@ export class SinParticipantesActivosException extends DomainException {
   readonly tipo = 'CONFLICTO';
 
   constructor() {
-    super(
-      'El programa no tiene participantes activos.',
-      'SIN_PARTICIPANTES_ACTIVOS',
-    );
+    super('No hay participantes activos.', 'SIN_PARTICIPANTES_ACTIVOS');
   }
 }
 
@@ -71,6 +68,17 @@ export class TransicionConcurrenteException extends DomainException {
     super(
       'Las asignaciones cambiaron durante la transición. Intente nuevamente.',
       'TRANSICION_CONCURRENTE',
+    );
+  }
+}
+
+export class ModalidadUsuarioYaInicializadaException extends DomainException {
+  readonly tipo = 'CONFLICTO';
+
+  constructor() {
+    super(
+      'El usuario ya tiene una modalidad terapéutica asignada.',
+      'MODALIDAD_YA_INICIALIZADA',
     );
   }
 }

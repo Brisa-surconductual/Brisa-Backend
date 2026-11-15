@@ -75,7 +75,7 @@ describe('RF-25B - POST habilitar-personalizada (HTTP)', () => {
     execute.mockReset();
     execute.mockImplementation((datos, idAdmin) =>
       new HabilitarModalidadPersonalizadaUseCase({
-        listarAsignacionesVigentesPorPrograma: jest.fn(),
+        listarAsignacionesVigentes: jest.fn(),
         guardarAsignaciones: jest.fn(),
       }).execute(datos, idAdmin),
     );
@@ -100,7 +100,6 @@ describe('RF-25B - POST habilitar-personalizada (HTTP)', () => {
 
   it('responde 200 ante una transicion confirmada', async () => {
     execute.mockResolvedValue({
-      id_programa: 12,
       modalidad: 'PERSONALIZADA',
       usuarios_actualizados: 3,
       fecha_vigencia_desde: '2026-10-20T12:00:00.000Z',
@@ -110,13 +109,11 @@ describe('RF-25B - POST habilitar-personalizada (HTTP)', () => {
     await request(app.getHttpServer())
       .post(ruta)
       .send({
-        id_programa: 12,
         confirmacion_transicion: true,
       })
       .expect(200)
       .expect('Cache-Control', 'no-store')
       .expect({
-        id_programa: 12,
         modalidad: 'PERSONALIZADA',
         usuarios_actualizados: 3,
         fecha_vigencia_desde: '2026-10-20T12:00:00.000Z',
@@ -124,37 +121,21 @@ describe('RF-25B - POST habilitar-personalizada (HTTP)', () => {
       });
 
     expect(execute).toHaveBeenCalledWith(
-      { id_programa: 12, confirmacion_transicion: true },
+      { confirmacion_transicion: true },
       idAdministrador,
     );
   });
 
-  it('responde 400 con un programa invalido', async () => {
-    await request(app.getHttpServer())
-      .post(ruta)
-      .send({
-        id_programa: 'invalido',
-        confirmacion_transicion: true,
-      })
-      .expect(400);
-
-    expect(execute).not.toHaveBeenCalled();
-  });
-
   it('responde 400 sin confirmacion explicita', async () => {
-    await request(app.getHttpServer())
-      .post(ruta)
-      .send({ id_programa: 12 })
-      .expect(400);
+    await request(app.getHttpServer()).post(ruta).send({}).expect(400);
 
-    expect(execute).toHaveBeenCalledWith({ id_programa: 12 }, idAdministrador);
+    expect(execute).toHaveBeenCalledWith({}, idAdministrador);
   });
 
   it('rechaza una confirmacion enviada como texto', async () => {
     await request(app.getHttpServer())
       .post(ruta)
       .send({
-        id_programa: 12,
         confirmacion_transicion: 'true',
       })
       .expect(400);
@@ -168,7 +149,6 @@ describe('RF-25B - POST habilitar-personalizada (HTTP)', () => {
     await request(app.getHttpServer())
       .post(ruta)
       .send({
-        id_programa: 12,
         confirmacion_transicion: true,
       })
       .expect(401);
@@ -182,7 +162,6 @@ describe('RF-25B - POST habilitar-personalizada (HTTP)', () => {
     await request(app.getHttpServer())
       .post(ruta)
       .send({
-        id_programa: 12,
         confirmacion_transicion: true,
       })
       .expect(403);
@@ -196,7 +175,6 @@ describe('RF-25B - POST habilitar-personalizada (HTTP)', () => {
     await request(app.getHttpServer())
       .post(ruta)
       .send({
-        id_programa: 12,
         confirmacion_transicion: true,
       })
       .expect(403);
@@ -215,7 +193,6 @@ describe('RF-25B - POST habilitar-personalizada (HTTP)', () => {
     const respuesta = await request(app.getHttpServer())
       .post(ruta)
       .send({
-        id_programa: 12,
         confirmacion_transicion: true,
       })
       .expect(409);

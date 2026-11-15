@@ -100,7 +100,6 @@ describe('RF-25B - GET /chat/admin/modalidad/elegibilidad (HTTP)', () => {
 
   it('responde 200 para un administrador autorizado', async () => {
     execute.mockResolvedValue({
-      id_programa: 12,
       modalidad_actual: 'GRUPAL',
       total_usuarios_activos: 3,
       con_perfil_completo: 3,
@@ -110,11 +109,9 @@ describe('RF-25B - GET /chat/admin/modalidad/elegibilidad (HTTP)', () => {
 
     await request(app.getHttpServer())
       .get(ruta)
-      .query({ id_programa: 12 })
       .expect(200)
       .expect('Cache-Control', 'no-store')
       .expect({
-        id_programa: 12,
         modalidad_actual: 'GRUPAL',
         total_usuarios_activos: 3,
         con_perfil_completo: 3,
@@ -122,22 +119,7 @@ describe('RF-25B - GET /chat/admin/modalidad/elegibilidad (HTTP)', () => {
         elegible: true,
       });
 
-    expect(execute).toHaveBeenCalledWith({ id_programa: 12 });
-  });
-
-  it('responde 400 para un id_programa no numerico', async () => {
-    await request(app.getHttpServer())
-      .get(ruta)
-      .query({ id_programa: 'invalido' })
-      .expect(400);
-
-    expect(execute).not.toHaveBeenCalled();
-  });
-
-  it('responde 400 cuando falta id_programa', async () => {
-    await request(app.getHttpServer()).get(ruta).expect(400);
-
-    expect(execute).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledWith();
   });
 
   it('responde 401 cuando falla la autenticacion', async () => {
@@ -145,10 +127,7 @@ describe('RF-25B - GET /chat/admin/modalidad/elegibilidad (HTTP)', () => {
       throw new UnauthorizedException();
     });
 
-    await request(app.getHttpServer())
-      .get(ruta)
-      .query({ id_programa: 12 })
-      .expect(401);
+    await request(app.getHttpServer()).get(ruta).expect(401);
 
     expect(execute).not.toHaveBeenCalled();
   });
@@ -156,10 +135,7 @@ describe('RF-25B - GET /chat/admin/modalidad/elegibilidad (HTTP)', () => {
   it('responde 403 cuando el alcance es insuficiente', async () => {
     autorizarAlcance.mockReturnValue(false);
 
-    await request(app.getHttpServer())
-      .get(ruta)
-      .query({ id_programa: 12 })
-      .expect(403);
+    await request(app.getHttpServer()).get(ruta).expect(403);
 
     expect(execute).not.toHaveBeenCalled();
   });
@@ -167,10 +143,7 @@ describe('RF-25B - GET /chat/admin/modalidad/elegibilidad (HTTP)', () => {
   it('responde 403 cuando un estudiante intenta consultar', async () => {
     rolActual = Rol.ESTUDIANTE;
 
-    await request(app.getHttpServer())
-      .get(ruta)
-      .query({ id_programa: 12 })
-      .expect(403);
+    await request(app.getHttpServer()).get(ruta).expect(403);
 
     expect(execute).not.toHaveBeenCalled();
   });

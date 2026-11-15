@@ -24,12 +24,6 @@ export class HabilitarModalidadPersonalizadaUseCase {
     dto: HabilitarModalidadPersonalizadaDtoRequest,
     idAdministrador: string,
   ): Promise<TransicionModalidadDtoResponse> {
-    if (!Number.isSafeInteger(dto.id_programa) || dto.id_programa <= 0) {
-      throw new BadRequestException(
-        'El identificador del programa es invalido.',
-      );
-    }
-
     if (
       typeof idAdministrador !== 'string' ||
       idAdministrador.trim().length === 0
@@ -45,10 +39,7 @@ export class HabilitarModalidadPersonalizadaUseCase {
       );
     }
 
-    const vigentes =
-      await this.modalidades.listarAsignacionesVigentesPorPrograma(
-        dto.id_programa,
-      );
+    const vigentes = await this.modalidades.listarAsignacionesVigentes();
 
     if (vigentes.length === 0) {
       throw new SinAsignacionesVigentesException();
@@ -95,7 +86,6 @@ export class HabilitarModalidadPersonalizadaUseCase {
     await this.modalidades.guardarAsignaciones(asignaciones);
 
     return TransicionModalidadDtoResponse.crear(
-      dto.id_programa,
       participantes.length,
       fecha,
       idAdministrador,

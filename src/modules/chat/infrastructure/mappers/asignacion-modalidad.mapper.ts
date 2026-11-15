@@ -9,7 +9,6 @@ import { ModalidadConversacional } from '../../domain/enums/modalidad-conversaci
 export const ASIGNACION_VIGENTE_SELECT = {
   id_tipo_terapia: true,
   id_usuario: true,
-  id_programa: true,
   modalidad: true,
   fecha_vigencia_desde: true,
   administrador_responsable: true,
@@ -34,7 +33,6 @@ export class AsignacionModalidadMapper {
       new AsignacionModalidad(
         fila.id_tipo_terapia,
         fila.id_usuario,
-        fila.id_programa,
         fila.modalidad as ModalidadConversacional,
         fila.fecha_vigencia_desde,
         null,
@@ -52,7 +50,6 @@ export class AsignacionModalidadMapper {
     return {
       id_tipo_terapia: asignacion.idAsignacion,
       id_usuario: asignacion.idUsuario,
-      id_programa: asignacion.idPrograma,
       modalidad: asignacion.modalidad,
       fecha_vigencia_desde: asignacion.fechaVigenciaDesde,
       administrador_responsable: asignacion.administradorResponsable,

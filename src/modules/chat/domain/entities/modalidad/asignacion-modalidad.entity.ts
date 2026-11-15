@@ -13,12 +13,25 @@ export class AsignacionModalidad {
   constructor(
     readonly idAsignacion: string,
     readonly idUsuario: string,
-    readonly idPrograma: number,
     readonly modalidad: ModalidadConversacional,
     readonly fechaVigenciaDesde: Date,
     readonly fechaVigenciaHasta: Date | null = null,
     readonly administradorResponsable: string | null = null,
   ) {}
+
+  /** Asignación inicial en GRUPAL al registrarse el estudiante (sin administrador responsable). */
+  static crearInicialGrupal(
+    idAsignacion: string,
+    idUsuario: string,
+    fecha: Date = new Date(),
+  ): AsignacionModalidad {
+    return new AsignacionModalidad(
+      idAsignacion,
+      idUsuario,
+      ModalidadConversacional.GRUPAL,
+      fecha,
+    );
+  }
 
   get vigente(): boolean {
     return this.fechaVigenciaHasta === null;
@@ -32,7 +45,6 @@ export class AsignacionModalidad {
     return new AsignacionModalidad(
       this.idAsignacion,
       this.idUsuario,
-      this.idPrograma,
       this.modalidad,
       this.fechaVigenciaDesde,
       fecha,
@@ -54,7 +66,6 @@ export class AsignacionModalidad {
       nueva: new AsignacionModalidad(
         idNuevaAsignacion,
         this.idUsuario,
-        this.idPrograma,
         ModalidadConversacional.PERSONALIZADA,
         fecha,
         null,

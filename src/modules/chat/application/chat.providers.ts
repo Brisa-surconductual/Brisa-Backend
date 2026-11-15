@@ -19,6 +19,7 @@ import { RechazarEliminacionArbolPersonalizadoUseCase } from './use-cases/arbol-
 import { ConsultarMiContenidoVigenteUseCase } from './use-cases/contenido-vigente/consultar-mi-contenido-vigente.use-case';
 import { ConsultarElegibilidadModalidadUseCase } from './use-cases/modalidad/consultar-elegibilidad-modalidad.use-case';
 import { HabilitarModalidadPersonalizadaUseCase } from './use-cases/modalidad/habilitar-modalidad-personalizada.use-case';
+import { InicializarModalidadUsuarioUseCase } from './use-cases/modalidad/inicializar-modalidad-usuario.use-case';
 import { DeterminarContextoConversacionalUseCase } from './use-cases/sesion/determinar-contexto-conversacional.use-case';
 import { IniciarOReanudarSesionUseCase } from './use-cases/sesion/iniciar-o-reanudar-sesion.use-case';
 import { ProcesarRespuestaUseCase } from './use-cases/sesion/procesar-respuesta.use-case';
@@ -37,6 +38,7 @@ export const ChatApplicationProviders = [
   DeterminarContextoConversacionalUseCase,
   ConsultarElegibilidadModalidadUseCase,
   HabilitarModalidadPersonalizadaUseCase,
+  InicializarModalidadUsuarioUseCase,
   CrearFlujoConversacionalUseCase,
   ListarFlujosUseCase,
   ConsultarArbolConversacionalUseCase,

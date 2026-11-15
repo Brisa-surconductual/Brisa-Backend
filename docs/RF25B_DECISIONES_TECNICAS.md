@@ -1,8 +1,18 @@
 # RF-25B — Decisiones técnicas y limitaciones
 
+> **Actualización:** `id_programa` se eliminó de `chat.tipo_terapia` y de todo
+> el flujo de RF-25B (migración `chat_eliminar_id_programa_tipo_terapia`).
+> Confirmaba la limitación ya señalada en "Existencia del programa" más
+> abajo: nunca existió un catálogo real de programas, por lo que particionar
+> por `id_programa` no distinguía nada que las asignaciones vigentes no
+> distinguieran ya por sí solas. La transición GRUPAL -> PERSONALIZADA ahora
+> aplica sobre **todas** las asignaciones vigentes del sistema, sin
+> parámetro de entrada en el GET de elegibilidad ni en el POST (salvo
+> `confirmacion_transicion`).
+
 ## Alcance
 
-Habilitación de modalidad PERSONALIZADA desde GRUPAL para los participantes activos de un programa.
+Habilitación de modalidad PERSONALIZADA desde GRUPAL para los participantes activos.
 
 ## Reglas adoptadas
 

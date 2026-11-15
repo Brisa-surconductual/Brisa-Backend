@@ -31,7 +31,6 @@ describe('PrismaModalidadProgramaRepository', () => {
   const asignacion = (perfilCompleto: boolean | null, idUsuario: string) => ({
     id_tipo_terapia: `asignacion-${idUsuario}`,
     id_usuario: idUsuario,
-    id_programa: 12,
     modalidad: 'GRUPAL',
     fecha_vigencia_desde: new Date('2026-10-01T00:00:00Z'),
     administrador_responsable: null,
@@ -43,20 +42,18 @@ describe('PrismaModalidadProgramaRepository', () => {
     },
   });
 
-  it('consulta exclusivamente las asignaciones vigentes del programa', async () => {
+  it('consulta exclusivamente las asignaciones vigentes', async () => {
     findMany.mockResolvedValue([]);
 
-    await repositorio.listarAsignacionesVigentesPorPrograma(12);
+    await repositorio.listarAsignacionesVigentes();
 
     expect(findMany).toHaveBeenCalledWith({
       where: {
-        id_programa: 12,
         fecha_vigencia_hasta: null,
       },
       select: {
         id_tipo_terapia: true,
         id_usuario: true,
-        id_programa: true,
         modalidad: true,
         fecha_vigencia_desde: true,
         administrador_responsable: true,
@@ -76,8 +73,7 @@ describe('PrismaModalidadProgramaRepository', () => {
   it('mapea correctamente un perfil completo', async () => {
     findMany.mockResolvedValue([asignacion(true, 'usuario-1')]);
 
-    const resultado =
-      await repositorio.listarAsignacionesVigentesPorPrograma(12);
+    const resultado = await repositorio.listarAsignacionesVigentes();
 
     expect(resultado).toHaveLength(1);
     expect(resultado[0]).toMatchObject({
@@ -97,8 +93,7 @@ describe('PrismaModalidadProgramaRepository', () => {
       asignacion(false, 'usuario-3'),
     ]);
 
-    const resultado =
-      await repositorio.listarAsignacionesVigentesPorPrograma(12);
+    const resultado = await repositorio.listarAsignacionesVigentes();
 
     expect(resultado.map((usuario) => usuario.perfilCompleto)).toEqual([
       false,
@@ -109,16 +104,13 @@ describe('PrismaModalidadProgramaRepository', () => {
   it('devuelve un arreglo vacio cuando no hay asignaciones', async () => {
     findMany.mockResolvedValue([]);
 
-    await expect(
-      repositorio.listarAsignacionesVigentesPorPrograma(99),
-    ).resolves.toEqual([]);
+    await expect(repositorio.listarAsignacionesVigentes()).resolves.toEqual([]);
   });
   describe('guardarAsignaciones', () => {
     const fecha = new Date('2026-10-20T12:00:00Z');
     const grupal = new AsignacionModalidad(
       'asignacion-1',
       'usuario-1',
-      12,
       ModalidadConversacional.GRUPAL,
       new Date('2026-10-01T00:00:00Z'),
     );
@@ -143,7 +135,6 @@ describe('PrismaModalidadProgramaRepository', () => {
           {
             id_tipo_terapia: 'asignacion-2',
             id_usuario: 'usuario-1',
-            id_programa: 12,
             modalidad: ModalidadConversacional.PERSONALIZADA,
             fecha_vigencia_desde: fecha,
             administrador_responsable: 'admin-1',

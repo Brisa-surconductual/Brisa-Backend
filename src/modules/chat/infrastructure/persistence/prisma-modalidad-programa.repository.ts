@@ -16,12 +16,9 @@ export class PrismaModalidadProgramaRepository extends ModalidadProgramaReposito
     super();
   }
 
-  async listarAsignacionesVigentesPorPrograma(
-    idPrograma: number,
-  ): Promise<AsignacionModalidadVigente[]> {
+  async listarAsignacionesVigentes(): Promise<AsignacionModalidadVigente[]> {
     const asignaciones = await this.prisma.tipo_terapia.findMany({
       where: {
-        id_programa: idPrograma,
         fecha_vigencia_hasta: null,
       },
       select: ASIGNACION_VIGENTE_SELECT,
@@ -81,6 +78,15 @@ export class PrismaModalidadProgramaRepository extends ModalidadProgramaReposito
         }
       }
     }
+  }
+
+  async existeAsignacionVigente(idUsuario: string): Promise<boolean> {
+    const asignacion = await this.prisma.tipo_terapia.findFirst({
+      where: { id_usuario: idUsuario, fecha_vigencia_hasta: null },
+      select: { id_tipo_terapia: true },
+    });
+
+    return asignacion !== null;
   }
 
   private esConflictoDeUnicidad(error: unknown): boolean {

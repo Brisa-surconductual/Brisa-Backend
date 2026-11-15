@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { ModalidadProgramaRepository } from '../../../domain/repositories/modalidad-programa.repository';
 import { AsignacionModalidad } from '../../../domain/entities/modalidad/asignacion-modalidad.entity';
 import { AsignacionModalidadVigente } from '../../../domain/entities/modalidad/asignacion-modalidad-vigente';
@@ -6,10 +5,10 @@ import { ModalidadConversacional } from '../../../domain/enums/modalidad-convers
 import { ConsultarElegibilidadModalidadUseCase } from './consultar-elegibilidad-modalidad.use-case';
 
 describe('ConsultarElegibilidadModalidadUseCase', () => {
-  const listarAsignacionesVigentesPorPrograma = jest.fn();
+  const listarAsignacionesVigentes = jest.fn();
 
   const repositorio = {
-    listarAsignacionesVigentesPorPrograma,
+    listarAsignacionesVigentes,
   } as unknown as ModalidadProgramaRepository;
 
   const casoDeUso = new ConsultarElegibilidadModalidadUseCase(repositorio);
@@ -36,7 +35,6 @@ describe('ConsultarElegibilidadModalidadUseCase', () => {
       new AsignacionModalidad(
         `asignacion-${datos.idUsuario}`,
         datos.idUsuario,
-        12,
         datos.modalidad,
         new Date('2026-10-01T00:00:00Z'),
       ),
@@ -47,19 +45,18 @@ describe('ConsultarElegibilidadModalidadUseCase', () => {
   };
 
   beforeEach(() => {
-    listarAsignacionesVigentesPorPrograma.mockReset();
+    listarAsignacionesVigentes.mockReset();
   });
 
-  it('declara elegible un programa grupal con todos los perfiles completos', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([
+  it('declara elegible cuando todos los perfiles estan completos', async () => {
+    listarAsignacionesVigentes.mockResolvedValue([
       asignacion(),
       asignacion({ idUsuario: 'usuario-2' }),
     ]);
 
-    const resultado = await casoDeUso.execute({ id_programa: 12 });
+    const resultado = await casoDeUso.execute();
 
     expect(resultado).toEqual({
-      id_programa: 12,
       modalidad_actual: ModalidadConversacional.GRUPAL,
       total_usuarios_activos: 2,
       con_perfil_completo: 2,
@@ -67,11 +64,11 @@ describe('ConsultarElegibilidadModalidadUseCase', () => {
       elegible: true,
     });
 
-    expect(listarAsignacionesVigentesPorPrograma).toHaveBeenCalledWith(12);
+    expect(listarAsignacionesVigentes).toHaveBeenCalledWith();
   });
 
   it('rechaza la elegibilidad cuando existe un perfil incompleto', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([
+    listarAsignacionesVigentes.mockResolvedValue([
       asignacion(),
       asignacion({
         idUsuario: 'usuario-2',
@@ -79,7 +76,7 @@ describe('ConsultarElegibilidadModalidadUseCase', () => {
       }),
     ]);
 
-    const resultado = await casoDeUso.execute({ id_programa: 12 });
+    const resultado = await casoDeUso.execute();
 
     expect(resultado).toMatchObject({
       total_usuarios_activos: 2,
@@ -90,7 +87,7 @@ describe('ConsultarElegibilidadModalidadUseCase', () => {
   });
 
   it('excluye cuentas no activas y usuarios administrativos', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([
+    listarAsignacionesVigentes.mockResolvedValue([
       asignacion(),
       asignacion({
         idUsuario: 'usuario-2',
@@ -104,7 +101,7 @@ describe('ConsultarElegibilidadModalidadUseCase', () => {
       }),
     ]);
 
-    const resultado = await casoDeUso.execute({ id_programa: 12 });
+    const resultado = await casoDeUso.execute();
 
     expect(resultado).toMatchObject({
       total_usuarios_activos: 1,
@@ -114,10 +111,10 @@ describe('ConsultarElegibilidadModalidadUseCase', () => {
     });
   });
 
-  it('rechaza programas sin participantes activos', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([]);
+  it('rechaza cuando no hay participantes activos', async () => {
+    listarAsignacionesVigentes.mockResolvedValue([]);
 
-    const resultado = await casoDeUso.execute({ id_programa: 12 });
+    const resultado = await casoDeUso.execute();
 
     expect(resultado).toMatchObject({
       modalidad_actual: null,
@@ -126,8 +123,8 @@ describe('ConsultarElegibilidadModalidadUseCase', () => {
     });
   });
 
-  it('rechaza programas con modalidades vigentes mixtas', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([
+  it('rechaza modalidades vigentes mixtas', async () => {
+    listarAsignacionesVigentes.mockResolvedValue([
       asignacion(),
       asignacion({
         idUsuario: 'usuario-2',
@@ -135,7 +132,7 @@ describe('ConsultarElegibilidadModalidadUseCase', () => {
       }),
     ]);
 
-    const resultado = await casoDeUso.execute({ id_programa: 12 });
+    const resultado = await casoDeUso.execute();
 
     expect(resultado).toMatchObject({
       modalidad_actual: null,
@@ -144,20 +141,8 @@ describe('ConsultarElegibilidadModalidadUseCase', () => {
     });
   });
 
-  it('rechaza identificadores de programa invalidos', async () => {
-    await expect(casoDeUso.execute({ id_programa: 0 })).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-
-    await expect(
-      casoDeUso.execute({ id_programa: 1.5 }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-
-    expect(listarAsignacionesVigentesPorPrograma).not.toHaveBeenCalled();
-  });
-
   it('ignora modalidades de participantes inactivos', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([
+    listarAsignacionesVigentes.mockResolvedValue([
       asignacion(),
       asignacion({
         idUsuario: 'usuario-bloqueado',
@@ -167,7 +152,7 @@ describe('ConsultarElegibilidadModalidadUseCase', () => {
       }),
     ]);
 
-    const resultado = await casoDeUso.execute({ id_programa: 12 });
+    const resultado = await casoDeUso.execute();
 
     expect(resultado).toMatchObject({
       modalidad_actual: ModalidadConversacional.GRUPAL,

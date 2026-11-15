@@ -13,18 +13,18 @@ import { ModalidadProgramaRepository } from '../../../domain/repositories/modali
 import { HabilitarModalidadPersonalizadaUseCase } from './habilitar-modalidad-personalizada.use-case';
 
 describe('HabilitarModalidadPersonalizadaUseCase', () => {
-  const listarAsignacionesVigentesPorPrograma = jest.fn();
+  const listarAsignacionesVigentes = jest.fn();
   const guardarAsignaciones = jest.fn();
 
   const repositorio = {
-    listarAsignacionesVigentesPorPrograma,
+    listarAsignacionesVigentes,
     guardarAsignaciones,
   } as unknown as ModalidadProgramaRepository;
 
   const casoDeUso = new HabilitarModalidadPersonalizadaUseCase(repositorio);
 
   const idAdministrador = '00000000-0000-4000-8000-000000000001';
-  const dto = { id_programa: 12, confirmacion_transicion: true };
+  const dto = { confirmacion_transicion: true };
 
   const vigente = (
     idUsuario: string,
@@ -47,7 +47,6 @@ describe('HabilitarModalidadPersonalizadaUseCase', () => {
       new AsignacionModalidad(
         `asignacion-${idUsuario}`,
         idUsuario,
-        dto.id_programa,
         datos.modalidad,
         new Date('2026-10-01T00:00:00Z'),
       ),
@@ -58,12 +57,12 @@ describe('HabilitarModalidadPersonalizadaUseCase', () => {
   };
 
   beforeEach(() => {
-    listarAsignacionesVigentesPorPrograma.mockReset();
+    listarAsignacionesVigentes.mockReset();
     guardarAsignaciones.mockReset();
   });
 
   it('cierra las asignaciones grupales y crea las personalizadas', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([
+    listarAsignacionesVigentes.mockResolvedValue([
       vigente('usuario-1'),
       vigente('usuario-2'),
     ]);
@@ -71,7 +70,6 @@ describe('HabilitarModalidadPersonalizadaUseCase', () => {
     const resultado = await casoDeUso.execute(dto, idAdministrador);
 
     expect(resultado).toMatchObject({
-      id_programa: 12,
       modalidad: ModalidadConversacional.PERSONALIZADA,
       usuarios_actualizados: 2,
       administrador_responsable: idAdministrador,
@@ -96,7 +94,7 @@ describe('HabilitarModalidadPersonalizadaUseCase', () => {
   });
 
   it('ignora cuentas inactivas al transicionar', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([
+    listarAsignacionesVigentes.mockResolvedValue([
       vigente('usuario-1'),
       vigente('usuario-2', { cuentaActiva: false, perfilCompleto: false }),
     ]);
@@ -106,17 +104,6 @@ describe('HabilitarModalidadPersonalizadaUseCase', () => {
     expect(resultado.usuarios_actualizados).toBe(1);
     expect(guardarAsignaciones.mock.calls[0][0]).toHaveLength(2);
   });
-
-  it.each([0, -1, 1.5, Number.NaN])(
-    'rechaza idPrograma invalido: %s',
-    async (idPrograma) => {
-      await expect(
-        casoDeUso.execute({ ...dto, id_programa: idPrograma }, idAdministrador),
-      ).rejects.toBeInstanceOf(BadRequestException);
-
-      expect(guardarAsignaciones).not.toHaveBeenCalled();
-    },
-  );
 
   it.each(['', '   '])(
     'rechaza un administrador vacio',
@@ -131,17 +118,14 @@ describe('HabilitarModalidadPersonalizadaUseCase', () => {
 
   it('rechaza una transicion sin confirmacion explicita', async () => {
     await expect(
-      casoDeUso.execute(
-        { ...dto, confirmacion_transicion: false },
-        idAdministrador,
-      ),
+      casoDeUso.execute({ confirmacion_transicion: false }, idAdministrador),
     ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(guardarAsignaciones).not.toHaveBeenCalled();
   });
 
-  it('rechaza un programa sin asignaciones vigentes', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([]);
+  it('rechaza cuando no hay asignaciones vigentes', async () => {
+    listarAsignacionesVigentes.mockResolvedValue([]);
 
     await expect(
       casoDeUso.execute(dto, idAdministrador),
@@ -149,7 +133,7 @@ describe('HabilitarModalidadPersonalizadaUseCase', () => {
   });
 
   it('rechaza cuando algun participante activo no esta en modalidad grupal', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([
+    listarAsignacionesVigentes.mockResolvedValue([
       vigente('usuario-1'),
       vigente('usuario-2', {
         modalidad: ModalidadConversacional.PERSONALIZADA,
@@ -163,7 +147,7 @@ describe('HabilitarModalidadPersonalizadaUseCase', () => {
   });
 
   it('rechaza cuando no hay participantes activos', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([
+    listarAsignacionesVigentes.mockResolvedValue([
       vigente('usuario-1', { cuentaActiva: false }),
     ]);
 
@@ -173,7 +157,7 @@ describe('HabilitarModalidadPersonalizadaUseCase', () => {
   });
 
   it('rechaza cuando hay perfiles incompletos e informa cuantos', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([
+    listarAsignacionesVigentes.mockResolvedValue([
       vigente('usuario-1'),
       vigente('usuario-2', { perfilCompleto: false }),
     ]);
@@ -189,9 +173,7 @@ describe('HabilitarModalidadPersonalizadaUseCase', () => {
   });
 
   it('propaga el conflicto de concurrencia del repositorio', async () => {
-    listarAsignacionesVigentesPorPrograma.mockResolvedValue([
-      vigente('usuario-1'),
-    ]);
+    listarAsignacionesVigentes.mockResolvedValue([vigente('usuario-1')]);
     const error = new TransicionConcurrenteException();
     guardarAsignaciones.mockRejectedValue(error);
 

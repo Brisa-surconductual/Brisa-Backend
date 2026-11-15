@@ -6,14 +6,10 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CsrfSessionGuard } from '../../../../usuarios/presentation/guards/csrf-session.guard';
-import {
-  ConsultarElegibilidadModalidadDtoRequest,
-  HabilitarModalidadPersonalizadaDtoRequest,
-} from '../../../application/dto/modalidad-programa.dto-request';
+import { HabilitarModalidadPersonalizadaDtoRequest } from '../../../application/dto/modalidad-programa.dto-request';
 import {
   ElegibilidadModalidadDtoResponse,
   TransicionModalidadDtoResponse,
@@ -23,7 +19,7 @@ import { HabilitarModalidadPersonalizadaUseCase } from '../../../application/use
 import { AccesoAdministrativo } from '../../decorators/acceso.decorators';
 import { IdUsuarioSesion } from '../../decorators/id-usuario-sesion.decorator';
 
-/** RF-25B: transición de la modalidad terapéutica de un programa, de grupal a personalizada. */
+/** RF-25B: transición de la modalidad terapéutica, de grupal a personalizada. */
 @Controller('/chat/admin/modalidad')
 @AccesoAdministrativo()
 export class ModalidadProgramaController {
@@ -34,10 +30,8 @@ export class ModalidadProgramaController {
 
   @Get('/elegibilidad')
   @Header('Cache-Control', 'no-store')
-  elegibilidad(
-    @Query() dto: ConsultarElegibilidadModalidadDtoRequest,
-  ): Promise<ElegibilidadModalidadDtoResponse> {
-    return this.consultarElegibilidad.execute(dto);
+  elegibilidad(): Promise<ElegibilidadModalidadDtoResponse> {
+    return this.consultarElegibilidad.execute();
   }
 
   @Post('/habilitar-personalizada')

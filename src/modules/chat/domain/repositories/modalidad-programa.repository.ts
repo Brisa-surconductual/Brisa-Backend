@@ -2,9 +2,7 @@ import { AsignacionModalidad } from '../entities/modalidad/asignacion-modalidad.
 import { AsignacionModalidadVigente } from '../entities/modalidad/asignacion-modalidad-vigente';
 
 export abstract class ModalidadProgramaRepository {
-  abstract listarAsignacionesVigentesPorPrograma(
-    idPrograma: number,
-  ): Promise<AsignacionModalidadVigente[]>;
+  abstract listarAsignacionesVigentes(): Promise<AsignacionModalidadVigente[]>;
 
   /**
    * Persiste las asignaciones de forma atomica. Una asignacion cerrada debe
@@ -14,4 +12,7 @@ export abstract class ModalidadProgramaRepository {
   abstract guardarAsignaciones(
     asignaciones: readonly AsignacionModalidad[],
   ): Promise<void>;
+
+  /** true si el usuario ya tiene una asignación de modalidad vigente. */
+  abstract existeAsignacionVigente(idUsuario: string): Promise<boolean>;
 }

@@ -110,7 +110,6 @@ describe('Mappers de sesión, perfil clínico y modalidad', () => {
     const vigente = AsignacionModalidadMapper.toDomain({
       id_tipo_terapia: 'a-1',
       id_usuario: ids.usuario,
-      id_programa: 12,
       modalidad: 'GRUPAL',
       fecha_vigencia_desde: fecha,
       administrador_responsable: null,
@@ -121,7 +120,7 @@ describe('Mappers de sesión, perfil clínico y modalidad', () => {
       },
     } as never);
 
-    expect(vigente.asignacion.idPrograma).toBe(12);
+    expect(vigente.asignacion.idUsuario).toBe(ids.usuario);
     expect(vigente.esEstudiante).toBe(true);
     expect(vigente.cuentaActiva).toBe(true);
     expect(vigente.perfilCompleto).toBe(true);
