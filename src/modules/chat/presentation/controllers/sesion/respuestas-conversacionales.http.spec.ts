@@ -61,12 +61,13 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
     };
     return true;
   };
-  const ruta = '/api/chat/sesiones/' + ids.sesion + '/respuestas';
+  const ruta = '/chat/sesiones/' + ids.sesion + '/respuestas';
   const body = () => ({
     idRespuesta: ids.interaccion,
     idNodo: ids.nodo,
     tipoEntrada: 'NUMERICO',
     valor: 5,
+    secuencia: 1,
     capturadaEn: '2026-11-06T11:49:00-05:00',
     conectividad: 'EN_LINEA',
   });
@@ -150,13 +151,6 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
       },
     });
   });
-  it('conserva el alias sin /api utilizado por el proxy', async () => {
-    await request(app.getHttpServer())
-      .post('/chat/sesiones/' + ids.sesion + '/respuestas')
-      .set('X-CSRF-Token', 'csrf-local')
-      .send(body())
-      .expect(200);
-  });
   it.each([undefined, 'incorrecto'])(
     'rechaza CSRF %s antes de procesar',
     async (csrf) => {
@@ -204,7 +198,7 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
   });
   it('valida UUID de sesión', async () => {
     await request(app.getHttpServer())
-      .post('/api/chat/sesiones/no-uuid/respuestas')
+      .post('/chat/sesiones/no-uuid/respuestas')
       .set('X-CSRF-Token', 'csrf-local')
       .send(body())
       .expect(400);

@@ -1,4 +1,4 @@
-import { Allow, Equals, IsISO8601, IsUUID, Matches } from 'class-validator';
+import { Allow, Equals, IsInt, IsISO8601, IsUUID, Matches, Min } from 'class-validator';
 
 export class ProcesarRespuestaDtoRequest {
   @IsUUID()
@@ -13,6 +13,11 @@ export class ProcesarRespuestaDtoRequest {
 
   @Allow()
   valor!: unknown;
+
+  // RF-30: la asigna el dispositivo; define el orden real, no el reloj local.
+  @IsInt()
+  @Min(1)
+  secuencia!: number;
 
   @IsISO8601({ strict: true, strictSeparator: true })
   @Matches(/T.*(?:Z|[+-]\d{2}:\d{2})$/u)

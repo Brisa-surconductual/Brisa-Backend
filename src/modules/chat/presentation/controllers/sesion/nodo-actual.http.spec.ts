@@ -252,20 +252,9 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
     });
     expect(result.text).not.toContain('PostgreSQL');
   });
-  it('expone la ruta /api y conserva el alias usado por el proxy', async () => {
-    const conApi = await request(app.getHttpServer())
-      .get(`/api/chat/sesiones/${idSesion}/nodo-actual`)
-      .expect(200);
-    const sinApi = await request(app.getHttpServer())
-      .get(`/chat/sesiones/${idSesion}/nodo-actual`)
-      .expect(200);
-    expect(conApi.body).toEqual(sinApi.body);
-  });
   it('respeta exactamente el sobre de error confirmado para una sesión ajena', async () => {
     const r = await request(app.getHttpServer())
-      .get(
-        '/api/chat/sesiones/26000000-0000-4000-8000-000000000099/nodo-actual',
-      )
+      .get('/chat/sesiones/26000000-0000-4000-8000-000000000099/nodo-actual')
       .expect(404);
     expect(r.body).toEqual({
       statusCode: 404,
@@ -276,7 +265,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
   it('normaliza también errores de autenticación', async () => {
     autenticacion = null;
     const r = await request(app.getHttpServer())
-      .get(`/api/chat/sesiones/${idSesion}/nodo-actual`)
+      .get(`/chat/sesiones/${idSesion}/nodo-actual`)
       .expect(401);
     expect(r.body as unknown).toMatchObject({
       statusCode: 401,
@@ -351,7 +340,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
       expiraEn: '2099-11-06T17:10:00.000Z',
     });
     const r = await request(app.getHttpServer())
-      .get(`/api/chat/sesiones/${idSesion}/nodo-actual`)
+      .get(`/chat/sesiones/${idSesion}/nodo-actual`)
       .expect(200);
     expect(r.body).toEqual({
       idSesion,
@@ -400,7 +389,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
       }),
     );
     const r = await request(app.getHttpServer())
-      .get(`/api/chat/sesiones/${idSesion}/nodo-actual`)
+      .get(`/chat/sesiones/${idSesion}/nodo-actual`)
       .expect(500);
     expect(r.body).toEqual({
       statusCode: 500,

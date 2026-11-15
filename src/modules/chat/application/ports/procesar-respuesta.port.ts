@@ -10,6 +10,7 @@ export interface SolicitudRespuesta {
   idUsuario: string;
   idNodo: string;
   idRespuesta: string;
+  secuencia: number;
   fechaCaptura: Date;
 }
 export interface RegistroDeRespuesta {

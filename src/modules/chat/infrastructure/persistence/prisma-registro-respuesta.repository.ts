@@ -66,6 +66,7 @@ export class PrismaRegistroRespuestaRepository implements RegistroRespuestaTrans
         id_interaccion: idInteraccion,
         id_sesion: s.idSesion,
         id_nodo: s.idNodo,
+        secuencia: s.secuencia,
         timestamp_interaccion: s.fechaCaptura,
       },
     });
@@ -93,6 +94,7 @@ export class PrismaRegistroRespuestaRepository implements RegistroRespuestaTrans
         respuesta_usuario: valor,
         id_nodo_destino: decision.idNodoDestino,
         timestamp_interaccion: s.fechaCaptura,
+        id_interaccion: idInteraccion,
       },
     });
     await this.tx.chat_sesiones.update({

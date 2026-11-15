@@ -124,6 +124,7 @@ export class ProcesarRespuestaUseCase {
             idUsuario,
             idNodo: nodo.idNodo,
             idRespuesta: dto.idRespuesta,
+            secuencia: dto.secuencia,
             fechaCaptura: new Date(dto.capturadaEn),
           },
           decision,
