@@ -1,8 +1,12 @@
+import { ArbolConversacional } from '../../../domain/entities/flujo/arbol-conversacional.entity';
 import { EstadoFlujoConversacional } from '../../../domain/enums/estado-flujo-conversacional.enum';
 import {
   ContenidoCronogramaNoEncontradoException,
   FlujoConversacionalNoEditableException,
   NodoConversacionalNoEncontradoException,
+  OrdenNodoConSaltoException,
+  OrdenNodoDuplicadoException,
+  OrdenNodoInicialInvalidoException,
 } from '../../../domain/exceptions';
 import { SolicitudActualizacionVaciaException } from '../../exceptions/solicitud-actualizacion-vacia.exception';
 import {
@@ -20,7 +24,9 @@ describe('ActualizarNodoConversacionalUseCase (RF-25)', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     repository.buscarNodo.mockResolvedValue(nodo(ids.nodoB));
-    repository.obtenerFlujo.mockResolvedValue(flujoGrupal());
+    repository.obtenerArbol.mockResolvedValue(
+      new ArbolConversacional(flujoGrupal(), [nodo(ids.nodoB)], []),
+    );
   });
 
   it('edita solo los campos enviados y deduce el flujo del nodo', async () => {
@@ -57,8 +63,12 @@ describe('ActualizarNodoConversacionalUseCase (RF-25)', () => {
   });
 
   it('no edita nodos de un flujo que ya no es borrador', async () => {
-    repository.obtenerFlujo.mockResolvedValue(
-      flujoGrupal(EstadoFlujoConversacional.PUBLICADO),
+    repository.obtenerArbol.mockResolvedValue(
+      new ArbolConversacional(
+        flujoGrupal(EstadoFlujoConversacional.PUBLICADO),
+        [nodo(ids.nodoB)],
+        [],
+      ),
     );
 
     await expect(
@@ -91,5 +101,46 @@ describe('ActualizarNodoConversacionalUseCase (RF-25)', () => {
     const [guardado] = repository.guardarNodo.mock.calls[0];
     expect(guardado).toMatchObject({ idContenidoCronograma: null });
     expect(respuesta.id_nodo).toBe(ids.nodoB);
+  });
+
+  it('rechaza marcar un nodo como inicial si su orden no es 1', async () => {
+    await expect(
+      useCase.execute(
+        ids.nodoB,
+        { es_nodo_inicial: true, orden: 3 },
+        ids.actor,
+      ),
+    ).rejects.toBeInstanceOf(OrdenNodoInicialInvalidoException);
+    expect(repository.guardarNodo).not.toHaveBeenCalled();
+  });
+
+  it('rechaza un orden que se salta un número', async () => {
+    repository.obtenerArbol.mockResolvedValue(
+      new ArbolConversacional(
+        flujoGrupal(),
+        [nodo(ids.nodoA), nodo(ids.nodoB)],
+        [],
+      ),
+    );
+
+    await expect(
+      useCase.execute(ids.nodoB, { orden: 5 }, ids.actor),
+    ).rejects.toBeInstanceOf(OrdenNodoConSaltoException);
+    expect(repository.guardarNodo).not.toHaveBeenCalled();
+  });
+
+  it('rechaza un orden ya usado por otro nodo', async () => {
+    repository.obtenerArbol.mockResolvedValue(
+      new ArbolConversacional(
+        flujoGrupal(),
+        [nodo(ids.nodoA), nodo(ids.nodoB)],
+        [],
+      ),
+    );
+
+    await expect(
+      useCase.execute(ids.nodoB, { orden: 1 }, ids.actor),
+    ).rejects.toBeInstanceOf(OrdenNodoDuplicadoException);
+    expect(repository.guardarNodo).not.toHaveBeenCalled();
   });
 });

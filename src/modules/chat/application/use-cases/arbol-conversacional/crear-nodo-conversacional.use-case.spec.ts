@@ -1,14 +1,19 @@
+import { ArbolConversacional } from '../../../domain/entities/flujo/arbol-conversacional.entity';
 import { TipoNodoConversacional } from '../../../domain/entities/catalogos/tipo-nodo.entity';
 import { EstadoFlujoConversacional } from '../../../domain/enums/estado-flujo-conversacional.enum';
 import {
   ContenidoCronogramaNoEncontradoException,
   FlujoConversacionalNoEditableException,
   FlujoConversacionalNoEncontradoException,
+  OrdenNodoConSaltoException,
+  OrdenNodoDuplicadoException,
+  OrdenNodoInicialInvalidoException,
   TipoNodoNoEncontradoException,
 } from '../../../domain/exceptions';
 import {
   flujoGrupal,
   ids,
+  nodo,
   repositorioSimulado,
 } from '../../support/testing/arbol-fixtures';
 import { CrearNodoConversacionalUseCase } from './crear-nodo-conversacional.use-case';
@@ -20,17 +25,20 @@ describe('CrearNodoConversacionalUseCase (RF-25)', () => {
     id_tipo_nodo: ids.tipo,
     contenido: { texto: 'Inicio' },
     es_nodo_inicial: true,
+    orden: 1,
   };
 
   beforeEach(() => {
     jest.resetAllMocks();
-    repository.obtenerFlujo.mockResolvedValue(flujoGrupal());
+    repository.obtenerArbol.mockResolvedValue(
+      new ArbolConversacional(flujoGrupal(), [], []),
+    );
     repository.buscarTipoNodo.mockResolvedValue(
       new TipoNodoConversacional(ids.tipo, 'MENSAJE'),
     );
   });
 
-  it('agrega el nodo al flujo en borrador con valores opcionales en null', async () => {
+  it('agrega el nodo al flujo en borrador', async () => {
     const respuesta = await useCase.execute(ids.flujo, dto, ids.actor);
 
     const [guardado, actor] = repository.guardarNodo.mock.calls[0];
@@ -38,7 +46,7 @@ describe('CrearNodoConversacionalUseCase (RF-25)', () => {
       idFlujo: ids.flujo,
       idTipoNodo: ids.tipo,
       esNodoInicial: true,
-      orden: null,
+      orden: 1,
       idContenidoCronograma: null,
       creadoPor: ids.actor,
     });
@@ -50,8 +58,12 @@ describe('CrearNodoConversacionalUseCase (RF-25)', () => {
   });
 
   it('no modifica un flujo que ya no es borrador', async () => {
-    repository.obtenerFlujo.mockResolvedValue(
-      flujoGrupal(EstadoFlujoConversacional.PUBLICADO),
+    repository.obtenerArbol.mockResolvedValue(
+      new ArbolConversacional(
+        flujoGrupal(EstadoFlujoConversacional.PUBLICADO),
+        [],
+        [],
+      ),
     );
 
     await expect(
@@ -69,7 +81,7 @@ describe('CrearNodoConversacionalUseCase (RF-25)', () => {
   });
 
   it('responde que el flujo no existe', async () => {
-    repository.obtenerFlujo.mockResolvedValue(null);
+    repository.obtenerArbol.mockResolvedValue(null);
 
     await expect(
       useCase.execute(ids.flujo, dto, ids.actor),
@@ -101,5 +113,42 @@ describe('CrearNodoConversacionalUseCase (RF-25)', () => {
     expect(repository.existeContenidoCronograma).toHaveBeenCalledWith('cc-1');
     const [guardado] = repository.guardarNodo.mock.calls[0];
     expect(guardado).toMatchObject({ idContenidoCronograma: 'cc-1' });
+  });
+
+  it('rechaza el nodo inicial si su orden no es 1', async () => {
+    await expect(
+      useCase.execute(ids.flujo, { ...dto, orden: 2 }, ids.actor),
+    ).rejects.toBeInstanceOf(OrdenNodoInicialInvalidoException);
+    expect(repository.guardarNodo).not.toHaveBeenCalled();
+  });
+
+  it('rechaza un orden que se salta un número', async () => {
+    repository.obtenerArbol.mockResolvedValue(
+      new ArbolConversacional(flujoGrupal(), [nodo(ids.nodoA)], []),
+    );
+
+    await expect(
+      useCase.execute(
+        ids.flujo,
+        { ...dto, es_nodo_inicial: false, orden: 3 },
+        ids.actor,
+      ),
+    ).rejects.toBeInstanceOf(OrdenNodoConSaltoException);
+    expect(repository.guardarNodo).not.toHaveBeenCalled();
+  });
+
+  it('rechaza un orden ya usado por otro nodo', async () => {
+    repository.obtenerArbol.mockResolvedValue(
+      new ArbolConversacional(flujoGrupal(), [nodo(ids.nodoA)], []),
+    );
+
+    await expect(
+      useCase.execute(
+        ids.flujo,
+        { ...dto, es_nodo_inicial: false, orden: 1 },
+        ids.actor,
+      ),
+    ).rejects.toBeInstanceOf(OrdenNodoDuplicadoException);
+    expect(repository.guardarNodo).not.toHaveBeenCalled();
   });
 });

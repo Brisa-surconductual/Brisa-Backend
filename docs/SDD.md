@@ -60,6 +60,135 @@ Regla operativa: **la base de datos se gestiona siempre por migraciones, nunca e
 - Orientación **Screaming Architecture** (la estructura de carpetas grita el dominio, no el framework).
 - Principios **SOLID** y de **POO** aplicados de forma consistente en todos los módulos.
 
+Las subsecciones siguientes documentan la anatomía real del repositorio (relevada directamente de `src/`, `prisma/`, `test/`, etc.) para que la creación de archivos nuevos **siga siempre** este orden, en vez de inventar una ubicación o un sufijo distinto cada vez. Se excluye `.idea` (configuración local del IDE, no es parte de la arquitectura).
+
+#### 2.3.1 Anatomía de la raíz del repositorio
+
+| Carpeta/archivo | Contenido |
+| --- | --- |
+| `.github/workflows/` | CI: build/test del backend (`backend.yml`), generación y despliegue de migraciones Prisma (`prisma-generate-schema.yml`, `prisma-migrate-deploy.yml`, `prisma-migrate-test-dev.yml`, `prisma-pr-check.yml`), `release.yml`. Implementa el flujo descrito en 2.2. |
+| `config/` | Variables de entorno (`.env`, plantilla `env.txt`). No contiene código. |
+| `dist/` | Salida de build de Nest. Generado, no se edita a mano. |
+| `docs/` | Especificaciones (`CONTRATO_*`) y este documento de metodología. |
+| `prisma/` | `schema.prisma` (modelo generado desde migraciones, nunca al revés), `migrations/` (migraciones aplicadas y vigentes, orden cronológico, inmutables una vez mergeadas), `migrations_backup/` (migraciones retiradas/superadas, se conservan por trazabilidad histórica), `generated/` (cliente de Prisma generado), `sql/` (SQL crudo para lo que el DSL de migraciones de Prisma no expresa directamente, p. ej. triggers/funciones), `prisma.module.ts` + `prisma.service.ts` (módulo Nest global que envuelve `PrismaClient`), y `prisma.config.ts` en la raíz. |
+| `scripts/` | Utilidades Node fuera del runtime de Nest: `create-migration.js` (helper de migraciones), `check-production.cjs` / `verify-rf25c-db.cjs` (verificación puntual contra la BD), `deploy-render.mjs` (hook de despliegue). |
+| `src/` | Código fuente de la aplicación. Ver 2.3.2 y 2.3.3. |
+| `test/` | Pruebas e2e/integración, separadas de los `*.spec.ts` unitarios que viven junto al código. Ver 2.3.5. |
+| `package.json`, `tsconfig*.json`, `nest-cli.json`, `eslint.config.mjs`, `.prettierrc` | Configuración de build, lint y formato. |
+| `Dockerfile*`, `docker-compose.yaml`, `render.yaml` | Empaquetado y despliegue. |
+
+#### 2.3.2 Anatomía de `src/`
+
+```text
+src/
+├── main.ts            # bootstrap de Nest (único punto de entrada del proceso)
+├── app.module.ts       # módulo raíz: importa Prisma + cada módulo de modules/ + shared/
+├── modules/
+│   └── <modulo>/        # uno por módulo de negocio (ver mapa de módulos, sección 4)
+└── shared/
+    └── presentation/     # únicamente primitivas de presentación genuinamente transversales
+```
+
+`shared/` **no** es un cajón de sastre: solo contiene lo que de verdad aplica a todos los módulos por igual (hoy: `health.controller.ts`, `roles.decorator.ts`, `role-guard.ts`). Lógica de un módulo específico va dentro de `modules/<modulo>/`, nunca en `shared/`.
+
+#### 2.3.3 Anatomía de un módulo (`src/modules/<modulo>/`)
+
+Todo módulo sigue las 4 capas de la arquitectura hexagonal, como subcarpetas de primer nivel: `domain/`, `application/`, `infrastructure/`, `presentation/`, más un `<modulo>.module.ts` en la raíz del módulo que ensambla las cuatro capas para Nest.
+
+```text
+modules/<modulo>/
+├── <modulo>.module.ts
+├── domain/
+│   ├── entities/[<feature>/]*.entity.ts
+│   ├── enums/*.enum.ts
+│   ├── exceptions/*.exception.ts
+│   ├── policies/*.policy.ts
+│   ├── repositories/*.repository.ts        # puertos de persistencia (interfaces)
+│   └── value-objects/*.vo.ts
+├── application/
+│   ├── dto/<feature>/*.dto-request.ts
+│   ├── dto/<feature>/*.dto-response.ts
+│   ├── exceptions/*.exception.ts
+│   ├── ports/*.port.ts                      # puertos de infraestructura NO persistentes
+│   ├── services/*.service.ts
+│   ├── support/[testing/]*                  # helpers y fixtures internos de la capa
+│   ├── use-cases/<feature>/*.use-case.ts    # un caso de uso = una operación de aplicación
+│   └── <modulo>.providers.ts                # wiring de DI de esta capa
+├── infrastructure/
+│   ├── config/*.config.ts
+│   ├── cron/*.cron.ts
+│   ├── mappers/*.mapper.ts                  # entidad de dominio <-> modelo Prisma
+│   ├── messaging/*.listener.ts|*.publisher.ts  # eventos entre módulos (@nestjs/event-emitter)
+│   ├── persistence/prisma-<entidad>.repository.ts  # implementa domain/repositories
+│   ├── security/*.ts                        # hashers, generadores de token
+│   ├── storage/*.adapter.ts                 # S3 u otros proveedores externos
+│   ├── validation/*.adapter.ts
+│   └── <modulo>.providers.ts                # liga implementaciones a los puertos de domain/application
+└── presentation/
+    ├── controllers/<feature>/*.controller.ts
+    ├── decorators/*.decorator.ts
+    ├── filters/*.filter.ts
+    ├── guards/*.guard.ts
+    ├── http/*-request.ts                    # tipado de Request autenticado/ampliado
+    ├── interceptors/*.interceptor.ts
+    └── <modulo>.providers.ts
+```
+
+Reglas de capa (lo que ya se viene cumpliendo en el módulo `chat`, el más maduro, y que se toma como referencia):
+
+- **`domain/`** no importa Nest ni Prisma. Son clases/tipos TypeScript puros: entidades, value objects, políticas de negocio y las **interfaces** de los repositorios (nunca su implementación).
+- **`application/`** orquesta casos de uso contra los puertos de `domain/repositories` y `application/ports`. Un caso de uso (`*.use-case.ts`) es la única puerta de entrada que un controlador puede llamar; no se invoca un repositorio ni un mapper directamente desde `presentation/`.
+- **`infrastructure/`** es la única capa que conoce Prisma, S3, proveedores de correo, criptografía concreta, etc. Implementa los puertos definidos en `domain/` (repositorios) y `application/` (ports) y los liga mediante `<modulo>.providers.ts`.
+- **`presentation/`** solo traduce HTTP ↔ caso de uso: valida con DTOs, aplica guards/decorators/filters/interceptors, y delega en `application/use-cases`.
+- La comunicación **entre módulos** (coherente con las dependencias de la sección 4: p. ej. Chat y Cronograma dependiendo de Usuarios) se hace a través de `infrastructure/messaging` (`*.listener.ts` / `*.publisher.ts` sobre `@nestjs/event-emitter`), no importando directamente clases internas de otro módulo.
+
+#### 2.3.4 Convención de sufijos por tipo de archivo
+
+| Sufijo/patrón | Capa / carpeta | Significado |
+| --- | --- | --- |
+| `*.entity.ts` | `domain/entities` | Entidad o agregado de dominio. |
+| `*.enum.ts` | `domain/enums` | Enumeración de dominio. |
+| `*.exception.ts` | `domain/exceptions`, `application/exceptions` | Error de negocio/aplicación (no HTTP). |
+| `*.policy.ts` | `domain/policies` | Regla de negocio reutilizable que no pertenece a una sola entidad. |
+| `*.repository.ts` | `domain/repositories` | **Puerto** de persistencia (interfaz). |
+| `*.vo.ts` | `domain/value-objects` | Value object con sus propias invariantes. |
+| `*.dto-request.ts` / `*.dto-response.ts` | `application/dto/<feature>` | Contrato de entrada/salida de un caso de uso. |
+| `*.port.ts` | `application/ports` | Puerto de infraestructura no persistente (storage, email, hashing, tokens, publishers). |
+| `*.service.ts` | `application/services` | Lógica compartida entre varios casos de uso. |
+| `*.use-case.ts` (+ `*.use-case.spec.ts` colocado) | `application/use-cases/<feature>` | Una operación de aplicación = una clase. |
+| `*.config.ts` | `infrastructure/config` | Configuración derivada de variables de entorno. |
+| `*.cron.ts` | `infrastructure/cron` | Tarea programada (`@nestjs/schedule`). |
+| `*.mapper.ts` | `infrastructure/mappers` | Traducción entidad de dominio ↔ modelo Prisma. |
+| `*.listener.ts` / `*.publisher.ts` | `infrastructure/messaging` | Adaptadores de eventos entre módulos. |
+| `prisma-<entidad>.repository.ts` | `infrastructure/persistence` | Implementación concreta de un puerto `domain/repositories`. |
+| `*.adapter.ts` | `infrastructure/storage`, `infrastructure/validation` | Integración con un proveedor/formato externo. |
+| `*.controller.ts` (+ `*.controller.spec.ts` o `*.http.spec.ts`) | `presentation/controllers/<feature>` | Endpoint HTTP. |
+| `*.decorator.ts` | `presentation/decorators` | Decorador de parámetro/metadata de Nest. |
+| `*.filter.ts` | `presentation/filters` | Exception filter de Nest. |
+| `*.guard.ts` | `presentation/guards` | Guard de autenticación/autorización. |
+| `*.interceptor.ts` | `presentation/interceptors` | Interceptor de request/response. |
+| `<modulo>.module.ts` | raíz del módulo | Ensambla las 4 capas para Nest. |
+| `<modulo>.providers.ts` | raíz de cada capa que lo requiera | Wiring de DI de esa capa (puede existir uno en `application/`, otro en `infrastructure/` y otro en `presentation/` del mismo módulo). |
+
+#### 2.3.5 Pruebas: unitarias vs. e2e/integración
+
+- **Unitarias**: `*.spec.ts` colocado junto al archivo que prueba, dentro de `src/modules/<modulo>/...` (p. ej. `crear-flujo-conversacional.use-case.spec.ts` al lado de `crear-flujo-conversacional.use-case.ts`).
+- **e2e / integración**: viven en `test/<modulo>/`, con su propio `test/jest-<modulo>-e2e.json` cuando el módulo lo requiere (`chat`, `cronograma`) o el genérico `test/jest-e2e.json`. Fixtures de estos tests van en `test/<modulo>/fixtures/`.
+- Un archivo nuevo de dominio/aplicación/infraestructura que introduce lógica no trivial se acompaña de su `*.spec.ts` en el mismo PR; no se deja para después.
+
+#### 2.3.6 Inconsistencias detectadas (no replicar en archivos nuevos)
+
+El relevamiento de `src/` muestra que módulos más antiguos (`cronograma`, `usuarios`, `administrativo`) se desviaron de la convención que sí sigue el módulo más reciente y completo (`chat`). Para archivos **nuevos**, se usa siempre la forma canónica; corregir lo existente es una tarea aparte (no se renombra como efecto colateral de otra tarea):
+
+| Desviación encontrada | Canónico | Dónde aparece la desviación |
+| --- | --- | --- |
+| `domain/exeption` (singular, mal escrito) | `domain/exceptions` | `cronograma`, `usuarios` |
+| `infraestructre` (typo) | `infrastructure` | `administrativo` (módulo aún sin implementar, solo tiene `domain/` e `infraestructre/` vacíos) |
+| `application/service` (singular) | `application/services` | `cronograma` |
+| `users.module.ts` (nombre en inglés) | `<modulo>.module.ts` → `usuarios.module.ts` | `usuarios` |
+| Controladores planos en `presentation/*.controller.ts` | `presentation/controllers/<feature>/*.controller.ts` | `cronograma` |
+| `acceso.decorators.ts` (sufijo en plural) | `*.decorator.ts` (singular) | `chat` |
+
 ## 3. Fuente de verdad de los requisitos (RF)
 
 Los **RF (Requisitos Funcionales) son siempre la fuente de verdad del proyecto**, por encima de este documento, del código y de cualquier spec individual.

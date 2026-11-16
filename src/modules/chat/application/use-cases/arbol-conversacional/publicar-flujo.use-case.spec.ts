@@ -107,6 +107,34 @@ describe('PublicarFlujoUseCase (RF-25 / RF-25C)', () => {
     expect(repository.guardarFlujos).not.toHaveBeenCalled();
   });
 
+  it('identifica el nodo huérfano por orden y texto, no solo por id', async () => {
+    repository.obtenerArbol.mockResolvedValue(
+      new ArbolConversacional(
+        flujoGrupal(),
+        [nodo(ids.nodoA), nodo(ids.nodoB)],
+        [],
+      ),
+    );
+
+    const error = (await useCase
+      .execute(ids.flujo, ids.actor)
+      .catch((e: unknown) => e)) as GrafoInvalidoException;
+
+    // nodoA es inicial por defecto en la fábrica de prueba; sin transiciones,
+    // nodoB queda huérfano (inalcanzable) y nodoA no lo está.
+    expect(error.detalles).toMatchObject({ sin_nodo_inicial: false });
+    const detalles = error.detalles as {
+      nodos_huerfanos: {
+        id_nodo: string;
+        orden: number | null;
+        texto: string;
+      }[];
+    };
+    expect(detalles.nodos_huerfanos).toEqual([
+      { id_nodo: ids.nodoB, orden: 1, texto: 'Hola' },
+    ]);
+  });
+
   it('responde que el flujo no existe', async () => {
     repository.obtenerArbol.mockResolvedValue(null);
 

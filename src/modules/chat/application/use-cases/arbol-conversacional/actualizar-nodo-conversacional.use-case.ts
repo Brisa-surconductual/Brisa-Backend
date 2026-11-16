@@ -5,6 +5,7 @@ import {
   NodoConversacionalNoEncontradoException,
   TipoNodoNoEncontradoException,
 } from '../../../domain/exceptions';
+import { OrdenNodoPolicy } from '../../../domain/policies/orden-nodo.policy';
 import { ArbolConversacionalRepository } from '../../../domain/repositories/arbol-conversacional.repository';
 import { ActualizarNodoConversacionalDtoRequest } from '../../dto/arbol-conversacional.dto-request';
 import { NodoConversacionalDtoResponse } from '../../dto/arbol-conversacional.dto-response';
@@ -14,6 +15,8 @@ import { ejecutarSeguro } from '../../support/ejecutar-seguro';
 /** RF-25: edita parcialmente un nodo de un flujo en borrador; el flujo se deduce del nodo. */
 @Injectable()
 export class ActualizarNodoConversacionalUseCase {
+  private readonly ordenPolicy = new OrdenNodoPolicy();
+
   constructor(private readonly repository: ArbolConversacionalRepository) {}
 
   execute(
@@ -30,9 +33,9 @@ export class ActualizarNodoConversacionalUseCase {
       if (existente === null) {
         throw new NodoConversacionalNoEncontradoException();
       }
-      const flujo = await this.repository.obtenerFlujo(existente.idFlujo);
-      if (flujo === null) throw new FlujoConversacionalNoEncontradoException();
-      flujo.asegurarEditable();
+      const arbol = await this.repository.obtenerArbol(existente.idFlujo);
+      if (arbol === null) throw new FlujoConversacionalNoEncontradoException();
+      arbol.flujo.asegurarEditable();
 
       const tipo =
         dto.id_tipo_nodo === undefined
@@ -45,6 +48,20 @@ export class ActualizarNodoConversacionalUseCase {
           dto.id_contenido_cronograma,
         );
         if (!existe) throw new ContenidoCronogramaNoEncontradoException();
+      }
+
+      if (dto.orden !== undefined || dto.es_nodo_inicial !== undefined) {
+        const ordenResuelto =
+          dto.orden === undefined ? existente.orden : dto.orden;
+        const esNodoInicialResuelto =
+          dto.es_nodo_inicial ?? existente.esNodoInicial;
+
+        this.ordenPolicy.validar(
+          arbol.nodos,
+          existente.idNodo,
+          ordenResuelto,
+          esNodoInicialResuelto,
+        );
       }
 
       const nodo = existente.actualizar(

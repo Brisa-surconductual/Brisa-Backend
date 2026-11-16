@@ -31,10 +31,9 @@ export class CrearNodoConversacionalDtoRequest {
   @IsBoolean()
   es_nodo_inicial: boolean = false;
 
-  @IsOptional()
   @IsInt()
   @Min(1)
-  orden?: number;
+  orden!: number;
 
   @IsOptional()
   @IsUUID()

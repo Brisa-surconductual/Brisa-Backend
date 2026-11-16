@@ -4,7 +4,7 @@ import {
   NodoInicialInexistenteException,
   NodosHuerfanosException,
 } from '../../exceptions';
-import { DiagnosticoArbol } from './diagnostico-arbol';
+import { DiagnosticoArbol, NodoDiagnostico } from './diagnostico-arbol';
 import { FlujoConversacional } from './flujo-conversacional.entity';
 import { NodoConversacional } from './nodo-conversacional.entity';
 import { TransicionConversacional } from './transicion-conversacional.entity';
@@ -106,10 +106,29 @@ export class ArbolConversacional {
     return {
       nodos_huerfanos: this.nodos
         .filter((nodo) => !alcanzables.has(nodo.idNodo))
-        .map((nodo) => nodo.idNodo),
-      ciclos: this.detectarCiclos(),
+        .map((nodo) => this.describirNodo(nodo)),
+      ciclos: this.detectarCiclos().map((ciclo) =>
+        ciclo.map((idNodo) => this.describirNodoPorId(idNodo)),
+      ),
       sin_nodo_inicial: nodosIniciales.length !== 1,
     };
+  }
+
+  /** Identificación legible del nodo (sin numerar ni truncar: eso es presentación). */
+  private describirNodo(nodo: NodoConversacional): NodoDiagnostico {
+    return {
+      id_nodo: nodo.idNodo,
+      orden: nodo.orden,
+      texto:
+        typeof nodo.contenido.texto === 'string' ? nodo.contenido.texto : '',
+    };
+  }
+
+  private describirNodoPorId(idNodo: string): NodoDiagnostico {
+    const nodo = this.nodos.find((actual) => actual.idNodo === idNodo);
+    return nodo === undefined
+      ? { id_nodo: idNodo, orden: null, texto: '' }
+      : this.describirNodo(nodo);
   }
 
   validarAusenciaCiclos(): void {
