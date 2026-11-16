@@ -478,7 +478,6 @@ model nodos {
   creado_por                                                String                 @db.Uuid
   fecha_creacion                                            DateTime               @default(now()) @db.Timestamptz(6)
   fecha_actualizacion                                       DateTime               @default(now()) @db.Timestamptz(6)
-  id_tipo_entrada                                           String?                @db.Uuid
   id_regla_validacion                                       String?                @db.Uuid
   historial_nodos_historial_nodos_id_nodoTonodos            historial_nodos[]      @relation("historial_nodos_id_nodoTonodos")
   historial_nodos_historial_nodos_id_nodo_destinoTonodos    historial_nodos[]      @relation("historial_nodos_id_nodo_destinoTonodos")
@@ -488,7 +487,6 @@ model nodos {
   flujo_conversacion                                        flujo_conversacion     @relation(fields: [id_flujo], references: [id_flujo], onDelete: Cascade, onUpdate: NoAction, map: "fk_nodo_flujo")
   reglas_validaciones                                       reglas_validaciones?   @relation(fields: [id_regla_validacion], references: [id_regla_validacion], onDelete: NoAction, onUpdate: NoAction, map: "fk_nodo_regla_validacion")
   tipo_nodo                                                 tipo_nodo              @relation(fields: [id_tipo_nodo], references: [id_tipo_nodo], onUpdate: NoAction, map: "fk_nodo_tipo")
-  tipo_entrada                                              tipo_entrada?          @relation(fields: [id_tipo_entrada], references: [id_tipo_entrada], onDelete: NoAction, onUpdate: NoAction, map: "fk_nodo_tipo_entrada")
   punto_control                                             punto_control[]
   reglas_nodos_reglas_nodos_id_nodo_destino_id_flujoTonodos reglas_nodos[]         @relation("reglas_nodos_id_nodo_destino_id_flujoTonodos")
   reglas_nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos  reglas_nodos[]         @relation("reglas_nodos_id_nodo_origen_id_flujoTonodos")
@@ -497,7 +495,6 @@ model nodos {
 
   @@unique([id_nodo, id_flujo], map: "uq_nodos_id_flujo")
   @@index([id_regla_validacion], map: "idx_nodos_regla_validacion")
-  @@index([id_tipo_entrada], map: "idx_nodos_tipo_entrada")
   @@index([id_contenido_cronograma], map: "idx_nodos_contenido_cronograma")
   @@schema("chat")
 }
@@ -641,7 +638,6 @@ model sincronizaciones {
 model tipo_entrada {
   id_tipo_entrada String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre          String       @unique @db.VarChar(50)
-  nodos           nodos[]
   respuestas      respuestas[]
 
   @@schema("chat")
