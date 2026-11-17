@@ -2,7 +2,6 @@ import {
   HttpException,
   Injectable,
   InternalServerErrorException,
-  Logger,
 } from '@nestjs/common';
 import { DomainException } from '../../../domain/exceptions/domain.exception';
 import {
@@ -12,7 +11,6 @@ import {
 } from '../../../domain/exceptions/respuesta.exceptions';
 import { MotorRespuestaConversacional } from '../../../domain/policies/motor-respuesta-conversacional.policy';
 import { CapturaPerfilRespuestaPolicy } from '../../../domain/policies/captura-perfil-respuesta.policy';
-import { SolicitudCapturaDimensionPerfil } from '../../../domain/repositories/perfil-clinico.repository';
 import { ProcesarRespuestaDtoRequest } from '../../dto/procesar-respuesta.dto-request';
 import {
   ResultadoRespuesta,
@@ -21,12 +19,11 @@ import {
 import {
   ComprobarFormatoRespuestaPort,
   ProcesarRespuestaPort,
-  TransaccionRespuesta,
 } from '../../ports/procesar-respuesta.port';
+import { huellaInteraccion } from '../../services/huella-interaccion';
 
 @Injectable()
 export class ProcesarRespuestaUseCase {
-  private readonly logger = new Logger(ProcesarRespuestaUseCase.name);
   private readonly motor = new MotorRespuestaConversacional();
   private readonly perfil = new CapturaPerfilRespuestaPolicy();
 
@@ -41,6 +38,10 @@ export class ProcesarRespuestaUseCase {
     dto: ProcesarRespuestaDtoRequest,
   ): Promise<ResultadoRespuesta> {
     try {
+      idSesion = idSesion.toLowerCase();
+      const idInteraccion = dto.id_interaccion.toLowerCase();
+      const idNodo = dto.id_nodo.toLowerCase();
+      const huella = huellaInteraccion(dto);
       return await this.persistencia.ejecutar(async (tx) => {
         const sesion = await tx.contexto.bloquearSesion(idSesion, idUsuario);
         if (sesion === null)
@@ -48,29 +49,31 @@ export class ProcesarRespuestaUseCase {
             'No se pudo recuperar el contenido del chat.',
             'SESION_NO_ENCONTRADA',
           );
-        const anterior = await tx.registro.buscarResultado(dto.idRespuesta);
+        const anterior = await tx.registro.buscarResultado(idInteraccion);
         if (anterior !== null) {
-          if (anterior.idSesion !== idSesion)
+          if (anterior.idSesion !== idSesion || anterior.huella !== huella)
             throw new ConflictoRespuestaConversacionalException(
-              'La respuesta no corresponde a este contexto de conversación.',
-              'NODO_DESACTUALIZADO',
+              'El identificador de interacción ya fue utilizado.',
+              'ID_INTERACCION_REUTILIZADA',
             );
-          const resultado = recuperarResultadoRespuesta(anterior.resultado);
-          if (resultado.idRespuesta !== dto.idRespuesta)
-            throw new Error('Resultado inconsistente.');
-          return resultado;
+          return recuperarResultadoRespuesta(anterior.resultado, idInteraccion);
         }
         if (sesion.estadoActual !== 'ACTIVA')
           throw new ConflictoRespuestaConversacionalException(
             'La sesión debe estar activa para responder.',
             'SESION_NO_ACTIVA',
           );
-        if (sesion.idNodoActual !== dto.idNodo)
+        if (dto.secuencia !== (await tx.registro.ultimaSecuencia(idSesion)) + 1)
+          throw new ConflictoRespuestaConversacionalException(
+            'La secuencia no corresponde a la siguiente interacción de la sesión.',
+            'SECUENCIA_FUERA_DE_ORDEN',
+          );
+        if (sesion.idNodoActual !== idNodo)
           throw new ConflictoRespuestaConversacionalException(
             'La conversación avanzó. Consulte el nodo actual.',
             'NODO_DESACTUALIZADO',
           );
-        const nodo = await tx.contexto.buscarNodo(dto.idNodo);
+        const nodo = await tx.contexto.buscarNodo(idNodo);
         if (nodo === null || nodo.idFlujo !== sesion.idFlujoConversacional)
           throw new ConfiguracionRespuestaInvalida(
             'DESTINO_INVALIDO',
@@ -83,7 +86,7 @@ export class ProcesarRespuestaUseCase {
           transiciones,
           dto.valor,
           (patron, texto) => this.formato.coincide(patron, texto),
-          dto.tipoEntrada,
+          dto.tipo_entrada,
           (valor) => {
             this.perfil.capturar(nodo, valor);
           },
@@ -99,19 +102,21 @@ export class ProcesarRespuestaUseCase {
           destino.idNodo,
           nodo.idFlujo,
         ));
-        const resultado: ResultadoRespuesta = {
-          idRespuesta: dto.idRespuesta,
-          resultado: 'VALIDA',
-          transicion: {
-            idNodoOrigen: nodo.idNodo,
-            idNodoDestino: destino.idNodo,
-            esTerminal,
-          },
-          estadoSesion: esTerminal ? 'COMPLETADA' : 'ACTIVA',
-        };
         const ahora = new Date();
+        const resultado: ResultadoRespuesta = {
+          id_interaccion: idInteraccion,
+          secuencia: dto.secuencia,
+          registrada_en: ahora.toISOString(),
+          duplicada: false,
+          transicion: {
+            id_nodo_origen: nodo.idNodo,
+            id_nodo_destino: destino.idNodo,
+            es_terminal: esTerminal,
+          },
+          estado_sesion: esTerminal ? 'COMPLETADA' : 'ACTIVA',
+        };
         if (captura !== null)
-          await this.capturarPerfil(tx, {
+          await tx.perfil.capturarDimension({
             idUsuario,
             idSesion,
             idNodo: nodo.idNodo,
@@ -123,12 +128,15 @@ export class ProcesarRespuestaUseCase {
             idSesion,
             idUsuario,
             idNodo: nodo.idNodo,
-            idRespuesta: dto.idRespuesta,
+            idInteraccion,
             secuencia: dto.secuencia,
-            fechaCaptura: new Date(dto.capturadaEn),
+            timestampInteraccion: dto.timestamp_interaccion,
+            conectividad: dto.estado_conectividad,
+            recursosNoPresentados: dto.recursos_no_presentados ?? null,
           },
           decision,
           resultado,
+          huella,
           ahora,
         });
         return resultado;
@@ -147,29 +155,13 @@ export class ProcesarRespuestaUseCase {
               ? 'El nodo destino no es válido.'
               : 'No se pudo determinar la siguiente acción en la conversación.',
         });
-      this.logger.error(
-        'Fallo inesperado al procesar la respuesta.',
-        error instanceof Error ? error.stack : error,
-      );
       throw new InternalServerErrorException(
-        'No fue posible procesar la respuesta en este momento.',
+        {
+          codigo: 'ERROR_PERSISTENCIA',
+          mensaje: 'No fue posible registrar la interacción.',
+        },
+        { cause: error },
       );
-    }
-  }
-
-  private async capturarPerfil(
-    tx: TransaccionRespuesta,
-    solicitud: SolicitudCapturaDimensionPerfil,
-  ): Promise<void> {
-    try {
-      await tx.perfil.capturarDimension(solicitud);
-    } catch (error: unknown) {
-      if (error instanceof DomainException) throw error;
-      throw new InternalServerErrorException({
-        codigo: 'ERROR_PERFIL',
-        mensaje:
-          'No fue posible registrar la variable clínica en este momento. Intente nuevamente más tarde.',
-      });
     }
   }
 }

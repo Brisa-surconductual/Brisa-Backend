@@ -23,6 +23,8 @@ export class PrismaProcesarRespuestaRepository implements ProcesarRespuestaPort 
         }),
       {
         isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+        // La apertura de una conexión del pool también cuenta en el maxWait.
+        maxWait: 10000,
         timeout: 10000,
       },
     );

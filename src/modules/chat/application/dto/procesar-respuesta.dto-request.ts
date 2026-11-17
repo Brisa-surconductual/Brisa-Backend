@@ -1,28 +1,50 @@
-import { Allow, Equals, IsInt, IsISO8601, IsUUID, Matches, Min } from 'class-validator';
+import {
+  Allow,
+  ArrayNotEmpty,
+  IsArray,
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
+
+export type EstadoConectividadRespuesta = 'EN_LINEA' | 'SIN_CONEXION';
 
 export class ProcesarRespuestaDtoRequest {
   @IsUUID()
-  idRespuesta!: string;
+  id_interaccion!: string;
 
   @IsUUID()
-  idNodo!: string;
+  id_nodo!: string;
 
-  // El dominio comprueba el tipo del nodo, también cuando el campo falta.
-  @Allow()
-  tipoEntrada!: string;
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  secuencia!: number;
+
+  @IsString()
+  tipo_entrada!: string;
 
   @Allow()
   valor!: unknown;
 
-  // RF-30: la asigna el dispositivo; define el orden real, no el reloj local.
-  @IsInt()
-  @Min(1)
-  secuencia!: number;
-
   @IsISO8601({ strict: true, strictSeparator: true })
-  @Matches(/T.*(?:Z|[+-]\d{2}:\d{2})$/u)
-  capturadaEn!: string;
+  @Matches(
+    /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/u,
+  )
+  timestamp_interaccion!: string;
 
-  @Equals('EN_LINEA')
-  conectividad!: string;
+  @IsIn(['EN_LINEA', 'SIN_CONEXION'])
+  estado_conectividad!: EstadoConectividadRespuesta;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID(undefined, { each: true })
+  recursos_no_presentados?: string[] | null;
 }

@@ -49,7 +49,7 @@ export class CapturarRespuesta {
       throw new RespuestaUsuarioInvalida(
         'El tipo de entrada no está permitido en este nodo.',
         'TIPO_ENTRADA_NO_PERMITIDO',
-        'tipoEntrada',
+        'tipo_entrada',
       );
     if (valor === undefined)
       throw new RespuestaUsuarioInvalida(

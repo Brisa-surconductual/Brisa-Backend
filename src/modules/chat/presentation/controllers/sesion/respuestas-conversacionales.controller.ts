@@ -2,35 +2,42 @@ import {
   Body,
   Controller,
   Header,
-  HttpCode,
   Param,
   ParseUUIDPipe,
   Post,
+  Res,
   UseFilters,
   UseGuards,
 } from '@nestjs/common';
-import { ProcesarRespuestaDtoRequest } from '../../../application/dto/procesar-respuesta.dto-request';
+import type { Response } from 'express';
+import type { ProcesarRespuestaDtoRequest } from '../../../application/dto/procesar-respuesta.dto-request';
 import { ProcesarRespuestaUseCase } from '../../../application/use-cases/sesion/procesar-respuesta.use-case';
 import { CsrfSessionGuard } from '../../../../usuarios/presentation/guards/csrf-session.guard';
 import { AccesoEstudiante } from '../../decorators/acceso.decorators';
 import { IdUsuarioSesion } from '../../decorators/id-usuario-sesion.decorator';
 import { ErrorRespuestaChatFilter } from '../../filters/error-respuesta-chat.filter';
+import { ValidarInteraccionPipe } from '../../pipes/validar-interaccion.pipe';
 
-@Controller( '/chat/sesiones')
+@Controller('/chat/sesiones')
 @AccesoEstudiante()
 @UseFilters(ErrorRespuestaChatFilter)
 export class RespuestasConversacionalesController {
   constructor(private readonly procesar: ProcesarRespuestaUseCase) {}
 
-  @Post('/:idSesion/respuestas')
-  @HttpCode(200)
+  @Post('/:id_sesion/respuestas')
   @Header('Cache-Control', 'no-store')
   @UseGuards(CsrfSessionGuard)
-  responder(
-    @Param('idSesion', new ParseUUIDPipe()) idSesion: string,
+  async responder(
+    @Param('id_sesion', new ParseUUIDPipe()) idSesion: string,
     @IdUsuarioSesion() idUsuario: string,
-    @Body() dto: ProcesarRespuestaDtoRequest,
-  ) {
-    return this.procesar.execute(idSesion, idUsuario, dto);
+    @Body(ValidarInteraccionPipe) dto: unknown,
+    @Res() respuesta: Response,
+  ): Promise<void> {
+    const data = await this.procesar.execute(
+      idSesion,
+      idUsuario,
+      dto as ProcesarRespuestaDtoRequest,
+    );
+    respuesta.status(data.duplicada ? 200 : 201).json({ data });
   }
 }

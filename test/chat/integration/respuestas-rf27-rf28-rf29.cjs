@@ -164,11 +164,16 @@ async function crear({
       ],
     );
     await q(
-      `INSERT INTO chat.reglas_nodos(id_flujo,id_nodo_origen,id_nodo_destino,id_regla_validacion,operador_condicion,valor_condicion,orden_evaluacion)
-      VALUES($1,$2,$3,$4,$5,$6,1)`,
-      [flujo, nodo, destino, validacion, operador, condicion],
+      `INSERT INTO chat.reglas_nodos(id_flujo,id_nodo_origen,id_nodo_destino,operador_condicion,valor_condicion,orden_evaluacion)
+      VALUES($1,$2,$3,$4,$5,1)`,
+      [flujo, nodo, destino, operador, condicion],
     );
   }
+  if (regla)
+    await q('UPDATE chat.nodos SET id_regla_validacion=$1 WHERE id_nodo=$2', [
+      validacion,
+      nodo,
+    ]);
   if (!destinoTerminal) {
     const fin = randomUUID(),
       validacionContinuar = randomUUID();
@@ -181,9 +186,13 @@ async function crear({
       [validacionContinuar],
     );
     await q(
-      `INSERT INTO chat.reglas_nodos(id_flujo,id_nodo_origen,id_nodo_destino,id_regla_validacion,operador_condicion,valor_condicion,orden_evaluacion) VALUES($1,$2,$3,$4,'IGUALDAD',$5,1)`,
-      [flujoDestino, destino, fin, validacionContinuar, { valor: null }],
+      `INSERT INTO chat.reglas_nodos(id_flujo,id_nodo_origen,id_nodo_destino,operador_condicion,valor_condicion,orden_evaluacion) VALUES($1,$2,$3,'IGUALDAD',$4,1)`,
+      [flujoDestino, destino, fin, { valor: null }],
     );
+    await q('UPDATE chat.nodos SET id_regla_validacion=$1 WHERE id_nodo=$2', [
+      validacionContinuar,
+      destino,
+    ]);
   }
   await q(
     `INSERT INTO chat.sesiones(id_sesion,id_usuario,id_flujo_conversacional,version_arbol_utilizada,modalidad_activa,tipo_dependencia,tipo_craving,id_nodo_actual)
@@ -213,16 +222,18 @@ async function crear({
     destino,
     sesion,
     dto: {
-      idNodo: nodo,
-      idRespuesta: randomUUID(),
-      tipoEntrada:
+      id_nodo: nodo,
+      id_interaccion: randomUUID(),
+      tipo_entrada:
         {
           SELECCION_UNICA: 'OPCION_UNICA',
           SELECCION_MULTIPLE: 'MULTISELECCION',
         }[tipo] ?? tipo,
       valor,
-      capturadaEn: '2026-11-06T11:49:00-05:00',
-      conectividad: 'EN_LINEA',
+      timestamp_interaccion: '2026-11-06T11:49:00-05:00',
+      secuencia: 1,
+      estado_conectividad: 'EN_LINEA',
+      recursos_no_presentados: null,
     },
   };
 }
@@ -323,7 +334,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
           idInteraccion = randomUUID(),
           idRespuesta = randomUUID();
         await q(
-          `INSERT INTO chat.interacciones(id_interaccion,id_sesion,id_nodo) VALUES($1,$2,$3)`,
+          `INSERT INTO chat.interacciones(id_interaccion,id_sesion,id_nodo,secuencia) VALUES($1,$2,$3,1)`,
           [idInteraccion, e.sesion, e.nodo],
         );
         await q(
@@ -357,17 +368,20 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
         );
       },
     );
+    await q(
+      "INSERT INTO chat.estado_conectividad (nombre) VALUES ('SIN_CONEXION')",
+    );
     await check(
       'numérico válido persiste respuesta, interacción, historial y puntero',
       async () => {
         const e = await crear({ valor: 0 });
         const r = await enviar(e);
-        assert.equal(r.transicion.idNodoDestino, e.destino);
-        assert.equal(r.idRespuesta, e.dto.idRespuesta);
-        assert.equal(r.estadoSesion, 'ACTIVA');
+        assert.equal(r.transicion.id_nodo_destino, e.destino);
+        assert.equal(r.id_interaccion, e.dto.id_interaccion);
+        assert.equal(r.estado_sesion, 'ACTIVA');
         assert.equal((await snapshot(e.sesion)).id_nodo_actual, e.destino);
-        const registro = await prisma.respuestas.findUnique({
-          where: { id_respuesta: r.idRespuesta },
+        const registro = await prisma.respuestas.findFirst({
+          where: { id_interaccion: r.id_interaccion },
         });
         assert.equal(registro.valor_respuesta, 0);
         assert.equal(registro.es_valida, true);
@@ -444,7 +458,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
     }
     await check('nodo desfasado rechazado', async () => {
       const e = await crear();
-      e.dto.idNodo = e.destino;
+      e.dto.id_nodo = e.destino;
       await sinCambios(e, 'NODO_DESACTUALIZADO');
     });
     await check(
@@ -471,16 +485,18 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
           enviar(e),
           caso.execute(e.sesion, usuario, {
             ...e.dto,
-            idRespuesta: randomUUID(),
+            id_interaccion: randomUUID(),
           }),
         ]);
         assert.equal(
           resultados.filter((r) => r.status === 'fulfilled').length,
           1,
         );
+        const rechazo = resultados.find((r) => r.status === 'rejected').reason;
         assert.equal(
-          codigo(resultados.find((r) => r.status === 'rejected').reason),
-          'NODO_DESACTUALIZADO',
+          codigo(rechazo),
+          'SECUENCIA_FUERA_DE_ORDEN',
+          rechazo.cause?.message,
         );
         assert.equal(
           (await snapshot(e.sesion)).respuestas,
@@ -500,7 +516,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
         );
         assert.deepEqual(
           await nuevaInstancia.execute(e.sesion, usuario, e.dto),
-          original,
+          { ...original, duplicada: true },
         );
         assert.deepEqual(await snapshot(e.sesion), antes);
       },
@@ -516,8 +532,8 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       assert.equal(
         (
           await q(
-            `SELECT valor_respuesta = 'null'::jsonb AS correcto FROM chat.respuestas WHERE id_respuesta=$1`,
-            [r.idRespuesta],
+            `SELECT valor_respuesta = 'null'::jsonb AS correcto FROM chat.respuestas WHERE id_interaccion=$1`,
+            [r.id_interaccion],
           )
         ).rows[0].correcto,
         true,
@@ -570,8 +586,8 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
         const r = await enviar(e);
         assert.deepEqual(
           (
-            await prisma.respuestas.findUnique({
-              where: { id_respuesta: r.idRespuesta },
+            await prisma.respuestas.findFirst({
+              where: { id_interaccion: r.id_interaccion },
             })
           ).valor_respuesta,
           datos.valor,
@@ -595,17 +611,17 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       async () => {
         const e = await crear({ destinoTerminal: true });
         const r = await enviar(e);
-        assert.equal(r.transicion.esTerminal, true);
-        assert.equal(r.estadoSesion, 'COMPLETADA');
+        assert.equal(r.transicion.es_terminal, true);
+        assert.equal(r.estado_sesion, 'COMPLETADA');
         const antes = await snapshot(e.sesion);
         assert.equal(antes.id_nodo_actual, e.destino);
         assert.ok(antes.fecha_completada);
         await rechaza(
           caso.execute(e.sesion, usuario, {
             ...e.dto,
-            idRespuesta: randomUUID(),
-            idNodo: e.destino,
-            tipoEntrada: 'CONTINUAR',
+            id_interaccion: randomUUID(),
+            id_nodo: e.destino,
+            tipo_entrada: 'CONTINUAR',
             valor: null,
           }),
           'SESION_NO_ACTIVA',
@@ -640,20 +656,179 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
         const r = await enviar(e);
         await assert.rejects(
           q(
-            `UPDATE chat.respuestas SET id_tipo_entrada=$1 WHERE id_respuesta=$2`,
-            [randomUUID(), r.idRespuesta],
+            `UPDATE chat.respuestas SET id_tipo_entrada=$1 WHERE id_interaccion=$2`,
+            [randomUUID(), r.id_interaccion],
           ),
           (err) => err.code === '23503',
         );
       },
     );
+    const etapa3 = readFileSync(
+      resolve(
+        __dirname,
+        '../../../prisma/migrations/20261115110915_fix_etapa3_chat/migration.sql',
+      ),
+      'utf8',
+    );
+    const inicioInmutabilidad = etapa3.indexOf(
+      'CREATE OR REPLACE FUNCTION chat.fn_bloquear_modificacion()',
+    );
+    const finInmutabilidad = etapa3.indexOf(
+      'DROP TRIGGER IF EXISTS trg_eventos_sincronizacion_inmutables',
+    );
+    assert.ok(
+      inicioInmutabilidad >= 0 && finInmutabilidad > inicioInmutabilidad,
+    );
+    await q(etapa3.slice(inicioInmutabilidad, finInmutabilidad));
+
     await check(
-      'reenvíos concurrentes del mismo idRespuesta devuelven el resultado original',
+      'la migración impide actualizar o borrar interacciones',
+      async () => {
+        const e = await crear();
+        await enviar(e);
+        for (const accion of [
+          'UPDATE chat.interacciones SET fecha_creacion=now() WHERE id_interaccion=$1',
+          'DELETE FROM chat.interacciones WHERE id_interaccion=$1',
+        ]) {
+          await assert.rejects(q(accion, [e.dto.id_interaccion]), {
+            code: '42501',
+          });
+        }
+      },
+    );
+
+    await check(
+      'registra interacción, respuesta e historial antes de mover el puntero',
+      async () => {
+        const e = await crear();
+        await q(`
+        CREATE FUNCTION chat.rf30_verificar_registro() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW.id_nodo_actual IS DISTINCT FROM OLD.id_nodo_actual
+            AND NOT EXISTS (
+              SELECT 1 FROM chat.interacciones i
+              JOIN chat.respuestas r USING (id_interaccion)
+              JOIN chat.historial_nodos h USING (id_interaccion)
+              WHERE i.id_sesion=OLD.id_sesion AND i.id_nodo=OLD.id_nodo_actual
+                AND h.id_nodo_destino=NEW.id_nodo_actual
+            )
+          THEN RAISE EXCEPTION 'El nodo se movió antes de registrar la interacción';
+          END IF;
+          RETURN NEW;
+        END $$;
+        CREATE TRIGGER rf30_verificar_registro BEFORE UPDATE ON chat.sesiones
+          FOR EACH ROW EXECUTE FUNCTION chat.rf30_verificar_registro();
+      `);
+        try {
+          const resultado = await enviar(e);
+          assert.equal(resultado.duplicada, false);
+          assert.equal((await snapshot(e.sesion)).id_nodo_actual, e.destino);
+        } finally {
+          await q(
+            'DROP TRIGGER rf30_verificar_registro ON chat.sesiones; DROP FUNCTION chat.rf30_verificar_registro()',
+          );
+        }
+      },
+    );
+
+    await check(
+      'conserva conectividad, marca temporal y recursos de la captura sin conexión',
+      async () => {
+        const e = await crear();
+        e.dto.estado_conectividad = 'SIN_CONEXION';
+        e.dto.timestamp_interaccion = '2026-11-13T19:40:12.481234-05:00';
+        e.dto.recursos_no_presentados = [randomUUID(), randomUUID()];
+        const resultado = await enviar(e);
+        const {
+          rows: [fila],
+        } = await q(
+          `
+        SELECT i.fecha_creacion, i.secuencia, i.recursos_no_presentados, c.nombre,
+          to_char(i.timestamp_interaccion AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS.US') AS capturada,
+          r.id_respuesta
+        FROM chat.interacciones i JOIN chat.respuestas r USING (id_interaccion)
+        JOIN chat.estado_conectividad c USING (id_estado_conectividad)
+        WHERE i.id_interaccion=$1
+      `,
+          [e.dto.id_interaccion],
+        );
+        assert.equal(resultado.id_interaccion, e.dto.id_interaccion);
+        assert.notEqual(fila.id_respuesta, e.dto.id_interaccion);
+        assert.equal(
+          fila.fecha_creacion.toISOString(),
+          resultado.registrada_en,
+        );
+        assert.equal(fila.secuencia, 1);
+        assert.equal(fila.nombre, 'SIN_CONEXION');
+        assert.equal(fila.capturada, '2026-11-14 00:40:12.481234');
+        assert.deepEqual(
+          fila.recursos_no_presentados,
+          e.dto.recursos_no_presentados,
+        );
+      },
+    );
+
+    await check(
+      'ordena por secuencia aunque los relojes de captura retrocedan',
+      async () => {
+        const e = await crear();
+        const a = await enviar(e);
+        const b = {
+          ...e.dto,
+          id_interaccion: randomUUID(),
+          id_nodo: e.destino,
+          tipo_entrada: 'CONTINUAR',
+          valor: null,
+          timestamp_interaccion: '2026-11-06T11:48:00-05:00',
+        };
+        await sinCambios(e, 'SECUENCIA_FUERA_DE_ORDEN', () =>
+          caso.execute(e.sesion, usuario, { ...b, secuencia: 3 }),
+        );
+        const siguiente = await caso.execute(e.sesion, usuario, {
+          ...b,
+          secuencia: 2,
+        });
+        assert.equal(siguiente.secuencia, 2);
+        const { rows } = await q(
+          'SELECT secuencia, timestamp_interaccion, recursos_no_presentados FROM chat.interacciones WHERE id_sesion=$1 ORDER BY secuencia',
+          [e.sesion],
+        );
+        assert.deepEqual(
+          rows.map((fila) => fila.secuencia),
+          [1, 2],
+        );
+        assert.ok(
+          rows[0].timestamp_interaccion > rows[1].timestamp_interaccion,
+        );
+        assert.equal(rows[0].recursos_no_presentados, null);
+        assert.deepEqual(await enviar(e), { ...a, duplicada: true });
+      },
+    );
+
+    await check(
+      'un UUID reutilizado con otro contenido no modifica registros',
+      async () => {
+        const e = await crear();
+        await enviar(e);
+        await sinCambios(e, 'ID_INTERACCION_REUTILIZADA', () =>
+          caso.execute(e.sesion, usuario, { ...e.dto, valor: 6 }),
+        );
+      },
+    );
+    await check(
+      'reenvíos concurrentes del mismo id_interaccion devuelven el resultado original',
       async () => {
         const e = await crear(),
           antes = await snapshot(e.sesion);
         const resultados = await Promise.all([enviar(e), enviar(e)]);
-        assert.deepEqual(resultados[0], resultados[1]);
+        assert.deepEqual(resultados.map((r) => r.duplicada).sort(), [
+          false,
+          true,
+        ]);
+        assert.deepEqual(
+          { ...resultados[0], duplicada: true },
+          { ...resultados[1], duplicada: true },
+        );
         assert.equal(
           (await snapshot(e.sesion)).respuestas,
           antes.respuestas + 1,
@@ -668,24 +843,25 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
           original = await enviar(e);
         await caso.execute(e.sesion, usuario, {
           ...e.dto,
-          idRespuesta: randomUUID(),
-          idNodo: e.destino,
-          tipoEntrada: 'CONTINUAR',
+          id_interaccion: randomUUID(),
+          id_nodo: e.destino,
+          secuencia: 2,
+          tipo_entrada: 'CONTINUAR',
           valor: null,
         });
         const antes = await snapshot(e.sesion);
         assert.equal(antes.estado_actual, 'COMPLETADA');
-        assert.deepEqual(await enviar(e), original);
-        assert.equal(original.estadoSesion, 'ACTIVA');
+        assert.deepEqual(await enviar(e), { ...original, duplicada: true });
+        assert.equal(original.estado_sesion, 'ACTIVA');
         assert.deepEqual(await snapshot(e.sesion), antes);
       },
     );
     await check(
-      'colisión de idRespuesta entre sesiones no expone el resultado ni duplica',
+      'colisión de id_interaccion entre sesiones no expone el resultado ni duplica',
       async () => {
         const a = await crear(),
           b = await crear();
-        b.dto.idRespuesta = a.dto.idRespuesta;
+        b.dto.id_interaccion = a.dto.id_interaccion;
         const antes = await snapshot(a.sesion);
         const resultados = await Promise.allSettled([enviar(a), enviar(b)]);
         assert.equal(
@@ -694,7 +870,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
         );
         assert.equal(
           codigo(resultados.find((r) => r.status === 'rejected').reason),
-          'NODO_DESACTUALIZADO',
+          'ID_INTERACCION_REUTILIZADA',
         );
         assert.equal(
           (await snapshot(a.sesion)).respuestas,
@@ -726,7 +902,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
           operador: 'IGUALDAD',
           condicion: { campo: 'es_valida', valor: true },
         });
-        assert.equal((await enviar(e)).transicion.idNodoDestino, e.destino);
+        assert.equal((await enviar(e)).transicion.id_nodo_destino, e.destino);
       },
     );
     await check(
@@ -743,13 +919,13 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
         const r = await enviar(e);
         assert.equal(
           (
-            await prisma.respuestas.findUnique({
-              where: { id_respuesta: r.idRespuesta },
+            await prisma.respuestas.findFirst({
+              where: { id_interaccion: r.id_interaccion },
             })
           ).valor_respuesta,
           null,
         );
-        assert.equal(r.transicion.idNodoDestino, e.destino);
+        assert.equal(r.transicion.id_nodo_destino, e.destino);
       },
     );
     const clinica = (dimension, valor, personalizado = false) =>
@@ -813,7 +989,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       async () => {
         const antes = await perfil(),
           e = await clinica('tipo_dependencia', 'ABSTINENCIA_FISICA');
-        e.dto.capturadaEn = '2026-11-06T12:00:00-05:00';
+        e.dto.timestamp_interaccion = '2026-11-06T12:00:00-05:00';
         await enviar(e);
         const p = await perfil();
         assert.equal(p.tipo_dependencia, 'TOLERANCIA');
@@ -837,7 +1013,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       async () => {
         const e = await clinica('tipo_craving', 'OTRO');
         await q(
-          "UPDATE chat.reglas_validaciones SET valores_permitidos=ARRAY['OTRO'] WHERE id_regla_validacion IN (SELECT id_regla_validacion FROM chat.reglas_nodos WHERE id_nodo_origen=$1)",
+          "UPDATE chat.reglas_validaciones SET valores_permitidos=ARRAY['OTRO'] WHERE id_regla_validacion = (SELECT id_regla_validacion FROM chat.nodos WHERE id_nodo=$1)",
           [e.nodo],
         );
         await sinCambios(e, 'VALOR_NO_PERMITIDO');
@@ -870,7 +1046,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       },
     );
     await check(
-      'fallo del perfil responde ERROR_PERFIL y revierte toda la respuesta',
+      'fallo del perfil responde ERROR_PERSISTENCIA y revierte toda la respuesta',
       async () => {
         const e = await clinica('tipo_craving', 'NEGATIVO');
         await q(
@@ -880,7 +1056,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
           'CREATE TRIGGER rf27_fallo_perfil BEFORE INSERT OR UPDATE ON chat.perfil_clinico FOR EACH ROW EXECUTE FUNCTION chat.rf27_fallar_perfil()',
         );
         try {
-          await sinCambios(e, 'ERROR_PERFIL');
+          await sinCambios(e, 'ERROR_PERSISTENCIA');
         } finally {
           await q('DROP TRIGGER rf27_fallo_perfil ON chat.perfil_clinico');
           await q('DROP FUNCTION chat.rf27_fallar_perfil()');
@@ -966,7 +1142,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
         });
         assert.deepEqual(await perfil(), antes);
         const respuesta = await enviar(e);
-        assert.equal(respuesta.transicion.idNodoDestino, e.destino);
+        assert.equal(respuesta.transicion.id_nodo_destino, e.destino);
         assert.deepEqual(await perfil(), antes);
         assert.equal(Object.hasOwn(respuesta, 'perfilCompleto'), false);
       },
@@ -1046,7 +1222,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
         const e = await clinica('tipo_dependencia', 'TOLERANCIA');
         const r = await enviar(e);
         const antes = await snapshot(e.sesion);
-        assert.deepEqual(await enviar(e), r);
+        assert.deepEqual(await enviar(e), { ...r, duplicada: true });
         assert.deepEqual(await snapshot(e.sesion), antes);
       },
     );
@@ -1102,7 +1278,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       },
     );
     process.stdout.write(
-      `RF27_INTEGRACION_RESULTADO: ${passed} aprobadas, ${failed} fallidas\n`,
+      `RF30_INTEGRACION_RESULTADO: ${passed} aprobadas, ${failed} fallidas\n`,
     );
     if (failed) process.exitCode = 1;
   } finally {

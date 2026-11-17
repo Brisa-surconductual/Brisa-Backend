@@ -4,19 +4,23 @@ import { SesionConversacional } from '../../domain/entities/sesion/sesion-conver
 import { DecisionRespuesta } from '../../domain/policies/motor-respuesta-conversacional.policy';
 import { PerfilClinicoRepository } from '../../domain/repositories/perfil-clinico.repository';
 import { ResultadoRespuesta } from '../dto/procesar-respuesta.dto-response';
+import { EstadoConectividadRespuesta } from '../dto/procesar-respuesta.dto-request';
 
 export interface SolicitudRespuesta {
   idSesion: string;
   idUsuario: string;
   idNodo: string;
-  idRespuesta: string;
+  idInteraccion: string;
   secuencia: number;
-  fechaCaptura: Date;
+  timestampInteraccion: string;
+  conectividad: EstadoConectividadRespuesta;
+  recursosNoPresentados: string[] | null;
 }
 export interface RegistroDeRespuesta {
   solicitud: SolicitudRespuesta;
   decision: DecisionRespuesta;
   resultado: ResultadoRespuesta;
+  huella: string;
   ahora: Date;
 }
 export interface ContextoRespuestaTransaccion {
@@ -29,9 +33,12 @@ export interface ContextoRespuestaTransaccion {
   tieneSalidas(idNodo: string, idFlujo: string): Promise<boolean>;
 }
 export interface RegistroRespuestaTransaccion {
-  buscarResultado(
-    idRespuesta: string,
-  ): Promise<{ idSesion: string; resultado: unknown } | null>;
+  buscarResultado(idInteraccion: string): Promise<{
+    idSesion: string;
+    resultado: unknown;
+    huella: string | null;
+  } | null>;
+  ultimaSecuencia(idSesion: string): Promise<number>;
   guardar(registro: RegistroDeRespuesta): Promise<void>;
 }
 export interface TransaccionRespuesta {

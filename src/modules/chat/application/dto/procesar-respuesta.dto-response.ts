@@ -1,41 +1,51 @@
 import { esObjetoRespuesta as objeto } from '../../domain/policies/configuracion-entrada-respuesta';
 
 export interface ResultadoRespuesta {
-  idRespuesta: string;
-  resultado: 'VALIDA';
+  id_interaccion: string;
+  secuencia: number;
+  registrada_en: string;
+  duplicada: boolean;
   transicion: {
-    idNodoOrigen: string;
-    idNodoDestino: string;
-    esTerminal: boolean;
+    id_nodo_origen: string;
+    id_nodo_destino: string;
+    es_terminal: boolean;
   };
-  estadoSesion: 'ACTIVA' | 'COMPLETADA';
+  estado_sesion: 'ACTIVA' | 'COMPLETADA';
 }
 
-/** Solo recupera campos del contrato; nunca devuelve JSON arbitrario persistido. */
+/** Solo recupera los campos públicos de un resultado confirmado de RF-30. */
 export function recuperarResultadoRespuesta(
   valor: unknown,
+  idInteraccion: string,
 ): ResultadoRespuesta {
   if (
     !objeto(valor) ||
-    typeof valor.idRespuesta !== 'string' ||
-    valor.resultado !== 'VALIDA' ||
-    (valor.estadoSesion !== 'ACTIVA' && valor.estadoSesion !== 'COMPLETADA') ||
+    valor.id_interaccion !== idInteraccion ||
+    typeof valor.secuencia !== 'number' ||
+    !Number.isInteger(valor.secuencia) ||
+    valor.secuencia < 1 ||
+    typeof valor.registrada_en !== 'string' ||
+    !Number.isFinite(Date.parse(valor.registrada_en)) ||
+    (valor.estado_sesion !== 'ACTIVA' &&
+      valor.estado_sesion !== 'COMPLETADA') ||
     !objeto(valor.transicion) ||
-    typeof valor.transicion.idNodoOrigen !== 'string' ||
-    typeof valor.transicion.idNodoDestino !== 'string' ||
-    typeof valor.transicion.esTerminal !== 'boolean'
+    typeof valor.transicion.id_nodo_origen !== 'string' ||
+    typeof valor.transicion.id_nodo_destino !== 'string' ||
+    typeof valor.transicion.es_terminal !== 'boolean'
   )
     throw new Error(
-      'No está disponible el resultado original de la respuesta.',
+      'No está disponible el resultado original de la interacción.',
     );
   return {
-    idRespuesta: valor.idRespuesta,
-    resultado: 'VALIDA',
-    estadoSesion: valor.estadoSesion,
+    id_interaccion: idInteraccion,
+    secuencia: valor.secuencia,
+    registrada_en: valor.registrada_en,
+    duplicada: true,
+    estado_sesion: valor.estado_sesion,
     transicion: {
-      idNodoOrigen: valor.transicion.idNodoOrigen,
-      idNodoDestino: valor.transicion.idNodoDestino,
-      esTerminal: valor.transicion.esTerminal,
+      id_nodo_origen: valor.transicion.id_nodo_origen,
+      id_nodo_destino: valor.transicion.id_nodo_destino,
+      es_terminal: valor.transicion.es_terminal,
     },
   };
 }

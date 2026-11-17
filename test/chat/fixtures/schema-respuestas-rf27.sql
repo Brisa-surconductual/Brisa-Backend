@@ -1,7 +1,8 @@
 -- Extiende schema-hu05.sql exclusivamente en PostgreSQL local desechable.
 -- No es una migración del proyecto ni se ejecuta en Supabase.
+ALTER TABLE chat.nodos ADD COLUMN id_regla_validacion UUID REFERENCES chat.reglas_validaciones(id_regla_validacion);
+ALTER TABLE chat.reglas_nodos DROP COLUMN id_regla_validacion;
 CREATE TYPE chat.estado_sesion_enum AS ENUM ('ACTIVA', 'PAUSADA', 'COMPLETADA', 'ERROR_CONFIGURACION');
-CREATE TYPE chat.estado_sincronizacion_enum AS ENUM ('SINCRONIZADO', 'PENDIENTE', 'ERROR');
 CREATE TYPE chat.motivo_pausa_enum AS ENUM ('VOLUNTARIA', 'SOS_CRAVING', 'INACTIVIDAD');
 CREATE TYPE chat.estado_registro_historial_enum AS ENUM ('REGISTRADO', 'SESION_INTERRUMPIDA');
 CREATE TABLE chat.sesiones (
@@ -10,8 +11,7 @@ CREATE TABLE chat.sesiones (
   version_arbol_utilizada INT, modalidad_activa chat.modalidad_enum NOT NULL,
   tipo_dependencia chat.tipo_dependencia_enum, tipo_craving chat.tipo_craving_enum,
   id_nodo_actual UUID REFERENCES chat.nodos(id_nodo),
-  fecha_inicio TIMESTAMPTZ NOT NULL DEFAULT now(), fecha_ultima_interaccion TIMESTAMPTZ NOT NULL DEFAULT now(),
-  estado_sincronizacion chat.estado_sincronizacion_enum NOT NULL DEFAULT 'SINCRONIZADO'
+  fecha_inicio TIMESTAMPTZ NOT NULL DEFAULT now(), fecha_ultima_interaccion TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE TABLE chat.estado_sesiones (
   id_sesion UUID PRIMARY KEY REFERENCES chat.sesiones(id_sesion),
@@ -27,11 +27,13 @@ CREATE TABLE chat.estado_conectividad (id_estado_conectividad UUID PRIMARY KEY D
 CREATE TABLE chat.interacciones (
   id_interaccion UUID PRIMARY KEY, id_sesion UUID NOT NULL REFERENCES chat.sesiones(id_sesion),
   id_nodo UUID NOT NULL REFERENCES chat.nodos(id_nodo), timestamp_interaccion TIMESTAMPTZ NOT NULL DEFAULT now(),
-  estado_sincronizacion chat.estado_sincronizacion_enum NOT NULL DEFAULT 'SINCRONIZADO',
-  fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT now()
+  fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT now(),
+  secuencia INTEGER NOT NULL CHECK (secuencia > 0),
+  recursos_no_presentados UUID[] CHECK (recursos_no_presentados IS NULL OR cardinality(recursos_no_presentados) > 0),
+  UNIQUE (id_sesion, secuencia)
 );
 CREATE TABLE chat.respuestas (
-  id_respuesta UUID PRIMARY KEY, id_interaccion UUID NOT NULL REFERENCES chat.interacciones(id_interaccion),
+  id_respuesta UUID PRIMARY KEY DEFAULT gen_random_uuid(), id_interaccion UUID NOT NULL REFERENCES chat.interacciones(id_interaccion),
   id_nodo UUID NOT NULL REFERENCES chat.nodos(id_nodo),
   id_tipo_entrada UUID NOT NULL REFERENCES chat.tipo_entrada(id_tipo_entrada),
   id_tipo_respuesta UUID REFERENCES chat.tipo_respuesta(id_tipo_respuesta),
@@ -44,7 +46,8 @@ CREATE TABLE chat.historial_nodos (
   id_nodo UUID NOT NULL REFERENCES chat.nodos(id_nodo), id_usuario UUID NOT NULL REFERENCES usuario.usuarios(id_usuario),
   respuesta_usuario JSONB, id_nodo_destino UUID REFERENCES chat.nodos(id_nodo),
   estado_registro chat.estado_registro_historial_enum NOT NULL DEFAULT 'REGISTRADO',
-  timestamp_interaccion TIMESTAMPTZ NOT NULL DEFAULT now()
+  timestamp_interaccion TIMESTAMPTZ NOT NULL DEFAULT now(),
+  id_interaccion UUID UNIQUE REFERENCES chat.interacciones(id_interaccion)
 );
 
 CREATE TABLE chat.perfil_clinico (
