@@ -2,7 +2,7 @@
 -- Fecha: 2026-11-20T20:43:14.108Z
 -- Descripción: 
 -- =====================================================================
--- Migracion:  m08_administrativo
+-- Migracion:   m08_administrativo
 -- Modulo M-8 Administrativo (RF-122 a RF-151)
 -- Dialecto: PostgreSQL 15+ (Supabase). Ejecutar con el rol dba.
 -- Orden: schema, enums, tablas, indices, FKs, checks, funciones/triggers,
