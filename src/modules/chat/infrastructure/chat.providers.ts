@@ -19,6 +19,8 @@ import { PrismaProcesarRespuestaRepository } from './persistence/prisma-procesar
 import { FormatoRespuestaAdapter } from './validation/formato-respuesta.adapter';
 import { PrismaPresentacionNodoActualRepository } from './persistence/prisma-presentacion-nodo-actual.repository';
 import { S3FirmarRecursoNodoAdapter } from './storage/s3-firmar-recurso-nodo.adapter';
+import { HistorialInteraccionesRepository } from '../domain/repositories/historial-interacciones.repository';
+import { PrismaHistorialInteraccionesRepository } from './persistence/prisma-historial-interacciones.repository';
 import {
   FirmarRecursoNodoPort,
   PresentacionNodoActualPort,
@@ -35,6 +37,10 @@ export const ChatInfrastructureProviders = [
     useClass: PrismaPresentacionNodoActualRepository,
   },
   { provide: FirmarRecursoNodoPort, useClass: S3FirmarRecursoNodoAdapter },
+  {
+    provide: HistorialInteraccionesRepository,
+    useClass: PrismaHistorialInteraccionesRepository,
+  },
   {
     provide: ModalidadProgramaRepository,
     useClass: PrismaModalidadProgramaRepository,

@@ -275,3 +275,18 @@ Verificación de la corrección RF-27B, ejecutada el 6 de noviembre de 2026:
   idempotencia, rechazo de acceso ajeno y rollback ante fallos de perfil e historial.
 - La base local se detuvo limpiamente al terminar. Esta corrección no ejecutó
   escrituras ni migraciones sobre Supabase.
+
+## Cambios
+
+### 2026-11-20 · El request y el response vigentes son los del RF-30
+
+- El formato camelCase de este documento (`idRespuesta`, `idNodo`,
+  `tipoEntrada`, `capturadaEn`, `conectividad`) y su respuesta sin envoltura
+  quedan **OBSOLETOS**. El contrato vigente de `POST /chat/sesiones/:id_sesion/respuestas`
+  está en [`CONTRATO_RF30_INTERACCIONES.md`](CONTRATO_RF30_INTERACCIONES.md):
+  snake_case con `id_interaccion`, `secuencia`, `timestamp_interaccion` y
+  `estado_conectividad`, y respuesta `{ data: {...} }`.
+- Siguen vigentes las reglas de validación (RF-28), transición (RF-29) y captura
+  clínica (RF-27B) de este documento.
+- Desde la misma fecha, `GET nodo-actual` devuelve los tipos de entrada
+  canónicos que este POST exige (ver «Cambios» en `CONTRATO_RF26_NODO_ACTUAL.md`).

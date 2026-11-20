@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { tipoEntradaConfigurado } from '../../domain/enums/tipo-entrada-respuesta.enum';
 import { EntradaNodoDtoResponse } from '../dto/presentacion-nodo-actual.dto-response';
 
 const objeto = (v: unknown): v is Record<string, unknown> =>
@@ -17,20 +18,10 @@ export class PrepararEntradaNodoActualService {
     const entrada = contenido.entrada;
     if (entrada === undefined || entrada === null) return null;
     if (!objeto(entrada)) throw new Error('Entrada no disponible.');
-    const tipo = entrada.tipo ?? entrada.tipo_entrada;
-    if (
-      typeof tipo !== 'string' ||
-      ![
-        'ESCALA',
-        'NUMERICO',
-        'SELECCION_UNICA',
-        'SELECCION_MULTIPLE',
-        'FECHA_HORA',
-        'BOOLEANO',
-        'TEXTO_LIBRE',
-      ].includes(tipo)
-    )
-      throw new Error('Tipo de entrada no disponible.');
+    // RF-27 v1.1: el estudiante ve siempre el literal canónico; los alias
+    // históricos (SELECCION_*) solo existen en contenido ya guardado.
+    const tipo = tipoEntradaConfigurado(entrada.tipo ?? entrada.tipo_entrada);
+    if (tipo === null) throw new Error('Tipo de entrada no disponible.');
     const etiquetas = objeto(entrada.etiquetas)
       ? entrada.etiquetas
       : { min: entrada.etiqueta_min, max: entrada.etiqueta_max };

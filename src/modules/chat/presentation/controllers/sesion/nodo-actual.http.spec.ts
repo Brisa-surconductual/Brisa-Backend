@@ -354,6 +354,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
           {
             orden: 3,
             tipo: 'IMAGEN',
+            idRecurso,
             url: 'https://bucket.example.test/imagen?firma=nueva',
             expiraEn: '2099-11-06T17:10:00.000Z',
             mimeType: 'image/webp',

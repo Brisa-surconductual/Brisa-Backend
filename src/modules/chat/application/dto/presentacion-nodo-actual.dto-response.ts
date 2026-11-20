@@ -2,6 +2,7 @@ export interface BloqueNodoDtoResponse {
   orden: number;
   tipo: string;
   texto?: string;
+  idRecurso?: string;
   url?: string;
   expiraEn?: string | null;
   mimeType?: string | null;
