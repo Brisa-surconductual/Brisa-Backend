@@ -15,6 +15,7 @@ import {
   ComprobarFormatoRespuestaPort,
   TransaccionRespuesta,
 } from '../../../application/ports/procesar-respuesta.port';
+import { huellaInteraccion } from '../../../application/services/huella-interaccion';
 import { ProcesarRespuestaUseCase } from '../../../application/use-cases/sesion/procesar-respuesta.use-case';
 import {
   idsRespuesta as ids,
@@ -34,7 +35,7 @@ import { FormatoRespuestaAdapter } from '../../../infrastructure/validation/form
 import { DomainExceptionFilter } from '../../filters/domain-exception.filter';
 import { RespuestasConversacionalesController } from './respuestas-conversacionales.controller';
 
-describe('RF-27/28/29 POST respuestas (HTTP)', () => {
+describe('RF-30 POST respuestas (HTTP)', () => {
   let app: INestApplication<App>;
   let tx: ReturnType<typeof transaccionRespuestaPrueba>;
   let ejecutar: jest.SpyInstance;
@@ -63,13 +64,26 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
   };
   const ruta = '/chat/sesiones/' + ids.sesion + '/respuestas';
   const body = () => ({
-    idRespuesta: ids.interaccion,
-    idNodo: ids.nodo,
-    tipoEntrada: 'NUMERICO',
+    id_interaccion: ids.interaccion,
+    id_nodo: ids.nodo,
+    tipo_entrada: 'NUMERICO',
     valor: 5,
     secuencia: 1,
-    capturadaEn: '2026-11-06T11:49:00-05:00',
-    conectividad: 'EN_LINEA',
+    timestamp_interaccion: '2026-11-06T11:49:00-05:00',
+    estado_conectividad: 'EN_LINEA' as const,
+    recursos_no_presentados: null,
+  });
+  const resultadoOriginal = () => ({
+    id_interaccion: ids.interaccion,
+    secuencia: 1,
+    registrada_en: expect.any(String) as unknown as string,
+    duplicada: false,
+    transicion: {
+      id_nodo_origen: ids.nodo,
+      id_nodo_destino: ids.destino,
+      es_terminal: false,
+    },
+    estado_sesion: 'ACTIVA',
   });
   const post = (datos: unknown) =>
     request(app.getHttpServer())
@@ -118,20 +132,11 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
   afterEach(() => jest.restoreAllMocks());
   afterAll(() => app?.close());
 
-  it('procesa con actor autenticado y CSRF real, sin envoltura data', async () => {
+  it('registra con actor autenticado, CSRF real y respuesta data', async () => {
     const r = await post(body())
-      .expect(200)
+      .expect(201)
       .expect('Cache-Control', 'no-store');
-    expect(r.body).toEqual({
-      idRespuesta: ids.interaccion,
-      resultado: 'VALIDA',
-      transicion: {
-        idNodoOrigen: ids.nodo,
-        idNodoDestino: ids.destino,
-        esTerminal: false,
-      },
-      estadoSesion: 'ACTIVA',
-    });
+    expect(r.body as unknown).toEqual({ data: resultadoOriginal() });
     expect(tx.contexto.bloquearSesion).toHaveBeenCalledWith(
       ids.sesion,
       ids.usuario,
@@ -142,12 +147,12 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
     tx.contexto.buscarNodo.mockResolvedValueOnce(
       nodoRespuesta({ tipo: 'ESCALA', min: 1, max: 10, paso: 1 }),
     );
-    await post({ ...body(), tipoEntrada: 'ESCALA', valor: 7 }).expect(200);
+    await post({ ...body(), tipo_entrada: 'ESCALA', valor: 7 }).expect(201);
     const guardado: unknown = tx.registro.guardar.mock.calls[0][0];
     expect(guardado).toMatchObject({
       solicitud: {
-        idRespuesta: ids.interaccion,
-        fechaCaptura: new Date('2026-11-06T16:49:00Z'),
+        idInteraccion: ids.interaccion,
+        timestampInteraccion: '2026-11-06T11:49:00-05:00',
       },
     });
   });
@@ -157,7 +162,7 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
       const req = request(app.getHttpServer()).post(ruta);
       if (csrf) req.set('X-CSRF-Token', csrf);
       const r = await req.send(body()).expect(403);
-      expect(r.body as unknown).toHaveProperty('mensaje');
+      expect(r.body as unknown).toMatchObject({ codigo: 'CSRF_INVALIDO' });
       expect(ejecutar).not.toHaveBeenCalled();
     },
   );
@@ -167,7 +172,10 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
       .set('x-test-auth', 'ausente')
       .send(body())
       .expect(401);
-    expect(r.body as unknown).toMatchObject({ statusCode: 401, codigo: null });
+    expect(r.body as unknown).toMatchObject({
+      statusCode: 401,
+      codigo: 'NO_AUTENTICADO',
+    });
     expect(ejecutar).not.toHaveBeenCalled();
   });
   it.each([
@@ -183,12 +191,12 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
     expect(ejecutar).not.toHaveBeenCalled();
   });
   it.each([
-    ['idNodo', 'no-uuid'],
-    ['idRespuesta', 'no-uuid'],
-    ['conectividad', 'OFFLINE'],
-    ['capturadaEn', 'ayer'],
-    ['capturadaEn', '2026-11-06'],
-    ['capturadaEn', '2026-11-06T11:49:00'],
+    ['id_nodo', 'no-uuid'],
+    ['id_interaccion', 'no-uuid'],
+    ['estado_conectividad', 'OFFLINE'],
+    ['timestamp_interaccion', 'ayer'],
+    ['timestamp_interaccion', '2026-11-06'],
+    ['timestamp_interaccion', '2026-11-06T11:49:00'],
     ['idUsuario', ids.usuario],
     ['id_interaccion_cliente', ids.interaccion],
   ])('rechaza DTO inválido %s=%s', async (campo, valor) => {
@@ -227,20 +235,19 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
   it('rechaza ausencia de valor aunque null pueda representar una respuesta opcional', async () => {
     const sinValor: Partial<ReturnType<typeof body>> = body();
     delete sinValor.valor;
-    const r = await post(sinValor).expect(400);
+    const r = await post(sinValor).expect(422);
     expect(r.body as unknown).toMatchObject({
-      codigo: 'RESPUESTA_OBLIGATORIA',
-      campo: 'valor',
+      codigo: 'INTERACCION_INCOMPLETA',
     });
     expect(tx.registro.guardar).not.toHaveBeenCalled();
   });
-  it.each(['TEXTO_LIBRE', 'SELECCION_UNICA', null, undefined])(
-    'rechaza tipoEntrada no permitido %s',
-    async (tipoEntrada) => {
-      const r = await post({ ...body(), tipoEntrada }).expect(400);
+  it.each(['TEXTO_LIBRE', 'SELECCION_UNICA'])(
+    'rechaza tipo_entrada no permitido %s',
+    async (tipo_entrada) => {
+      const r = await post({ ...body(), tipo_entrada }).expect(400);
       expect(r.body as unknown).toMatchObject({
         codigo: 'TIPO_ENTRADA_NO_PERMITIDO',
-        campo: 'tipoEntrada',
+        campo: 'tipo_entrada',
       });
       expect(tx.registro.guardar).not.toHaveBeenCalled();
     },
@@ -250,7 +257,10 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
       new Error('detalle privado de PostgreSQL'),
     );
     const r = await post(body()).expect(500);
-    expect(r.body as unknown).toMatchObject({ statusCode: 500, codigo: null });
+    expect(r.body as unknown).toMatchObject({
+      statusCode: 500,
+      codigo: 'ERROR_PERSISTENCIA',
+    });
     expect(JSON.stringify(r.body)).not.toContain('PostgreSQL');
   });
   it.each([
@@ -287,26 +297,102 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
     expect(tx.registro.guardar).not.toHaveBeenCalled();
   });
   it('devuelve un reenvío desde su resultado original, sin repetir validación ni escrituras', async () => {
+    const datos = body();
     const original = {
-      idRespuesta: ids.interaccion,
-      resultado: 'VALIDA',
-      estadoSesion: 'ACTIVA',
-      transicion: {
-        idNodoOrigen: ids.nodo,
-        idNodoDestino: ids.destino,
-        esTerminal: false,
-      },
+      ...resultadoOriginal(),
+      registrada_en: '2026-11-13T19:40:12.481Z',
     };
     tx.registro.buscarResultado.mockResolvedValue({
       idSesion: ids.sesion,
+      huella: huellaInteraccion(datos),
       resultado: original,
     });
-    const r = await post(body()).expect(200);
-    expect(r.body).toEqual(original);
+    const r = await post(datos).expect(200);
+    expect(r.body as unknown).toEqual({
+      data: { ...original, duplicada: true },
+    });
+    expect(tx.registro.ultimaSecuencia).not.toHaveBeenCalled();
     expect(tx.contexto.buscarNodo).not.toHaveBeenCalled();
     expect(tx.perfil.capturarDimension).not.toHaveBeenCalled();
     expect(tx.registro.guardar).not.toHaveBeenCalled();
   });
+  it.each([
+    ['id_nodo', ids.destino],
+    ['secuencia', 2],
+    ['tipo_entrada', 'ESCALA'],
+    ['valor', 9],
+    ['timestamp_interaccion', '2026-11-06T11:49:01-05:00'],
+    ['estado_conectividad', 'SIN_CONEXION'],
+    ['recursos_no_presentados', [ids.nodo]],
+  ])(
+    'rechaza UUID reutilizado con %s distinto antes de revisar secuencia',
+    async (campo, valor) => {
+      tx.registro.buscarResultado.mockResolvedValue({
+        idSesion: ids.sesion,
+        huella: huellaInteraccion(body()),
+        resultado: resultadoOriginal(),
+      });
+      const r = await post({ ...body(), [campo]: valor }).expect(409);
+      expect(r.body as unknown).toHaveProperty(
+        'codigo',
+        'ID_INTERACCION_REUTILIZADA',
+      );
+      expect(tx.registro.ultimaSecuencia).not.toHaveBeenCalled();
+      expect(tx.registro.guardar).not.toHaveBeenCalled();
+    },
+  );
+  it.each([1, 3])(
+    'rechaza secuencia %s si la última es 1',
+    async (secuencia) => {
+      tx.registro.ultimaSecuencia.mockResolvedValue(1);
+      const r = await post({ ...body(), secuencia }).expect(409);
+      expect(r.body as unknown).toHaveProperty(
+        'codigo',
+        'SECUENCIA_FUERA_DE_ORDEN',
+      );
+      expect(tx.contexto.buscarNodo).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    'id_interaccion',
+    'id_nodo',
+    'secuencia',
+    'tipo_entrada',
+    'timestamp_interaccion',
+    'estado_conectividad',
+  ])('rechaza la ausencia de %s con 422', async (campo) => {
+    const r = await post({ ...body(), [campo]: undefined }).expect(422);
+    expect(r.body as unknown).toHaveProperty(
+      'codigo',
+      'INTERACCION_INCOMPLETA',
+    );
+    expect(ejecutar).not.toHaveBeenCalled();
+  });
+  it('admite una interacción capturada sin conexión y sus recursos omitidos', async () => {
+    await post({
+      ...body(),
+      estado_conectividad: 'SIN_CONEXION',
+      recursos_no_presentados: [ids.nodo],
+    }).expect(201);
+    expect(tx.registro.guardar.mock.calls[0]?.[0].solicitud).toMatchObject({
+      conectividad: 'SIN_CONEXION',
+      recursosNoPresentados: [ids.nodo],
+    });
+  });
+  it.each([[], ['sin-uuid'], 'invalido'])(
+    'rechaza recursos_no_presentados inválido %p',
+    async (recursos) => {
+      const r = await post({
+        ...body(),
+        recursos_no_presentados: recursos,
+      }).expect(400);
+      expect(r.body as unknown).toHaveProperty(
+        'campo',
+        'recursos_no_presentados',
+      );
+      expect(ejecutar).not.toHaveBeenCalled();
+    },
+  );
   it.each([
     ['OPCION_UNICA', 'a', Dato.SELECCION, ['a']],
     ['MULTISELECCION', ['a', 'b'], Dato.SELECCION, ['a', 'b']],
@@ -332,7 +418,7 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
               }),
         ),
       ]);
-      await post({ ...body(), tipoEntrada: tipo, valor }).expect(200);
+      await post({ ...body(), tipo_entrada: tipo, valor }).expect(201);
       expect(tx.registro.guardar).toHaveBeenCalledTimes(1);
     },
   );
@@ -354,7 +440,7 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
       ]);
       return {
         ...body(),
-        tipoEntrada: 'OPCION_UNICA',
+        tipo_entrada: 'OPCION_UNICA',
         valor: 'ABSTINENCIA_FISICA',
       };
     };
@@ -369,7 +455,7 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
           valorVigente: aplicado ? 'ABSTINENCIA_FISICA' : 'TOLERANCIA',
           perfilCompleto: false,
         });
-        const r = await post(datos).expect(200);
+        const r = await post(datos).expect(201);
         expect(tx.perfil.capturarDimension).toHaveBeenCalledWith({
           idUsuario: ids.usuario,
           idSesion: ids.sesion,
@@ -379,16 +465,7 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
           modalidadSesion: ModalidadConversacional.GRUPAL,
         });
         expect(tx.registro.guardar).toHaveBeenCalledTimes(1);
-        expect(r.body as unknown).toEqual({
-          idRespuesta: ids.interaccion,
-          resultado: 'VALIDA',
-          transicion: {
-            idNodoOrigen: ids.nodo,
-            idNodoDestino: ids.destino,
-            esTerminal: false,
-          },
-          estadoSesion: 'ACTIVA',
-        });
+        expect(r.body as unknown).toEqual({ data: resultadoOriginal() });
       },
     );
 
@@ -421,7 +498,7 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
       expect(tx.registro.guardar).not.toHaveBeenCalled();
     });
 
-    it('propaga ERROR_PERFIL sin datos privados ni avance', async () => {
+    it('propaga ERROR_PERSISTENCIA sin datos privados ni avance', async () => {
       const datos = configurar();
       tx.perfil.capturarDimension.mockRejectedValue(
         new Error('detalle privado de Supabase'),
@@ -429,14 +506,14 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
       const r = await post(datos).expect(500);
       expect(r.body as unknown).toMatchObject({
         statusCode: 500,
-        codigo: 'ERROR_PERFIL',
+        codigo: 'ERROR_PERSISTENCIA',
       });
       expect(JSON.stringify(r.body)).not.toContain('Supabase');
       expect(tx.registro.guardar).not.toHaveBeenCalled();
     });
 
     it('una respuesta ordinaria nunca intenta capturar el perfil', async () => {
-      await post(body()).expect(200);
+      await post(body()).expect(201);
       expect(tx.perfil.capturarDimension).not.toHaveBeenCalled();
     });
   });

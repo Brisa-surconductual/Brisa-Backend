@@ -1,38 +1,55 @@
 import { Prisma } from '@prisma/client';
-import { randomUUID } from 'node:crypto';
 import {
   RegistroDeRespuesta,
   RegistroRespuestaTransaccion,
 } from '../../application/ports/procesar-respuesta.port';
+import { esObjetoRespuesta } from '../../domain/policies/configuracion-entrada-respuesta';
 
 /** Persistencia y bloqueos; el resultado y el estado vienen decididos por aplicación. */
 export class PrismaRegistroRespuestaRepository implements RegistroRespuestaTransaccion {
   constructor(private readonly tx: Prisma.TransactionClient) {}
 
-  async buscarResultado(idRespuesta: string) {
+  async buscarResultado(idInteraccion: string) {
     // Serializa también colisiones del UUID entre sesiones distintas. No es un
     // bloqueo de sesión: evita depender de una excepción de unicidad para reintentar.
     await this.tx
-      .$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${idRespuesta}::text, 0))`;
-    const fila = await this.tx.respuestas.findUnique({
-      where: { id_respuesta: idRespuesta },
+      .$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${idInteraccion}::text, 0))`;
+    const fila = await this.tx.interacciones.findUnique({
+      where: { id_interaccion: idInteraccion },
       select: {
-        resultado_procesamiento: true,
-        interacciones: { select: { id_sesion: true } },
+        id_sesion: true,
+        respuestas: { select: { resultado_procesamiento: true }, take: 2 },
       },
     });
-    return fila === null
-      ? null
-      : {
-          idSesion: fila.interacciones.id_sesion,
-          resultado: fila.resultado_procesamiento,
-        };
+    if (fila === null) return null;
+    const guardado =
+      fila.respuestas.length === 1
+        ? fila.respuestas[0].resultado_procesamiento
+        : null;
+    return {
+      idSesion: fila.id_sesion,
+      resultado: esObjetoRespuesta(guardado) ? guardado.resultado : null,
+      huella:
+        esObjetoRespuesta(guardado) && typeof guardado.huella === 'string'
+          ? guardado.huella
+          : null,
+    };
+  }
+
+  async ultimaSecuencia(idSesion: string): Promise<number> {
+    const ultima = await this.tx.interacciones.findFirst({
+      where: { id_sesion: idSesion },
+      orderBy: { secuencia: 'desc' },
+      select: { secuencia: true },
+    });
+    return ultima?.secuencia ?? 0;
   }
 
   async guardar({
     solicitud: s,
     decision,
     resultado,
+    huella,
     ahora,
   }: RegistroDeRespuesta): Promise<void> {
     const alias: Record<string, string> = {
@@ -51,38 +68,40 @@ export class PrismaRegistroRespuestaRepository implements RegistroRespuestaTrans
     });
     const tipo =
       tipos.find((t) => t.nombre === decision.tipoEntrada) ?? tipos[0];
-    const conexiones = await this.tx.estado_conectividad.findMany({
-      where: { nombre: { in: ['EN_LINEA', 'ONLINE'] } },
+    const conexion = await this.tx.estado_conectividad.findUnique({
+      where: { nombre: s.conectividad },
     });
-    const conexion =
-      conexiones.find((c) => c.nombre === 'EN_LINEA') ?? conexiones[0];
     if (!tipo || !conexion)
       throw new Error('Catálogos de respuesta no disponibles.');
     const valor =
       decision.respuesta === null ? Prisma.JsonNull : decision.respuesta;
-    const idInteraccion = randomUUID();
-    await this.tx.interacciones.create({
-      data: {
-        id_interaccion: idInteraccion,
-        id_sesion: s.idSesion,
-        id_nodo: s.idNodo,
-        secuencia: s.secuencia,
-        timestamp_interaccion: s.fechaCaptura,
-      },
-    });
+    const recursos = s.recursosNoPresentados
+      ? Prisma.sql`ARRAY[${Prisma.join(s.recursosNoPresentados)}]::uuid[]`
+      : Prisma.sql`NULL`;
+    const fechaCaptura = new Date(s.timestampInteraccion);
+    // Prisma no representa el NULL de uuid[]; PostgreSQL también conserva aquí
+    // la precisión del timestamp recibido sin convertirlo a Date.
+    await this.tx.$executeRaw`
+      INSERT INTO chat.interacciones (
+        id_interaccion, id_sesion, id_nodo, secuencia, timestamp_interaccion,
+        fecha_creacion, recursos_no_presentados
+      ) VALUES (
+        ${s.idInteraccion}::uuid, ${s.idSesion}::uuid, ${s.idNodo}::uuid,
+        ${s.secuencia}::integer, ${s.timestampInteraccion}::timestamptz,
+        ${ahora}::timestamptz, ${recursos}
+      )`;
     await this.tx.respuestas.create({
       data: {
-        id_respuesta: s.idRespuesta,
-        id_interaccion: idInteraccion,
+        id_interaccion: s.idInteraccion,
         id_nodo: s.idNodo,
         id_tipo_entrada: tipo.id_tipo_entrada,
         id_estado_conectividad: conexion.id_estado_conectividad,
         valor_respuesta: valor,
         es_valida: true,
-        fecha_captura: s.fechaCaptura,
+        fecha_captura: fechaCaptura,
         resultado_procesamiento: {
-          ...resultado,
-          transicion: { ...resultado.transicion },
+          huella,
+          resultado: { ...resultado, transicion: { ...resultado.transicion } },
         },
       },
     });
@@ -93,8 +112,8 @@ export class PrismaRegistroRespuestaRepository implements RegistroRespuestaTrans
         id_usuario: s.idUsuario,
         respuesta_usuario: valor,
         id_nodo_destino: decision.idNodoDestino,
-        timestamp_interaccion: s.fechaCaptura,
-        id_interaccion: idInteraccion,
+        timestamp_interaccion: fechaCaptura,
+        id_interaccion: s.idInteraccion,
       },
     });
     await this.tx.chat_sesiones.update({
@@ -107,9 +126,9 @@ export class PrismaRegistroRespuestaRepository implements RegistroRespuestaTrans
     await this.tx.estado_sesiones.update({
       where: { id_sesion: s.idSesion },
       data: {
-        estado_actual: resultado.estadoSesion,
+        estado_actual: resultado.estado_sesion,
         fecha_actualizacion: ahora,
-        ...(resultado.estadoSesion === 'COMPLETADA' && {
+        ...(resultado.estado_sesion === 'COMPLETADA' && {
           fecha_completada: ahora,
         }),
       },

@@ -39,6 +39,7 @@ export function transaccionRespuestaPrueba() {
     },
     registro: {
       buscarResultado: jest.fn().mockResolvedValue(null),
+      ultimaSecuencia: jest.fn().mockResolvedValue(0),
       guardar: jest
         .fn<Promise<void>, [RegistroDeRespuesta]>()
         .mockResolvedValue(undefined),
