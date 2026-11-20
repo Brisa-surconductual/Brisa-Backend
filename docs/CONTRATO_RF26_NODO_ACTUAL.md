@@ -153,3 +153,30 @@ La integración local usa PostgreSQL desechable y `SET TRANSACTION READ ONLY`,
 comparando snapshots antes y después. La firma del SDK se prueba sin descargas,
 subidas ni cambios en S3. Estas pruebas no sustituyen la reproducción del
 historial completo de migraciones ni una prueba visual de frontend.
+
+## Cambios
+
+### 2026-11-20 · Tipos de entrada canónicos e `idRecurso` (RF-26 v1.1, RF-27 v1.1, RF-33 v1.1)
+
+- **Estado:** APROBADA. Rama `feat/chat-rf26-entradas-canonicas`.
+- **Motivo:** el GET solo aceptaba los literales históricos `SELECCION_UNICA` y
+  `SELECCION_MULTIPLE`, y no aceptaba `CONTINUAR`. Un nodo configurado con los
+  nombres del RF-27 (`OPCION_UNICA`, `MULTISELECCION`, `CONTINUAR`), incluidos
+  los nodos de captura clínica del RF-27B, respondía 500
+  `CONTENIDO_NO_DISPONIBLE`. Además, el `POST /respuestas` exige los nombres
+  canónicos, así que GET y POST no coincidían (aclaración A-014 del frontend).
+- **`entrada.tipo`** devuelve siempre el literal canónico del RF-27:
+  `OPCION_UNICA | MULTISELECCION | ESCALA | NUMERICO | FECHA_HORA | BOOLEANO | TEXTO_LIBRE | CONTINUAR`.
+  Los literales históricos guardados en `nodos.contenido` se siguen leyendo y
+  se traducen (`SELECCION_UNICA` → `OPCION_UNICA`, `SELECCION_MULTIPLE` →
+  `MULTISELECCION`) con `tipoEntradaConfigurado` (`domain/enums/tipo-entrada-respuesta.enum.ts`),
+  la misma función que usa el motor de respuestas. Un tipo fuera del catálogo
+  sigue respondiendo 500 `CONTENIDO_NO_DISPONIBLE`.
+- **Bloques multimedia firmados** agregan `idRecurso` (uuid de
+  `cronograma.recursos_contenido`). Es un campo aditivo: el cliente lo devuelve en
+  `recursos_no_presentados` del RF-30 cuando no pudo mostrar el recurso (RF-33).
+  Las referencias HTTPS públicas sin recurso de catálogo no llevan `idRecurso`.
+- **Compatibilidad:** no hay cambios de base de datos ni de ruta. Un cliente que
+  traducía los alias por su cuenta sigue funcionando.
+- **Verificación:** `presentacion-nodo-actual.services.spec.ts` y
+  `nodo-actual.http.spec.ts`.

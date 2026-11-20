@@ -72,6 +72,8 @@ export class PresentarBloquesNodoActualService {
       return {
         orden: b.orden,
         tipo: b.tipo,
+        // RF-33: el cliente lo devuelve en recursos_no_presentados (RF-30).
+        idRecurso: recurso.idRecurso,
         ...acceso,
         mimeType: recurso.mimeType,
         textoAlternativo: recurso.textoAlternativo,

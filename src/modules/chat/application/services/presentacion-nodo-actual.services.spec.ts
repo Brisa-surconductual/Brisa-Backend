@@ -86,6 +86,7 @@ describe('Presentación RF-26: bloques y entrada', () => {
     );
     expect(r[0]).toMatchObject({
       tipo: 'VIDEO',
+      idRecurso: 'recurso',
       url: 'https://bucket.test/video?firma=nueva',
       mimeType: 'video/mp4',
       duracionSegundos: 45,
@@ -190,10 +191,25 @@ describe('Presentación RF-26: bloques y entrada', () => {
     'FECHA_HORA',
     'TEXTO_LIBRE',
     'NUMERICO',
-    'SELECCION_UNICA',
-    'SELECCION_MULTIPLE',
+    'OPCION_UNICA',
+    'MULTISELECCION',
+    'CONTINUAR',
   ])('presenta %s sin validar ninguna respuesta', (tipo) => {
     expect(entrada.preparar({ entrada: { tipo } })?.tipo).toBe(tipo);
+  });
+  it.each([
+    ['SELECCION_UNICA', 'OPCION_UNICA'],
+    ['SELECCION_MULTIPLE', 'MULTISELECCION'],
+  ])(
+    'traduce el literal histórico %s al canónico %s del RF-27',
+    (historico, canonico) => {
+      expect(entrada.preparar({ entrada: { tipo: historico } })?.tipo).toBe(
+        canonico,
+      );
+    },
+  );
+  it('rechaza un tipo de entrada fuera del catálogo del RF-27', () => {
+    expect(() => entrada.preparar({ entrada: { tipo: 'LIBRE' } })).toThrow();
   });
   it('toma las opciones y sus etiquetas de la entrada del nodo', () => {
     const r = entrada.preparar({
