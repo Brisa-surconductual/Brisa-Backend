@@ -10,39 +10,11 @@ import {
 export class PrismaPresentacionNodoActualRepository implements PresentacionNodoActualPort {
   constructor(private readonly prisma: PrismaService) {}
 
-  async consultarReglas(idNodo: string, idFlujo: string) {
-    // La regla no está en reglas_nodos: pertenece al nodo origen (un nodo
-    // tiene a lo sumo una regla), por lo que todas las filas aquí comparten
-    // la misma regla del nodo `idNodo`.
-    const filas = await this.prisma.reglas_nodos.findMany({
+  async tieneSalidas(idNodo: string, idFlujo: string): Promise<boolean> {
+    const salidas = await this.prisma.reglas_nodos.count({
       where: { id_nodo_origen: idNodo, id_flujo: idFlujo },
-      select: {
-        nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos: {
-          select: {
-            reglas_validaciones: {
-              select: {
-                obligatorio: true,
-                valor_min: true,
-                valor_max: true,
-                valores_permitidos: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { orden_evaluacion: 'asc' },
     });
-    return filas.map(
-      ({ nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos: nodo }) => {
-        const r = nodo.reglas_validaciones;
-        return {
-          obligatorio: r?.obligatorio ?? false,
-          valorMin: r?.valor_min?.toNumber() ?? null,
-          valorMax: r?.valor_max?.toNumber() ?? null,
-          valoresPermitidos: r?.valores_permitidos ?? [],
-        };
-      },
-    );
+    return salidas > 0;
   }
 
   async consultarRecursos(idContenido: string): Promise<RecursoNodoActual[]> {

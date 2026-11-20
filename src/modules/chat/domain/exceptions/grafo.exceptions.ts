@@ -1,5 +1,19 @@
-import type { DiagnosticoArbol } from '../entities/flujo/diagnostico-arbol';
+import type { DiagnosticoArbol } from '../results/diagnostico-arbol';
+import type { DiagnosticoCobertura } from '../results/diagnostico-cobertura';
 import { DomainException } from './domain.exception';
+
+/** RF-25: hay respuestas posibles (selección única, Sí/No) sin transición. */
+export class CoberturaTransicionesIncompletaException extends DomainException {
+  readonly tipo = 'NO_PROCESABLE';
+
+  constructor(detalles: DiagnosticoCobertura) {
+    super(
+      'Hay respuestas posibles sin transición: el estudiante quedaría sin camino.',
+      'COBERTURA_INCOMPLETA',
+      detalles,
+    );
+  }
+}
 
 export class GrafoInvalidoException extends DomainException {
   readonly tipo = 'NO_PROCESABLE';

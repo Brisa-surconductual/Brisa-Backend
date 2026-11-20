@@ -1,38 +1,54 @@
 import { ArbolConversacional } from '../../../domain/entities/flujo/arbol-conversacional.entity';
-import { TipoDatoValidacion } from '../../../domain/enums/tipo-dato-validacion-enum';
+import { NodoConversacional } from '../../../domain/entities/flujo/nodo-conversacional.entity';
 import { OperadorCondicion } from '../../../domain/enums/operador-condicional.enum';
+import { TipoDatoValidacion } from '../../../domain/enums/tipo-dato-validacion-enum';
 import {
   CicloConversacionalNoPermitidoException,
   NodoFueraDeFlujoException,
   NodoOrigenNoEncontradoException,
   ReglaValidacionInvalidaException,
-  ReglaValidacionNoEncontradaException,
 } from '../../../domain/exceptions';
 import {
   arbol,
+  fecha,
   flujoGrupal,
   ids,
   nodo,
-  reglaTexto,
   repositorioSimulado,
 } from '../../support/testing/arbol-fixtures';
 import { CrearTransicionConversacionalUseCase } from './crear-transicion-conversacional.use-case';
 
-describe('CrearTransicionConversacionalUseCase (RF-25)', () => {
+function nodoCon(idNodo: string, contenido: Record<string, unknown>) {
+  return new NodoConversacional(
+    idNodo,
+    ids.flujo,
+    ids.tipo,
+    'PREGUNTA',
+    { texto: 'Hola', ...contenido },
+    idNodo === ids.nodoA,
+    1,
+    null,
+    ids.actor,
+    fecha,
+    fecha,
+  );
+}
+
+describe('CrearTransicionConversacionalUseCase (RF-25, regla propia)', () => {
   const repository = repositorioSimulado();
   const useCase = new CrearTransicionConversacionalUseCase(repository);
   const dto = {
     id_nodo_origen: ids.nodoA,
     id_nodo_destino: ids.nodoB,
-    id_regla_validacion: ids.regla,
-    operador_condicion: OperadorCondicion.IGUALDAD,
-    valor_condicion: { valor: 'si' },
+    regla_validacion: {
+      valor_esperado: { valor: 'si' },
+      mensaje_error: 'Elige una opción.',
+    },
     orden_evaluacion: 1,
   };
 
   beforeEach(() => {
     jest.resetAllMocks();
-    repository.buscarReglaValidacion.mockResolvedValue(reglaTexto);
     repository.obtenerArbol.mockResolvedValue(
       new ArbolConversacional(
         flujoGrupal(),
@@ -43,7 +59,7 @@ describe('CrearTransicionConversacionalUseCase (RF-25)', () => {
     repository.buscarNodo.mockImplementation((id) => Promise.resolve(nodo(id)));
   });
 
-  it('crea la transición con una regla de validación existente', async () => {
+  it('crea la transición con su regla propia derivada del nodo origen', async () => {
     const respuesta = await useCase.execute(ids.flujo, dto, ids.actor);
 
     const [guardada, actor] = repository.guardarTransicion.mock.calls[0];
@@ -53,93 +69,74 @@ describe('CrearTransicionConversacionalUseCase (RF-25)', () => {
       idNodoDestino: ids.nodoB,
       ordenEvaluacion: 1,
     });
-    expect(guardada.reglaValidacion).toBe(reglaTexto);
+    expect(guardada.reglaValidacion).toMatchObject({
+      operadorCondicion: OperadorCondicion.IGUALDAD,
+      valorEsperado: { valor: 'si' },
+      tipoDato: TipoDatoValidacion.TEXTO,
+      mensajeError: 'Elige una opción.',
+    });
     expect(actor).toBe(ids.actor);
-    expect(respuesta).toMatchObject({
-      id_transicion: guardada.idTransicion,
-      regla_validacion: expect.objectContaining({
-        id_regla_validacion: ids.regla,
-      }),
+    expect(respuesta.regla_validacion).toMatchObject({
+      operador_condicion: OperadorCondicion.IGUALDAD,
+      valor_esperado: { valor: 'si' },
     });
   });
 
-  it('crea la transición con una regla nueva embebida', async () => {
-    const base = { ...dto, id_regla_validacion: undefined };
-
-    const respuesta = await useCase.execute(
-      ids.flujo,
-      {
-        ...base,
-        regla_validacion: {
-          tipo_dato: TipoDatoValidacion.TEXTO,
-          obligatorio: true,
-          valores_permitidos: [],
-          mensaje_error: 'Respuesta requerida',
-        },
-      },
-      ids.actor,
-    );
-
-    const guardada = repository.guardarTransicion.mock.calls[0][0];
-    expect(repository.buscarReglaValidacion).not.toHaveBeenCalled();
-    expect(guardada.reglaValidacion.idReglaValidacion).not.toBe(ids.regla);
-    expect(respuesta.regla_validacion.mensaje_error).toBe(
-      'Respuesta requerida',
-    );
-  });
-
-  it('exige una regla existente o una embebida, exclusivamente una', () => {
-    const base = { ...dto, id_regla_validacion: undefined };
-
-    expect(() => useCase.execute(ids.flujo, base, ids.actor)).toThrow(
-      ReglaValidacionInvalidaException,
-    );
-    expect(() =>
+  it('rechaza un valor esperado que el nodo origen no define', async () => {
+    await expect(
       useCase.execute(
         ids.flujo,
         {
           ...dto,
           regla_validacion: {
-            tipo_dato: TipoDatoValidacion.TEXTO,
-            obligatorio: true,
-            valores_permitidos: [],
-            mensaje_error: 'x',
+            ...dto.regla_validacion,
+            valor_esperado: { valor: 'quizas' },
           },
         },
         ids.actor,
       ),
-    ).toThrow(ReglaValidacionInvalidaException);
-  });
-
-  it('rechaza una regla embebida incoherente antes de guardar', () => {
-    const base = { ...dto, id_regla_validacion: undefined };
-
-    expect(() =>
-      useCase.execute(
-        ids.flujo,
-        {
-          ...base,
-          regla_validacion: {
-            tipo_dato: TipoDatoValidacion.NUMERICO,
-            obligatorio: true,
-            valor_min: 10,
-            valor_max: 1,
-            valores_permitidos: [],
-            mensaje_error: 'Fuera de rango',
-          },
-        },
-        ids.actor,
-      ),
-    ).toThrow(ReglaValidacionInvalidaException);
+    ).rejects.toBeInstanceOf(ReglaValidacionInvalidaException);
     expect(repository.guardarTransicion).not.toHaveBeenCalled();
   });
 
-  it('rechaza una regla de validación inexistente', async () => {
-    repository.buscarReglaValidacion.mockResolvedValue(null);
+  it('exige la regla cuando el nodo origen espera respuesta', async () => {
+    await expect(
+      useCase.execute(
+        ids.flujo,
+        { ...dto, regla_validacion: undefined },
+        ids.actor,
+      ),
+    ).rejects.toBeInstanceOf(ReglaValidacionInvalidaException);
+  });
+
+  it('crea una transición sin regla desde un nodo sin respuesta (CONTINUAR)', async () => {
+    repository.buscarNodo.mockImplementation((id) =>
+      Promise.resolve(id === ids.nodoA ? nodoCon(id, {}) : nodo(id)),
+    );
+
+    await useCase.execute(
+      ids.flujo,
+      { ...dto, regla_validacion: undefined },
+      ids.actor,
+    );
+
+    expect(
+      repository.guardarTransicion.mock.calls[0][0].reglaValidacion,
+    ).toBeNull();
+  });
+
+  it('rechaza transiciones desde un nodo de texto libre', async () => {
+    repository.buscarNodo.mockImplementation((id) =>
+      Promise.resolve(
+        id === ids.nodoA
+          ? nodoCon(id, { entrada: { tipo: 'TEXTO_LIBRE' } })
+          : nodo(id),
+      ),
+    );
 
     await expect(
       useCase.execute(ids.flujo, dto, ids.actor),
-    ).rejects.toBeInstanceOf(ReglaValidacionNoEncontradaException);
+    ).rejects.toBeInstanceOf(ReglaValidacionInvalidaException);
   });
 
   it('rechaza un nodo que no existe o que pertenece a otro flujo', async () => {

@@ -1,3 +1,5 @@
+import type { DiagnosticoCapturaPerfil } from '../results/diagnostico-captura-perfil';
+import type { DimensionPerfilClinico } from '../enums/perfil-clinico.enum';
 import { DomainException } from './domain.exception';
 
 export class EstadoFlujoInvalidoException extends DomainException {
@@ -109,5 +111,24 @@ export class FlujoGrupalPublicadoExistenteException extends DomainException {
 
   constructor() {
     super('Ya existe un flujo conversacional grupal publicado.');
+  }
+}
+
+/** RF-25 (trasladado desde RF-27B): el árbol grupal debe tener exactamente
+ * un nodo de captura por dimensión del perfil clínico antes de publicarse. */
+export class NodoCapturaPerfilInvalidoException extends DomainException {
+  readonly tipo = 'NO_PROCESABLE';
+
+  constructor(
+    readonly detalles: DiagnosticoCapturaPerfil & {
+      /** RF-25: dimensiones cuyo nodo de captura no tiene una regla de
+       * validación cuyos `valores_permitidos` coincidan con el dominio
+       * clínico (o no tiene ninguna regla asociada). */
+      dimensiones_valores_invalidos: DimensionPerfilClinico[];
+    },
+  ) {
+    super(
+      'El árbol conversacional grupal no tiene configurado un nodo para la captura de esta variable clínica.',
+    );
   }
 }

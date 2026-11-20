@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsNotEmptyObject,
   IsObject,
+  IsOptional,
   IsString,
   IsUUID,
   MaxLength,
@@ -13,10 +14,6 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import {
-  ActualizarReglaValidacionDtoRequest,
-  ReglaValidacionDtoRequest,
-} from './arbol-conversacional.dto-request';
 import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
 import { OperadorCondicion } from '../../domain/enums/operador-condicional.enum';
 import {
@@ -54,8 +51,31 @@ export class CrearFlujoConversacionalDtoRequest {
 }
 
 /**
- * La regla de validación se indica con `id_regla_validacion` (regla existente)
- * o con `regla_validacion` (regla nueva embebida), exclusivamente una de las dos.
+ * RF-25: lo único que el administrador define de la regla de una transición.
+ * El tipo de dato, los valores permitidos y `obligatorio` se derivan del nodo
+ * origen; el operador solo se elige cuando el nodo es de tipo número.
+ */
+export class ReglaTransicionDtoRequest {
+  @IsOptional()
+  @IsEnum(OperadorCondicion)
+  operador_condicion?: OperadorCondicion;
+
+  /** `{ valor }` en IGUALDAD, `{ min, max }` en RANGO. */
+  @IsDefined()
+  @IsObject()
+  valor_esperado!: Record<string, unknown>;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @IsNotEmpty()
+  mensaje_error!: string;
+}
+
+/**
+ * RF-25: la transición lleva su propia regla (nunca una existente). Se omite
+ * solo si el nodo origen no espera respuesta (transición automática).
  */
 export class CrearTransicionConversacionalDtoRequest {
   @IsUUID()
@@ -64,63 +84,29 @@ export class CrearTransicionConversacionalDtoRequest {
   @IsUUID()
   id_nodo_destino!: string;
 
-  @ValidateIf(
-    (dto: CrearTransicionConversacionalDtoRequest) =>
-      dto.regla_validacion === undefined,
-  )
-  @IsUUID()
-  id_regla_validacion?: string;
-
-  @ValidateIf(
-    (dto: CrearTransicionConversacionalDtoRequest) =>
-      dto.id_regla_validacion === undefined,
-  )
-  @IsDefined()
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsObject()
   @ValidateNested()
-  @Type(() => ReglaValidacionDtoRequest)
-  regla_validacion?: ReglaValidacionDtoRequest;
-
-  @IsEnum(OperadorCondicion)
-  operador_condicion!: OperadorCondicion;
-
-  @IsDefined()
-  @IsObject()
-  valor_condicion!: Record<string, unknown>;
+  @Type(() => ReglaTransicionDtoRequest)
+  regla_validacion?: ReglaTransicionDtoRequest;
 
   @IsInt()
   @Min(1)
   orden_evaluacion!: number;
 }
 
-/**
- * La regla de validación se puede sustituir (`id_regla_validacion`) o editar
- * (`regla_validacion`), nunca ambas cosas a la vez. El origen no se modifica.
- */
+/** `regla_validacion` reemplaza por completo la regla propia. El origen no se modifica. */
 export class ActualizarTransicionConversacionalDtoRequest {
   @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsUUID()
   id_nodo_destino?: string;
 
   @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsUUID()
-  id_regla_validacion?: string;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsObject()
   @IsNotEmptyObject()
   @ValidateNested()
-  @Type(() => ActualizarReglaValidacionDtoRequest)
-  regla_validacion?: ActualizarReglaValidacionDtoRequest;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsEnum(OperadorCondicion)
-  operador_condicion?: OperadorCondicion;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsDefined()
-  @IsObject()
-  valor_condicion?: Record<string, unknown>;
+  @Type(() => ReglaTransicionDtoRequest)
+  regla_validacion?: ReglaTransicionDtoRequest;
 
   @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsInt()

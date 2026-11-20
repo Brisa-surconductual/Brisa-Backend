@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import type { reglas_validaciones } from '@prisma/client';
 import { ReglaValidacion } from '../../domain/entities/reglas-validacion/reglas-validacion.entity';
+import { OperadorCondicion } from '../../domain/enums/operador-condicional.enum';
 import { TipoDatoValidacion } from '../../domain/enums/tipo-dato-validacion-enum';
 
 export class ReglaValidacionMapper {
@@ -14,6 +15,8 @@ export class ReglaValidacionMapper {
       fila.formato_regex,
       fila.valores_permitidos ?? [],
       fila.mensaje_error,
+      fila.operador_condicion as OperadorCondicion,
+      fila.valor_esperado,
     );
   }
 
@@ -27,6 +30,8 @@ export class ReglaValidacionMapper {
       formato_regex: regla.formatoRegex,
       valores_permitidos: regla.valoresPermitidos,
       mensaje_error: regla.mensajeError,
+      operador_condicion: regla.operadorCondicion,
+      valor_esperado: regla.valorEsperado as Prisma.InputJsonValue,
     };
   }
 }

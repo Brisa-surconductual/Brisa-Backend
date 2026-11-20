@@ -18,7 +18,7 @@ export class PresentarNodoActualService {
     sesion: SesionConversacional,
     nodo: NodoConversacional,
   ): Promise<PresentacionNodoActualDtoResponse> {
-    const reglas = await this.lecturas.consultarReglas(
+    const tieneSalidas = await this.lecturas.tieneSalidas(
       nodo.idNodo,
       nodo.idFlujo,
     );
@@ -33,9 +33,9 @@ export class PresentarNodoActualService {
         idNodo: nodo.idNodo,
         tipoNodo: nodo.nombreTipoNodo,
         orden: nodo.orden,
-        esTerminal: reglas.length === 0,
+        esTerminal: !tieneSalidas,
         bloques: await this.bloques.preparar(nodo.contenido, recursos),
-        entrada: this.entrada.preparar(nodo.contenido, reglas),
+        entrada: this.entrada.preparar(nodo.contenido),
       },
     };
   }

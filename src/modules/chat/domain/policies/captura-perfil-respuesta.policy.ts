@@ -10,6 +10,7 @@ import { CapturarRespuesta } from './capturar-respuesta.policy';
 import { respuestaVacia } from './configuracion-entrada-respuesta';
 import { DimensionPerfilCapturada } from '../repositories/perfil-clinico.repository';
 import { CapturarDimensionPerfilPolicy } from './capturar-dimension-perfil.policy';
+import { extraerDimensionCapturaPerfil } from './dimension-captura-perfil';
 
 export type CapturaPerfilRespuesta = DimensionPerfilCapturada;
 
@@ -45,28 +46,6 @@ export class CapturaPerfilRespuestaPolicy {
   }
 
   private dimension(nodo: NodoConversacional): DimensionPerfilClinico | null {
-    const { capturaPerfil, captura_perfil: anterior } = nodo.contenido;
-    if (capturaPerfil == null && anterior == null) return null;
-    const dimension =
-      typeof capturaPerfil === 'object' && !Array.isArray(capturaPerfil)
-        ? (capturaPerfil as { dimension?: unknown } | null)?.dimension
-        : capturaPerfil;
-    const legado =
-      anterior === 'tipo_dependencia'
-        ? DimensionPerfilClinico.TIPO_DEPENDENCIA
-        : anterior === 'tipo_craving'
-          ? DimensionPerfilClinico.TIPO_CRAVING
-          : null;
-    if (
-      (anterior != null && legado === null) ||
-      (capturaPerfil != null &&
-        dimension !== DimensionPerfilClinico.TIPO_DEPENDENCIA &&
-        dimension !== DimensionPerfilClinico.TIPO_CRAVING) ||
-      (capturaPerfil != null && legado !== null && dimension !== legado)
-    )
-      return configuracion(
-        'Dimensión clínica no configurada o contradictoria.',
-      );
-    return (dimension ?? legado) as DimensionPerfilClinico;
+    return extraerDimensionCapturaPerfil(nodo.contenido);
   }
 }

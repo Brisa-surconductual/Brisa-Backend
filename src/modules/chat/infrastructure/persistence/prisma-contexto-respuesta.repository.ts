@@ -2,7 +2,10 @@ import { Prisma } from '@prisma/client';
 import { ContextoRespuestaTransaccion } from '../../application/ports/procesar-respuesta.port';
 import { NodoConversacionalMapper } from '../mappers/nodo-conversacional.mapper';
 import { SesionConversacionalMapper } from '../mappers/sesion-conversacional.mapper';
-import { TransicionConversacionalMapper } from '../mappers/transicion-conversacional.mapper';
+import {
+  INCLUIR_REGLA_DE_TRANSICION,
+  TransicionConversacionalMapper,
+} from '../mappers/transicion-conversacional.mapper';
 
 /** Consultas de la transacción; no decide permisos, estados o rutas. */
 export class PrismaContextoRespuestaRepository implements ContextoRespuestaTransaccion {
@@ -35,11 +38,7 @@ export class PrismaContextoRespuestaRepository implements ContextoRespuestaTrans
   async buscarTransiciones(idNodo: string) {
     const filas = await this.tx.reglas_nodos.findMany({
       where: { id_nodo_origen: idNodo },
-      include: {
-        nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos: {
-          include: { reglas_validaciones: true },
-        },
-      },
+      include: INCLUIR_REGLA_DE_TRANSICION,
       orderBy: [{ orden_evaluacion: 'asc' }, { id_regla: 'asc' }],
     });
     return filas.map((f) => TransicionConversacionalMapper.toDomain(f));

@@ -35,7 +35,7 @@ describe('ClonarVersionFlujoUseCase (RF-25C)', () => {
     expect(respuesta).toMatchObject({
       id_flujo_origen: ids.flujo,
       nodos_copiados: 2,
-      transiciones_copiadas: 1,
+      transiciones_copiadas: 2,
       flujo: {
         version: 2,
         estado: EstadoFlujoConversacional.BORRADOR,
@@ -51,7 +51,7 @@ describe('ClonarVersionFlujoUseCase (RF-25C)', () => {
     await useCase.execute(ids.flujo, ids.actor);
 
     const [clon] = repository.guardarArbolClonado.mock.calls[0];
-    expect(clon.transiciones[0].reglaValidacion.idReglaValidacion).not.toBe(
+    expect(clon.transiciones[0].reglaValidacion?.idReglaValidacion).not.toBe(
       ids.regla,
     );
   });

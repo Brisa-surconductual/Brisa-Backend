@@ -21,6 +21,9 @@ export const ids = {
   entrada: '00000000-0000-4000-8000-000000000010',
 };
 export const fecha = new Date('2026-10-17T12:00:00.000Z');
+/** RF-25: el origen pide un número de 0 a 10; su transición, igualdad con 5. */
+export const entradaOrigen = { tipo: 'NUMERICO', min: 0, max: 10 };
+export const valorEsperado = { valor: 5 };
 export const flujoRow = {
   id_flujo: ids.flujo,
   nombre: 'Árbol HU-03',
@@ -33,41 +36,6 @@ export const flujoRow = {
   fecha_archivado: null,
   tipo_dependencia: null,
   tipo_craving: null,
-};
-export const reglaRow = {
-  id_regla_validacion: ids.validacion,
-  tipo_dato: TipoDatoValidacion.TEXTO,
-  obligatorio: true,
-  valor_min: null,
-  valor_max: null,
-  formato_regex: null,
-  valores_permitidos: [] as string[],
-  mensaje_error: 'Respuesta requerida',
-};
-export const nodoRow = (id = ids.origen) => ({
-  id_nodo: id,
-  id_flujo: ids.flujo,
-  id_tipo_nodo: ids.tipo,
-  contenido: { texto: 'Mensaje' },
-  es_nodo_inicial: id === ids.origen,
-  orden: 1,
-  id_contenido_cronograma: null,
-  creado_por: ids.actor,
-  fecha_creacion: fecha,
-  fecha_actualizacion: fecha,
-  tipo_nodo: { nombre: 'MENSAJE' },
-});
-export const transicionRow = {
-  id_regla: ids.transicion,
-  id_flujo: ids.flujo,
-  id_nodo_origen: ids.origen,
-  id_nodo_destino: ids.destino,
-  id_regla_validacion: ids.validacion,
-  operador_condicion: OperadorCondicion.IGUALDAD,
-  valor_condicion: { valor: 'si' },
-  orden_evaluacion: 1,
-  fecha_creacion: fecha,
-  reglas_validaciones: reglaRow,
 };
 
 export function arbolDominio(): ArbolConversacional {
@@ -87,7 +55,9 @@ export function arbolDominio(): ArbolConversacional {
       ids.flujo,
       ids.tipo,
       'MENSAJE',
-      { texto: 'Mensaje' },
+      id === ids.origen
+        ? { texto: 'Mensaje', entrada: entradaOrigen }
+        : { texto: 'Mensaje' },
       id === ids.origen,
       1,
       null,
@@ -97,21 +67,21 @@ export function arbolDominio(): ArbolConversacional {
     );
   const regla = new ReglaValidacion(
     ids.validacion,
-    TipoDatoValidacion.TEXTO,
+    TipoDatoValidacion.NUMERICO,
     true,
     null,
     null,
     null,
     [],
-    reglaRow.mensaje_error,
+    'Respuesta requerida',
+    OperadorCondicion.IGUALDAD,
+    valorEsperado,
   );
   const transicion = new TransicionConversacional(
     ids.transicion,
     ids.flujo,
     ids.origen,
     ids.destino,
-    OperadorCondicion.IGUALDAD,
-    transicionRow.valor_condicion,
     1,
     regla,
     fecha,
@@ -120,5 +90,85 @@ export function arbolDominio(): ArbolConversacional {
     flujo,
     [nodo(ids.origen), nodo(ids.destino)],
     [transicion],
+  );
+}
+
+/**
+ * RF-25: árbol grupal que cumple todo lo que exige publicar: el de
+ * `arbolDominio` más los dos nodos de captura clínica, cada uno con una
+ * transición por cada valor de su dominio.
+ */
+export function arbolGrupalPublicable(): ArbolConversacional {
+  const base = arbolDominio();
+  const captura = (idNodo: string, dimension: string, valores: string[]) =>
+    new NodoConversacional(
+      idNodo,
+      ids.flujo,
+      ids.tipo,
+      'PREGUNTA',
+      {
+        texto: dimension,
+        capturaPerfil: { dimension },
+        entrada: {
+          tipo: 'SELECCION_UNICA',
+          opciones: valores.map((valor) => ({ valor, etiqueta: valor })),
+        },
+      },
+      false,
+      2,
+      null,
+      ids.actor,
+      fecha,
+      fecha,
+    );
+  const salidas = (origen: string, destino: string, valores: string[]) =>
+    valores.map(
+      (valor, i) =>
+        new TransicionConversacional(
+          `${origen.slice(0, -2)}${i}${valor.length}`,
+          ids.flujo,
+          origen,
+          destino,
+          i + 1,
+          new ReglaValidacion(
+            `regla-${origen}-${valor}`,
+            TipoDatoValidacion.TEXTO,
+            true,
+            null,
+            null,
+            null,
+            [],
+            'Elige una opción',
+            OperadorCondicion.IGUALDAD,
+            { valor },
+          ),
+          fecha,
+        ),
+    );
+  const dependencia = ['ABSTINENCIA_FISICA', 'TOLERANCIA'];
+  const craving = ['POSITIVO', 'NEGATIVO'];
+  const idDependencia = '00000000-0000-4000-8000-000000000011';
+  const idCraving = '00000000-0000-4000-8000-000000000012';
+  return new ArbolConversacional(
+    base.flujo,
+    [
+      base.nodos[0],
+      captura(idDependencia, 'TIPO_DEPENDENCIA', dependencia),
+      captura(idCraving, 'TIPO_CRAVING', craving),
+      base.nodos[1],
+    ],
+    [
+      new TransicionConversacional(
+        ids.transicion,
+        ids.flujo,
+        ids.origen,
+        idDependencia,
+        1,
+        base.transiciones[0].reglaValidacion,
+        fecha,
+      ),
+      ...salidas(idDependencia, idCraving, dependencia),
+      ...salidas(idCraving, ids.destino, craving),
+    ],
   );
 }

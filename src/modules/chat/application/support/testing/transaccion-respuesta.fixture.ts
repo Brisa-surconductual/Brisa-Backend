@@ -24,17 +24,16 @@ export function transaccionRespuestaPrueba() {
   return {
     contexto: {
       bloquearSesion: jest.fn().mockResolvedValue(sesion),
-      buscarNodo: jest
-        .fn()
-        .mockImplementation((id: string) =>
-          Promise.resolve(
-            nodoRespuesta(
-              id === ids.nodo ? { tipo: 'NUMERICO' } : null,
-              id === ids.nodo ? 'PREGUNTA' : 'MENSAJE',
-              id,
-            ),
+      buscarNodo: jest.fn().mockImplementation((id: string) =>
+        Promise.resolve(
+          nodoRespuesta(
+            // El rango básico vive en la entrada del nodo (RF-25).
+            id === ids.nodo ? { tipo: 'NUMERICO', min: 0, max: 10 } : null,
+            id === ids.nodo ? 'PREGUNTA' : 'MENSAJE',
+            id,
           ),
         ),
+      ),
       buscarTransiciones: jest.fn().mockResolvedValue([transicionRespuesta()]),
       tieneSalidas: jest.fn().mockResolvedValue(true),
     },

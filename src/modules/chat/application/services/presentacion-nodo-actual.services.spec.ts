@@ -165,21 +165,18 @@ describe('Presentación RF-26: bloques y entrada', () => {
     ).toHaveLength(1);
   });
   it('no inventa entrada en un mensaje', () =>
-    expect(entrada.preparar({}, [])).toBeNull());
+    expect(entrada.preparar({})).toBeNull());
   it('mantiene cero y false explícitos en la configuración', () => {
     expect(
-      entrada.preparar(
-        {
-          entrada: {
-            tipo: 'ESCALA',
-            obligatorio: false,
-            min: 0,
-            max: 10,
-            paso: 1,
-          },
+      entrada.preparar({
+        entrada: {
+          tipo: 'ESCALA',
+          obligatorio: false,
+          min: 0,
+          max: 10,
+          paso: 1,
         },
-        [],
-      ),
+      }),
     ).toMatchObject({
       tipo: 'ESCALA',
       obligatorio: false,
@@ -196,25 +193,22 @@ describe('Presentación RF-26: bloques y entrada', () => {
     'SELECCION_UNICA',
     'SELECCION_MULTIPLE',
   ])('presenta %s sin validar ninguna respuesta', (tipo) => {
-    expect(entrada.preparar({ entrada: { tipo } }, [])?.tipo).toBe(tipo);
+    expect(entrada.preparar({ entrada: { tipo } })?.tipo).toBe(tipo);
   });
-  it('toma alternativas de las reglas existentes y conserva etiquetas', () => {
-    const r = entrada.preparar(
-      {
-        entrada: {
-          tipo_entrada: 'SELECCION_UNICA',
-          opciones: [{ valor: 'a', etiqueta: 'Primera' }],
-        },
+  it('toma las opciones y sus etiquetas de la entrada del nodo', () => {
+    const r = entrada.preparar({
+      entrada: {
+        tipo_entrada: 'SELECCION_UNICA',
+        opciones: [{ valor: 'a', etiqueta: 'Primera' }],
       },
-      [
-        {
-          obligatorio: true,
-          valorMin: null,
-          valorMax: null,
-          valoresPermitidos: ['a'],
-        },
-      ],
-    );
+    });
     expect(r?.opciones).toEqual([{ valor: 'a', etiqueta: 'Primera' }]);
+  });
+  it('un Sí/No no muestra opciones aunque sus reglas usen true/false (RF-25)', () => {
+    expect(entrada.preparar({ entrada: { tipo: 'BOOLEANO' } })).toMatchObject({
+      tipo: 'BOOLEANO',
+      obligatorio: true,
+      opciones: null,
+    });
   });
 });

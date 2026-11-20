@@ -322,13 +322,14 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
       tx.contexto.buscarNodo.mockResolvedValueOnce(nodoRespuesta({ tipo }));
       tx.contexto.buscarTransiciones.mockResolvedValue([
         transicionRespuesta(
-          { valor },
-          Op.IGUALDAD,
-          reglaRespuesta({
-            tipoDato,
-            obligatorio: tipo !== 'CONTINUAR',
-            valoresPermitidos: [...permitidos],
-          }),
+          tipo === 'CONTINUAR'
+            ? null
+            : reglaRespuesta({
+                tipoDato,
+                valoresPermitidos: [...permitidos],
+                operadorCondicion: Op.IGUALDAD,
+                valorEsperado: { valor },
+              }),
         ),
       ]);
       await post({ ...body(), tipoEntrada: tipo, valor }).expect(200);
@@ -343,11 +344,11 @@ describe('RF-27/28/29 POST respuestas (HTTP)', () => {
       tx.contexto.buscarNodo.mockResolvedValueOnce(n);
       tx.contexto.buscarTransiciones.mockResolvedValue([
         transicionRespuesta(
-          { campo: 'es_valida', valor: true },
-          Op.IGUALDAD,
           reglaRespuesta({
             tipoDato: Dato.SELECCION,
             valoresPermitidos: ['ABSTINENCIA_FISICA', 'TOLERANCIA'],
+            operadorCondicion: Op.IGUALDAD,
+            valorEsperado: { valor: 'ABSTINENCIA_FISICA' },
           }),
         ),
       ]);

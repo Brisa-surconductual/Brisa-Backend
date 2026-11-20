@@ -46,6 +46,8 @@ describe('Mappers del árbol conversacional', () => {
     formato_regex: null,
     valores_permitidos: [],
     mensaje_error: 'Fuera de rango',
+    operador_condicion: 'RANGO',
+    valor_esperado: { min: 1.5, max: 3 },
   } as never;
 
   it('convierte un flujo en entidad y de vuelta a datos de persistencia', () => {
@@ -94,6 +96,7 @@ describe('Mappers del árbol conversacional', () => {
       nombreTipoNodo: 'MENSAJE',
       esNodoInicial: true,
     });
+    expect(nodo).not.toHaveProperty('idReglaValidacion');
     expect(NodoConversacionalMapper.toCreateData(nodo)).toMatchObject({
       id_nodo: ids.nodoA,
       id_tipo_nodo: ids.tipo,
@@ -111,45 +114,48 @@ describe('Mappers del árbol conversacional', () => {
       tipoDato: TipoDatoValidacion.NUMERICO,
       valorMin: 1.5,
       valorMax: null,
+      operadorCondicion: OperadorCondicion.RANGO,
+      valorEsperado: { min: 1.5, max: 3 },
     });
     expect(ReglaValidacionMapper.toData(regla)).toMatchObject({
       id_regla_validacion: ids.regla,
       valor_min: 1.5,
       valor_max: null,
+      operador_condicion: 'RANGO',
+      valor_esperado: { min: 1.5, max: 3 },
     });
   });
 
-  it('convierte una transición con su regla y conserva el null de la condición', () => {
+  it('convierte una transición con su regla propia, o sin regla (automática)', () => {
     const transicion = TransicionConversacionalMapper.toDomain({
       id_regla: ids.transicion,
       id_flujo: ids.flujo,
       id_nodo_origen: ids.nodoA,
       id_nodo_destino: ids.nodoB,
-      operador_condicion: 'IGUALDAD',
-      valor_condicion: { valor: 'si' },
       orden_evaluacion: 1,
+      id_regla_validacion: ids.regla,
       fecha_creacion: fecha,
-      nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos: {
-        reglas_validaciones: filaRegla,
-      },
-    } as never);
+      reglas_validaciones: filaRegla,
+    });
 
     expect(transicion).toMatchObject({
       idTransicion: ids.transicion,
-      operadorCondicion: OperadorCondicion.IGUALDAD,
-      reglaValidacion: { idReglaValidacion: ids.regla },
+      reglaValidacion: {
+        idReglaValidacion: ids.regla,
+        operadorCondicion: OperadorCondicion.RANGO,
+      },
     });
     expect(
       TransicionConversacionalMapper.toCreateData(transicion),
     ).toMatchObject({
       id_regla: ids.transicion,
-      valor_condicion: { valor: 'si' },
+      id_regla_validacion: ids.regla,
     });
     expect(
       TransicionConversacionalMapper.toUpdateData(
-        transicion.actualizar({ valorCondicion: null }),
-      ).valor_condicion,
-    ).toBe(Prisma.JsonNull);
+        transicion.actualizar({ reglaValidacion: null }),
+      ).id_regla_validacion,
+    ).toBeNull();
   });
 
   it('convierte los catálogos y la auditoría (identificador bigint)', () => {

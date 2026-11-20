@@ -24,7 +24,7 @@ describe('ValidarArbolConversacionalUseCase (RF-25 / RF-25C)', () => {
     await expect(useCase.execute(ids.flujo)).resolves.toEqual({
       valido: true,
       total_nodos: 2,
-      total_transiciones: 1,
+      total_transiciones: 2,
     });
   });
 

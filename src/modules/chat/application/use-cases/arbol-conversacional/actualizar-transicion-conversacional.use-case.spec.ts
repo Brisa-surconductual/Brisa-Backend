@@ -1,8 +1,6 @@
-import { ReglaValidacion } from '../../../domain/entities/reglas-validacion/reglas-validacion.entity';
-import { TipoDatoValidacion } from '../../../domain/enums/tipo-dato-validacion-enum';
+import { OperadorCondicion } from '../../../domain/enums/operador-condicional.enum';
 import {
   ReglaValidacionInvalidaException,
-  ReglaValidacionNoEncontradaException,
   TransicionConversacionalNoEncontradaException,
 } from '../../../domain/exceptions';
 import { SolicitudActualizacionVaciaException } from '../../exceptions/solicitud-actualizacion-vacia.exception';
@@ -10,12 +8,13 @@ import {
   arbol,
   ids,
   nodo,
+  reglaTexto,
   repositorioSimulado,
   transicion,
 } from '../../support/testing/arbol-fixtures';
 import { ActualizarTransicionConversacionalUseCase } from './actualizar-transicion-conversacional.use-case';
 
-describe('ActualizarTransicionConversacionalUseCase (RF-25)', () => {
+describe('ActualizarTransicionConversacionalUseCase (RF-25, regla propia)', () => {
   const repository = repositorioSimulado();
   const useCase = new ActualizarTransicionConversacionalUseCase(repository);
 
@@ -26,7 +25,7 @@ describe('ActualizarTransicionConversacionalUseCase (RF-25)', () => {
     repository.buscarNodo.mockImplementation((id) => Promise.resolve(nodo(id)));
   });
 
-  it('conserva lo que no se envía y deduce el flujo de la transición', async () => {
+  it('conserva lo que no se envía, incluida su regla', async () => {
     const respuesta = await useCase.execute(
       ids.transicion,
       { orden_evaluacion: 2 },
@@ -41,87 +40,47 @@ describe('ActualizarTransicionConversacionalUseCase (RF-25)', () => {
       idNodoDestino: ids.nodoB,
       ordenEvaluacion: 2,
     });
-    expect(guardada.reglaValidacion.idReglaValidacion).toBe(ids.regla);
+    expect(guardada.reglaValidacion).toBe(reglaTexto);
     expect(actor).toBe(ids.actor);
     expect(respuesta.id_transicion).toBe(ids.transicion);
   });
 
-  it('sustituye la regla de validación por otra existente', async () => {
-    const otra = new ReglaValidacion(
-      'regla-nueva',
-      TipoDatoValidacion.TEXTO,
-      true,
-      null,
-      null,
-      null,
-      [],
-      'Otro mensaje',
-    );
-    repository.buscarReglaValidacion.mockResolvedValue(otra);
-
+  it('reemplaza la regla propia por una nueva derivada del nodo origen', async () => {
     await useCase.execute(
       ids.transicion,
-      { id_regla_validacion: 'regla-nueva' },
-      ids.actor,
-    );
-
-    expect(repository.guardarTransicion.mock.calls[0][0].reglaValidacion).toBe(
-      otra,
-    );
-  });
-
-  it('edita la regla en su sitio cuando solo esta transición la usa', async () => {
-    repository.contarUsosReglaValidacion.mockResolvedValue(1);
-
-    await useCase.execute(
-      ids.transicion,
-      { regla_validacion: { mensaje_error: 'Nuevo mensaje' } },
+      {
+        regla_validacion: {
+          valor_esperado: { valor: 'no' },
+          mensaje_error: 'Elige no.',
+        },
+      },
       ids.actor,
     );
 
     const regla = repository.guardarTransicion.mock.calls[0][0].reglaValidacion;
-    expect(regla.idReglaValidacion).toBe(ids.regla);
-    expect(regla.mensajeError).toBe('Nuevo mensaje');
+    expect(regla).toMatchObject({
+      operadorCondicion: OperadorCondicion.IGUALDAD,
+      valorEsperado: { valor: 'no' },
+      mensajeError: 'Elige no.',
+    });
+    expect(regla?.idReglaValidacion).not.toBe(ids.regla);
   });
 
-  it('edita una copia cuando la regla la comparten varias transiciones', async () => {
-    repository.contarUsosReglaValidacion.mockResolvedValue(3);
-
-    await useCase.execute(
-      ids.transicion,
-      { regla_validacion: { mensaje_error: 'Nuevo mensaje' } },
-      ids.actor,
-    );
-
-    const regla = repository.guardarTransicion.mock.calls[0][0].reglaValidacion;
-    expect(regla.idReglaValidacion).not.toBe(ids.regla);
-    expect(regla.mensajeError).toBe('Nuevo mensaje');
-  });
-
-  it('no permite sustituir y editar la regla a la vez', async () => {
+  it('rechaza una regla que el nodo origen no admite', async () => {
     await expect(
       useCase.execute(
         ids.transicion,
         {
-          id_regla_validacion: 'otra',
-          regla_validacion: { mensaje_error: 'x' },
+          regla_validacion: {
+            operador_condicion: OperadorCondicion.RANGO,
+            valor_esperado: { min: 1, max: 2 },
+            mensaje_error: 'x',
+          },
         },
         ids.actor,
       ),
     ).rejects.toBeInstanceOf(ReglaValidacionInvalidaException);
     expect(repository.guardarTransicion).not.toHaveBeenCalled();
-  });
-
-  it('rechaza una regla de reemplazo inexistente', async () => {
-    repository.buscarReglaValidacion.mockResolvedValue(null);
-
-    await expect(
-      useCase.execute(
-        ids.transicion,
-        { id_regla_validacion: 'no-existe' },
-        ids.actor,
-      ),
-    ).rejects.toBeInstanceOf(ReglaValidacionNoEncontradaException);
   });
 
   it('rechaza una edición sin cambios', () => {

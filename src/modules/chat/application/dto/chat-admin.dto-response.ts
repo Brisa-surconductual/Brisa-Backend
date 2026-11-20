@@ -1,4 +1,3 @@
-import { ReglaValidacion } from '../../domain/entities/reglas-validacion/reglas-validacion.entity';
 import { ContenidoCronogramaConversacional } from '../../domain/entities/catalogos/contenido-cronograma.entity';
 import { TipoEntradaConversacional } from '../../domain/entities/catalogos/tipo-entrada.entity';
 import { EstadoFlujoConversacional } from '../../domain/enums/estado-flujo-conversacional.enum';
@@ -14,6 +13,7 @@ import {
   ArbolConversacionalDtoResponse,
   FlujoConversacionalDtoResponse,
   NodoConversacionalDtoResponse,
+  ReglaTransicionDtoResponse,
   TipoNodoDtoResponse,
   TransicionConversacionalDtoResponse,
 } from './arbol-conversacional.dto-response';
@@ -26,15 +26,14 @@ export class RespuestaChatAdminDtoResponse<T> {
   }
 }
 
+/** RF-25: la transición trae su regla propia anidada (`null` si es automática). */
 export class TransicionChatAdminDtoResponse {
   id_regla!: string;
   id_flujo!: string;
   id_nodo_origen!: string;
   id_nodo_destino!: string;
-  id_regla_validacion!: string;
-  operador_condicion!: OperadorCondicion;
-  valor_condicion!: unknown;
   orden_evaluacion!: number;
+  regla_validacion!: ReglaTransicionDtoResponse | null;
   fecha_creacion!: Date;
 
   static desde(
@@ -45,10 +44,8 @@ export class TransicionChatAdminDtoResponse {
       id_flujo: transicion.id_flujo,
       id_nodo_origen: transicion.id_nodo_origen,
       id_nodo_destino: transicion.id_nodo_destino,
-      id_regla_validacion: transicion.regla_validacion.id_regla_validacion,
-      operador_condicion: transicion.operador_condicion,
-      valor_condicion: transicion.valor_condicion,
       orden_evaluacion: transicion.orden_evaluacion,
+      regla_validacion: transicion.regla_validacion,
       fecha_creacion: transicion.fecha_creacion,
     };
   }
@@ -68,30 +65,6 @@ export class ArbolChatAdminDtoResponse {
       transiciones: arbol.transiciones.map((transicion) =>
         TransicionChatAdminDtoResponse.desde(transicion),
       ),
-    };
-  }
-}
-
-export class ReglaValidacionDtoResponse {
-  id_regla_validacion!: string;
-  tipo_dato!: TipoDatoValidacion;
-  obligatorio!: boolean;
-  valor_min!: number | null;
-  valor_max!: number | null;
-  formato_regex!: string | null;
-  valores_permitidos!: string[];
-  mensaje_error!: string;
-
-  static crear(regla: ReglaValidacion): ReglaValidacionDtoResponse {
-    return {
-      id_regla_validacion: regla.idReglaValidacion,
-      tipo_dato: regla.tipoDato,
-      obligatorio: regla.obligatorio,
-      valor_min: regla.valorMin,
-      valor_max: regla.valorMax,
-      formato_regex: regla.formatoRegex,
-      valores_permitidos: regla.valoresPermitidos,
-      mensaje_error: regla.mensajeError,
     };
   }
 }
@@ -130,7 +103,6 @@ export class ContenidoCronogramaDtoResponse {
 export class CatalogosChatDtoResponse {
   tipos_nodo!: TipoNodoDtoResponse[];
   tipos_entrada!: TipoEntradaDtoResponse[];
-  reglas_validacion!: ReglaValidacionDtoResponse[];
   contenidos_cronograma!: ContenidoCronogramaDtoResponse[];
   enums!: {
     modalidad: ModalidadConversacional[];
@@ -144,16 +116,12 @@ export class CatalogosChatDtoResponse {
   static crear(
     tiposNodo: TipoNodoConversacional[],
     tiposEntrada: TipoEntradaConversacional[],
-    reglas: ReglaValidacion[],
     contenidosCronograma: ContenidoCronogramaConversacional[],
   ): CatalogosChatDtoResponse {
     return {
       tipos_nodo: tiposNodo.map((tipo) => TipoNodoDtoResponse.crear(tipo)),
       tipos_entrada: tiposEntrada.map((tipo) =>
         TipoEntradaDtoResponse.crear(tipo),
-      ),
-      reglas_validacion: reglas.map((regla) =>
-        ReglaValidacionDtoResponse.crear(regla),
       ),
       contenidos_cronograma: contenidosCronograma.map((item) =>
         ContenidoCronogramaDtoResponse.crear(item),

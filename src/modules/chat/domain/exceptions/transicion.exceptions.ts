@@ -33,3 +33,11 @@ export class OrdenTransicionDuplicadoException extends DomainException {
     );
   }
 }
+
+export class OperadorCondicionIncompatibleException extends DomainException {
+  readonly tipo = 'SOLICITUD_INVALIDA';
+
+  constructor(mensaje: string) {
+    super(mensaje);
+  }
+}

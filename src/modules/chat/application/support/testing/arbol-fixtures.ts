@@ -26,6 +26,14 @@ export const ids = {
 };
 export const fecha = new Date('2026-10-01T12:00:00.000Z');
 
+export const entradaSiNo = {
+  tipo: 'SELECCION_UNICA',
+  opciones: [
+    { valor: 'si', etiqueta: 'Sí' },
+    { valor: 'no', etiqueta: 'No' },
+  ],
+};
+
 export function flujoGrupal(
   estado = EstadoFlujoConversacional.BORRADOR,
 ): FlujoConversacional {
@@ -71,7 +79,9 @@ export function nodo(
     idFlujo,
     ids.tipo,
     'MENSAJE',
-    { texto: 'Hola' },
+    // Selección única sí/no: `reglaTexto` (IGUALDAD "si") es una regla válida
+    // para su transición (RF-25).
+    { texto: 'Hola', entrada: entradaSiNo },
     inicial,
     1,
     null,
@@ -81,6 +91,7 @@ export function nodo(
   );
 }
 
+/** Regla propia de una transición desde un nodo `entradaSiNo`: "si". */
 export const reglaTexto = new ReglaValidacion(
   ids.regla,
   TipoDatoValidacion.TEXTO,
@@ -90,6 +101,8 @@ export const reglaTexto = new ReglaValidacion(
   null,
   [],
   'Respuesta requerida',
+  OperadorCondicion.IGUALDAD,
+  { valor: 'si' },
 );
 
 export function transicion(
@@ -102,20 +115,45 @@ export function transicion(
     idFlujo,
     origen,
     destino,
-    OperadorCondicion.IGUALDAD,
-    { valor: 'si' },
     1,
     reglaTexto,
     fecha,
   );
 }
 
-/** Árbol mínimo y válido: A (inicial) → B. */
+/** Segunda salida de A ("no"), para que la pregunta sí/no quede cubierta. */
+export function transicionNo(idFlujo = ids.flujo): TransicionConversacional {
+  return new TransicionConversacional(
+    `${ids.transicion.slice(0, -1)}9`,
+    idFlujo,
+    ids.nodoA,
+    ids.nodoB,
+    2,
+    new ReglaValidacion(
+      `${ids.regla.slice(0, -1)}9`,
+      TipoDatoValidacion.TEXTO,
+      true,
+      null,
+      null,
+      null,
+      [],
+      'Respuesta requerida',
+      OperadorCondicion.IGUALDAD,
+      { valor: 'no' },
+    ),
+    fecha,
+  );
+}
+
+/** Árbol mínimo y válido: A (inicial) → B por "si" y por "no". */
 export function arbol(flujo = flujoGrupal()): ArbolConversacional {
   return new ArbolConversacional(
     flujo,
     [nodo(ids.nodoA, flujo.idFlujo), nodo(ids.nodoB, flujo.idFlujo)],
-    [transicion(ids.nodoA, ids.nodoB, flujo.idFlujo)],
+    [
+      transicion(ids.nodoA, ids.nodoB, flujo.idFlujo),
+      transicionNo(flujo.idFlujo),
+    ],
   );
 }
 
@@ -126,18 +164,15 @@ export function repositorioSimulado(): jest.Mocked<ArbolConversacionalRepository
     'obtenerArbol',
     'buscarNodo',
     'buscarTransicion',
-    'buscarReglaValidacion',
     'buscarTipoNodo',
     'listarFlujos',
     'listarFlujosPersonalizados',
     'buscarPublicadoGrupal',
     'buscarPublicadoPersonalizado',
-    'contarUsosReglaValidacion',
     'obtenerUltimaVersionPersonalizada',
     'listarAuditoriaArbol',
     'listarTiposNodo',
     'listarTiposEntrada',
-    'listarReglasValidacion',
     'listarContenidosCronograma',
     'existeContenidoCronograma',
     'guardarFlujo',
@@ -145,7 +180,6 @@ export function repositorioSimulado(): jest.Mocked<ArbolConversacionalRepository
     'guardarArbolClonado',
     'guardarNodo',
     'guardarTransicion',
-    'guardarReglaValidacion',
   ] as const;
   return Object.fromEntries(
     metodos.map((metodo) => [metodo, jest.fn()]),

@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
+import { ArbolConversacional } from '../../../domain/entities/flujo/arbol-conversacional.entity';
+import { DimensionPerfilClinico } from '../../../domain/enums/perfil-clinico.enum';
 import { ModalidadConversacional } from '../../../domain/enums/modalidad-conversacional-enum';
 import {
+  CoberturaTransicionesIncompletaException,
   FlujoConversacionalNoEncontradoException,
   FlujoGrupalPublicadoExistenteException,
   FlujoPersonalizadoArchivadoException,
   GrafoInvalidoException,
+  NodoCapturaPerfilInvalidoException,
 } from '../../../domain/exceptions';
+import { extraerDimensionCapturaPerfil } from '../../../domain/policies/dimension-captura-perfil';
+import { opcionesDelNodo } from '../../../domain/policies/regla-por-tipo-entrada';
+import { valoresPermitidosCoincidenConDominio } from '../../../domain/policies/valores-permitidos-captura-perfil';
 import { ArbolConversacionalRepository } from '../../../domain/repositories/arbol-conversacional.repository';
 import { FlujoConversacionalDtoResponse } from '../../dto/arbol-conversacional.dto-response';
 import { ejecutarSeguro } from '../../support/ejecutar-seguro';
@@ -44,6 +51,11 @@ export class PublicarFlujoUseCase {
         throw new GrafoInvalidoException(diagnostico);
       }
 
+      const cobertura = arbol.diagnosticarCobertura();
+      if (cobertura.nodos_sin_cobertura.length > 0) {
+        throw new CoberturaTransicionesIncompletaException(cobertura);
+      }
+
       if (esPersonalizado) {
         const perfil = publicado.perfilClinico();
         const anterior = await this.repository.buscarPublicadoPersonalizado(
@@ -58,12 +70,50 @@ export class PublicarFlujoUseCase {
           idActor,
         );
       } else {
+        const diagnosticoPerfil = arbol.diagnosticarCapturaPerfil();
+        const dimensionesValoresInvalidos =
+          diagnosticoPerfil.dimensiones_ausentes.length === 0 &&
+          diagnosticoPerfil.dimensiones_duplicadas.length === 0
+            ? this.dimensionesConValoresInvalidos(arbol)
+            : [];
+        if (
+          diagnosticoPerfil.dimensiones_ausentes.length > 0 ||
+          diagnosticoPerfil.dimensiones_duplicadas.length > 0 ||
+          dimensionesValoresInvalidos.length > 0
+        ) {
+          throw new NodoCapturaPerfilInvalidoException({
+            ...diagnosticoPerfil,
+            dimensiones_valores_invalidos: dimensionesValoresInvalidos,
+          });
+        }
         if ((await this.repository.buscarPublicadoGrupal()) !== null) {
           throw new FlujoGrupalPublicadoExistenteException();
         }
         await this.repository.guardarFlujo(publicado, idActor);
       }
       return FlujoConversacionalDtoResponse.crear(publicado);
+    });
+  }
+
+  /**
+   * RF-25: las opciones de cada nodo de captura deben ser exactamente el
+   * dominio clínico de su dimensión (las reglas de sus transiciones solo
+   * pueden elegir entre esas opciones, y la cobertura exige un camino por cada una).
+   */
+  private dimensionesConValoresInvalidos(
+    arbol: ArbolConversacional,
+  ): DimensionPerfilClinico[] {
+    return arbol.nodos.flatMap((nodo) => {
+      const dimension = extraerDimensionCapturaPerfil(nodo.contenido);
+      if (dimension === null) return [];
+      const entrada = nodo.contenido.entrada;
+      const opciones =
+        typeof entrada === 'object' && entrada !== null
+          ? opcionesDelNodo(entrada as Record<string, unknown>)
+          : [];
+      return valoresPermitidosCoincidenConDominio(dimension, opciones)
+        ? []
+        : [dimension];
     });
   }
 }

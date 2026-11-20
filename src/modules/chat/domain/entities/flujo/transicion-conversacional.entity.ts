@@ -1,17 +1,19 @@
 import { randomUUID } from 'crypto';
-import { OperadorCondicion } from '../../enums/operador-condicional.enum';
 import { ReglaValidacion } from '../reglas-validacion/reglas-validacion.entity';
 
+/**
+ * RF-25: la transición solo une dos nodos con un orden de evaluación; cuándo
+ * se toma lo decide su regla propia (`null` solo si el origen no espera
+ * respuesta, CONTINUAR).
+ */
 export class TransicionConversacional {
   constructor(
     readonly idTransicion: string,
     readonly idFlujo: string,
     readonly idNodoOrigen: string,
     readonly idNodoDestino: string,
-    readonly operadorCondicion: OperadorCondicion,
-    readonly valorCondicion: unknown,
     readonly ordenEvaluacion: number,
-    readonly reglaValidacion: ReglaValidacion,
+    readonly reglaValidacion: ReglaValidacion | null,
     readonly fechaCreacion: Date,
   ) {}
 
@@ -19,18 +21,14 @@ export class TransicionConversacional {
     idFlujo: string,
     idNodoOrigen: string,
     idNodoDestino: string,
-    operadorCondicion: OperadorCondicion,
-    valorCondicion: unknown,
     ordenEvaluacion: number,
-    reglaValidacion: ReglaValidacion,
+    reglaValidacion: ReglaValidacion | null,
   ): TransicionConversacional {
     return new TransicionConversacional(
       randomUUID(),
       idFlujo,
       idNodoOrigen,
       idNodoDestino,
-      operadorCondicion,
-      valorCondicion,
       ordenEvaluacion,
       reglaValidacion,
       new Date(),
@@ -38,30 +36,20 @@ export class TransicionConversacional {
   }
 
   /** Aplica los cambios indicados; `undefined` conserva el valor actual. */
-  actualizar(
-    cambios: Partial<
-      Pick<
-        TransicionConversacional,
-        | 'idNodoOrigen'
-        | 'idNodoDestino'
-        | 'operadorCondicion'
-        | 'valorCondicion'
-        | 'ordenEvaluacion'
-        | 'reglaValidacion'
-      >
-    >,
-  ): TransicionConversacional {
+  actualizar(cambios: {
+    idNodoDestino?: string;
+    ordenEvaluacion?: number;
+    reglaValidacion?: ReglaValidacion | null;
+  }): TransicionConversacional {
     return new TransicionConversacional(
       this.idTransicion,
       this.idFlujo,
-      cambios.idNodoOrigen ?? this.idNodoOrigen,
+      this.idNodoOrigen,
       cambios.idNodoDestino ?? this.idNodoDestino,
-      cambios.operadorCondicion ?? this.operadorCondicion,
-      cambios.valorCondicion === undefined
-        ? this.valorCondicion
-        : cambios.valorCondicion,
       cambios.ordenEvaluacion ?? this.ordenEvaluacion,
-      cambios.reglaValidacion ?? this.reglaValidacion,
+      cambios.reglaValidacion === undefined
+        ? this.reglaValidacion
+        : cambios.reglaValidacion,
       this.fechaCreacion,
     );
   }
@@ -70,15 +58,13 @@ export class TransicionConversacional {
     idFlujo: string,
     idNodoOrigen: string,
     idNodoDestino: string,
-    reglaValidacion: ReglaValidacion,
+    reglaValidacion: ReglaValidacion | null,
   ): TransicionConversacional {
     return new TransicionConversacional(
       randomUUID(),
       idFlujo,
       idNodoOrigen,
       idNodoDestino,
-      this.operadorCondicion,
-      this.valorCondicion,
       this.ordenEvaluacion,
       reglaValidacion,
       new Date(),

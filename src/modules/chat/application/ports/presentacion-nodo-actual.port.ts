@@ -1,10 +1,3 @@
-export interface ReglaEntradaNodoActual {
-  obligatorio: boolean;
-  valorMin: number | null;
-  valorMax: number | null;
-  valoresPermitidos: string[];
-}
-
 export interface RecursoNodoActual {
   idRecurso: string;
   tipo: string;
@@ -17,10 +10,8 @@ export interface RecursoNodoActual {
 }
 
 export abstract class PresentacionNodoActualPort {
-  abstract consultarReglas(
-    idNodo: string,
-    idFlujo: string,
-  ): Promise<ReglaEntradaNodoActual[]>;
+  /** Si el nodo tiene al menos una transición saliente (si no, es terminal). */
+  abstract tieneSalidas(idNodo: string, idFlujo: string): Promise<boolean>;
   abstract consultarRecursos(idContenido: string): Promise<RecursoNodoActual[]>;
 }
 

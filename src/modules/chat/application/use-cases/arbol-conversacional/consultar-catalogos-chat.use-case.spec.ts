@@ -2,25 +2,20 @@ import { ContenidoCronogramaConversacional } from '../../../domain/entities/cata
 import { TipoEntradaConversacional } from '../../../domain/entities/catalogos/tipo-entrada.entity';
 import { TipoNodoConversacional } from '../../../domain/entities/catalogos/tipo-nodo.entity';
 import { ModalidadConversacional } from '../../../domain/enums/modalidad-conversacional-enum';
-import {
-  ids,
-  reglaTexto,
-  repositorioSimulado,
-} from '../../support/testing/arbol-fixtures';
+import { ids, repositorioSimulado } from '../../support/testing/arbol-fixtures';
 import { ConsultarCatalogosChatUseCase } from './consultar-catalogos-chat.use-case';
 
 describe('ConsultarCatalogosChatUseCase (RF-25)', () => {
   const repository = repositorioSimulado();
   const useCase = new ConsultarCatalogosChatUseCase(repository);
 
-  it('entrega tipos de nodo y entrada, reglas reutilizables y enums', async () => {
+  it('entrega tipos de nodo y entrada, contenido programado y enums, sin catálogo de reglas', async () => {
     repository.listarTiposNodo.mockResolvedValue([
       new TipoNodoConversacional(ids.tipo, 'MENSAJE'),
     ]);
     repository.listarTiposEntrada.mockResolvedValue([
       new TipoEntradaConversacional('entrada-1', 'TEXTO_LIBRE'),
     ]);
-    repository.listarReglasValidacion.mockResolvedValue([reglaTexto]);
     repository.listarContenidosCronograma.mockResolvedValue([
       new ContenidoCronogramaConversacional(
         'cc-1',
@@ -40,7 +35,7 @@ describe('ConsultarCatalogosChatUseCase (RF-25)', () => {
     expect(respuesta.tipos_entrada).toEqual([
       { id_tipo_entrada: 'entrada-1', nombre: 'TEXTO_LIBRE' },
     ]);
-    expect(respuesta.reglas_validacion[0].id_regla_validacion).toBe(ids.regla);
+    expect(respuesta).not.toHaveProperty('reglas_validacion');
     expect(respuesta.contenidos_cronograma).toEqual([
       {
         id_contenido_cronograma: 'cc-1',

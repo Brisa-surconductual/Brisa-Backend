@@ -68,14 +68,14 @@ describe('PrismaArbolConversacionalRepository', () => {
     null,
     [],
     'Fuera de rango',
+    OperadorCondicion.RANGO,
+    { min: 2, max: 4 },
   );
   const transicion = new TransicionConversacional(
     ids.transicion,
     ids.flujo,
     ids.nodoA,
     ids.nodoB,
-    OperadorCondicion.IGUALDAD,
-    'si',
     1,
     regla,
     fecha,
@@ -116,19 +116,18 @@ describe('PrismaArbolConversacionalRepository', () => {
     formato_regex: null,
     valores_permitidos: [],
     mensaje_error: 'Fuera de rango',
+    operador_condicion: 'RANGO',
+    valor_esperado: { min: 2, max: 4 },
   };
   const transicionRow = {
     id_regla: ids.transicion,
     id_flujo: ids.flujo,
     id_nodo_origen: ids.nodoA,
     id_nodo_destino: ids.nodoB,
-    operador_condicion: 'IGUALDAD',
-    valor_condicion: 'si',
     orden_evaluacion: 1,
+    id_regla_validacion: ids.regla,
     fecha_creacion: fecha,
-    nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos: {
-      reglas_validaciones: reglaRow,
-    },
+    reglas_validaciones: reglaRow,
   };
 
   const tx = {
@@ -158,6 +157,7 @@ describe('PrismaArbolConversacionalRepository', () => {
       findMany: jest.fn(),
       create: jest.fn(),
       upsert: jest.fn(),
+      delete: jest.fn(),
     },
     tipo_nodo: { findUnique: jest.fn(), findMany: jest.fn() },
     tipo_entrada: { findMany: jest.fn() },
@@ -206,7 +206,7 @@ describe('PrismaArbolConversacionalRepository', () => {
         expect.objectContaining({ where: { id_flujo: ids.flujo } }),
       );
       expect(arbol).toBeInstanceOf(ArbolConversacional);
-      expect(arbol?.transiciones[0].reglaValidacion.valorMax).toBe(5);
+      expect(arbol?.transiciones[0].reglaValidacion?.valorMax).toBe(5);
     });
 
     it('retorna null si el flujo no existe', async () => {
@@ -505,12 +505,10 @@ describe('PrismaArbolConversacionalRepository', () => {
           where: { id_regla_validacion: ids.regla },
         }),
       );
-      expect(tx.nodos.update).toHaveBeenCalledWith({
-        where: { id_nodo: ids.nodoA },
-        data: { id_regla_validacion: ids.regla },
-      });
+      expect(tx.nodos.update).not.toHaveBeenCalled();
       expect(tx.reglas_nodos.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
+          id_regla_validacion: ids.regla,
           id_regla: ids.transicion,
           id_nodo_origen: ids.nodoA,
           id_nodo_destino: ids.nodoB,
@@ -525,6 +523,7 @@ describe('PrismaArbolConversacionalRepository', () => {
     it('actualiza la transición existente y audita EDITAR_TRANSICION', async () => {
       tx.reglas_nodos.findUnique.mockResolvedValue({
         id_regla: ids.transicion,
+        id_regla_validacion: ids.regla,
       });
 
       await repo.guardarTransicion(
@@ -533,6 +532,7 @@ describe('PrismaArbolConversacionalRepository', () => {
       );
 
       expect(tx.reglas_nodos.create).not.toHaveBeenCalled();
+      expect(tx.reglas_validaciones.delete).not.toHaveBeenCalled();
       expect(tx.reglas_nodos.update).toHaveBeenCalledWith({
         where: { id_regla: ids.transicion },
         data: expect.objectContaining({ orden_evaluacion: 2 }),
@@ -583,44 +583,20 @@ describe('PrismaArbolConversacionalRepository', () => {
     });
   });
 
-  describe('guardarReglaValidacion', () => {
-    it('persiste la regla y su evento propio, sin flujo, en la misma transacción', async () => {
-      await repo.guardarReglaValidacion(regla, ids.actor);
-
-      expect(tx.reglas_validaciones.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          id_regla_validacion: ids.regla,
-          tipo_dato: 'NUMERICO',
-          valor_min: 1,
-          valor_max: 5,
-          mensaje_error: 'Fuera de rango',
-        }),
-      });
-      expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
-        auditoria('CREAR_REGLA_VALIDACION', null, ids.regla),
-      );
+  it('al reemplazar la regla de una transición borra la anterior (nunca se comparte)', async () => {
+    tx.reglas_nodos.findUnique.mockResolvedValue({
+      id_regla: ids.transicion,
+      id_regla_validacion: 'regla-anterior',
     });
 
-    it('propaga un fallo de auditoría para que la creación se revierta', async () => {
-      const fallo = new Error('auditoría no disponible');
-      tx.auditoria_arboles.create.mockRejectedValue(fallo);
+    await repo.guardarTransicion(transicion, ids.actor);
 
-      await expect(repo.guardarReglaValidacion(regla, ids.actor)).rejects.toBe(
-        fallo,
-      );
+    expect(tx.reglas_nodos.update).toHaveBeenCalledWith({
+      where: { id_regla: ids.transicion },
+      data: expect.objectContaining({ id_regla_validacion: ids.regla }),
     });
-  });
-
-  it('convierte los límites decimales de una regla sin alterar su valor', async () => {
-    tx.reglas_validaciones.findUnique.mockResolvedValue({
-      ...reglaRow,
-      valor_min: new Prisma.Decimal('1.5'),
-      valor_max: null,
+    expect(tx.reglas_validaciones.delete).toHaveBeenCalledWith({
+      where: { id_regla_validacion: 'regla-anterior' },
     });
-
-    const encontrada = await repo.buscarReglaValidacion(ids.regla);
-
-    expect(encontrada?.valorMin).toBe(1.5);
-    expect(encontrada?.valorMax).toBeNull();
   });
 });

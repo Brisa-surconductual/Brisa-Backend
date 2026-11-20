@@ -52,6 +52,8 @@ describe('ArbolConversacional (RF-25)', () => {
       null,
       [],
       'Respuesta requerida',
+      OperadorCondicion.IGUALDAD,
+      { valor: 'si' },
     );
 
   const transicion = (origen: string, destino: string, orden = 1) =>
@@ -60,8 +62,6 @@ describe('ArbolConversacional (RF-25)', () => {
       flujo.idFlujo,
       origen,
       destino,
-      OperadorCondicion.IGUALDAD,
-      true,
       orden,
       regla(),
       fecha,
@@ -160,6 +160,8 @@ describe('ArbolConversacional (RF-25)', () => {
           null,
           [],
           'Fuera de rango',
+          OperadorCondicion.RANGO,
+          { min: 1, max: 2 },
         ),
     ).toThrow(ReglaValidacionInvalidaException);
   });
@@ -176,6 +178,8 @@ describe('ArbolConversacional (RF-25)', () => {
           null,
           [],
           'Seleccione una opción',
+          OperadorCondicion.IGUALDAD,
+          { valor: 'a' },
         ),
     ).toThrow(ReglaValidacionInvalidaException);
   });

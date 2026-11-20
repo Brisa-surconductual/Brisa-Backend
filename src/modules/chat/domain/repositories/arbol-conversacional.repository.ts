@@ -6,7 +6,6 @@ import { ArbolConversacional } from '../entities/flujo/arbol-conversacional.enti
 import { FlujoConversacional } from '../entities/flujo/flujo-conversacional.entity';
 import { NodoConversacional } from '../entities/flujo/nodo-conversacional.entity';
 import { TransicionConversacional } from '../entities/flujo/transicion-conversacional.entity';
-import { ReglaValidacion } from '../entities/reglas-validacion/reglas-validacion.entity';
 import {
   TipoCravingClinico,
   TipoDependenciaClinica,
@@ -31,10 +30,6 @@ export abstract class ArbolConversacionalRepository {
   abstract buscarTransicion(
     idTransicion: string,
   ): Promise<TransicionConversacional | null>;
-
-  abstract buscarReglaValidacion(
-    idReglaValidacion: string,
-  ): Promise<ReglaValidacion | null>;
 
   abstract buscarTipoNodo(
     idTipoNodo: string,
@@ -66,11 +61,6 @@ export abstract class ArbolConversacionalRepository {
     tipoCraving: TipoCravingClinico,
   ): Promise<number>;
 
-  /** Cantidad de transiciones que referencian la regla de validación. */
-  abstract contarUsosReglaValidacion(
-    idReglaValidacion: string,
-  ): Promise<number>;
-
   abstract listarAuditoriaArbol(
     idFlujo: string,
   ): Promise<AuditoriaArbolConversacional[]>;
@@ -78,8 +68,6 @@ export abstract class ArbolConversacionalRepository {
   abstract listarTiposNodo(): Promise<TipoNodoConversacional[]>;
 
   abstract listarTiposEntrada(): Promise<TipoEntradaConversacional[]>;
-
-  abstract listarReglasValidacion(): Promise<ReglaValidacion[]>;
 
   /** Contenido ya asociado a una unidad temporal, disponible para un nodo. */
   abstract listarContenidosCronograma(): Promise<
@@ -117,14 +105,12 @@ export abstract class ArbolConversacionalRepository {
     idActor: string,
   ): Promise<void>;
 
-  /** Guarda la transición junto con su regla de validación. */
+  /**
+   * Guarda la transición junto con su regla propia; si la regla se
+   * reemplazó, elimina la anterior (nunca se comparte).
+   */
   abstract guardarTransicion(
     transicion: TransicionConversacional,
-    idActor: string,
-  ): Promise<void>;
-
-  abstract guardarReglaValidacion(
-    regla: ReglaValidacion,
     idActor: string,
   ): Promise<void>;
 }

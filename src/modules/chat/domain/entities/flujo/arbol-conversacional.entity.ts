@@ -4,16 +4,27 @@ import {
   NodoInicialInexistenteException,
   NodosHuerfanosException,
 } from '../../exceptions';
-import { DiagnosticoArbol, NodoDiagnostico } from './diagnostico-arbol';
+import { OperadorCondicion } from '../../enums/operador-condicional.enum';
+import { DimensionPerfilClinico } from '../../enums/perfil-clinico.enum';
+import { TipoEntradaRespuesta } from '../../enums/tipo-entrada-respuesta.enum';
+import { extraerDimensionCapturaPerfil } from '../../policies/dimension-captura-perfil';
+import {
+  opcionesDelNodo,
+  resolverTipoEntrada,
+} from '../../policies/regla-por-tipo-entrada';
+import {
+  DiagnosticoCobertura,
+  NodoSinCobertura,
+} from '../../results/diagnostico-cobertura';
+import {
+  DiagnosticoArbol,
+  NodoDiagnostico,
+} from '../../results/diagnostico-arbol';
+import { DiagnosticoCapturaPerfil } from '../../results/diagnostico-captura-perfil';
+import { ResultadoValidacionArbol } from '../../results/resultado-validacion-arbol';
 import { FlujoConversacional } from './flujo-conversacional.entity';
 import { NodoConversacional } from './nodo-conversacional.entity';
 import { TransicionConversacional } from './transicion-conversacional.entity';
-
-export interface ResultadoValidacionArbol {
-  valido: true;
-  totalNodos: number;
-  totalTransiciones: number;
-}
 
 export class ArbolConversacional {
   constructor(
@@ -42,7 +53,7 @@ export class ArbolConversacional {
 
   /**
    * Copia el árbol como una nueva versión en borrador. Cada transición recibe
-   * su propia copia de la regla de validación: las versiones son independientes.
+   * su propia copia de su regla: las versiones son independientes.
    */
   clonar(version: number, idActor: string): ArbolConversacional {
     const flujo = this.flujo.clonarComoBorrador(version, idActor);
@@ -62,7 +73,7 @@ export class ArbolConversacional {
         flujo.idFlujo,
         origen,
         destino,
-        transicion.reglaValidacion.copiar(),
+        transicion.reglaValidacion?.copiar() ?? null,
       );
     });
     return new ArbolConversacional(flujo, nodos, transiciones);
@@ -112,6 +123,72 @@ export class ArbolConversacional {
       ),
       sin_nodo_inicial: nodosIniciales.length !== 1,
     };
+  }
+
+  /** RF-25: el árbol grupal debe designar exactamente un nodo por dimensión. */
+  diagnosticarCapturaPerfil(): DiagnosticoCapturaPerfil {
+    const ocurrencias = new Map<DimensionPerfilClinico, number>();
+
+    for (const nodo of this.nodos) {
+      const dimension = extraerDimensionCapturaPerfil(nodo.contenido);
+      if (dimension === null) continue;
+      ocurrencias.set(dimension, (ocurrencias.get(dimension) ?? 0) + 1);
+    }
+
+    const todas = Object.values(DimensionPerfilClinico);
+    return {
+      dimensiones_ausentes: todas.filter(
+        (dimension) => (ocurrencias.get(dimension) ?? 0) === 0,
+      ),
+      dimensiones_duplicadas: todas.filter(
+        (dimension) => (ocurrencias.get(dimension) ?? 0) > 1,
+      ),
+    };
+  }
+
+  /**
+   * RF-25: en selección única y Sí/No cada respuesta posible debe tener su
+   * transición; si no, el estudiante quedaría en un callejón sin salida.
+   */
+  diagnosticarCobertura(): DiagnosticoCobertura {
+    const nodosSinCobertura: NodoSinCobertura[] = [];
+
+    for (const nodo of this.nodos) {
+      const tipo = resolverTipoEntrada(nodo.contenido);
+      const requeridos =
+        tipo === TipoEntradaRespuesta.OPCION_UNICA
+          ? opcionesDelNodo(nodo.contenido.entrada as Record<string, unknown>)
+          : tipo === TipoEntradaRespuesta.BOOLEANO
+            ? ['true', 'false']
+            : null;
+      const salidas = this.transiciones.filter(
+        (t) => t.idNodoOrigen === nodo.idNodo,
+      );
+      // Un nodo sin salidas es un final del flujo: no hay camino que cubrir.
+      if (requeridos === null || salidas.length === 0) continue;
+
+      const cubiertos = new Set(
+        salidas
+          .filter(
+            (t) =>
+              t.reglaValidacion?.operadorCondicion ===
+              OperadorCondicion.IGUALDAD,
+          )
+          .map((t) =>
+            String(
+              (t.reglaValidacion?.valorEsperado as { valor: unknown }).valor,
+            ),
+          ),
+      );
+      const faltantes = requeridos.filter((valor) => !cubiertos.has(valor));
+      if (faltantes.length > 0)
+        nodosSinCobertura.push({
+          ...this.describirNodo(nodo),
+          valores_faltantes: faltantes,
+        });
+    }
+
+    return { nodos_sin_cobertura: nodosSinCobertura };
   }
 
   /** Identificación legible del nodo (sin numerar ni truncar: eso es presentación). */

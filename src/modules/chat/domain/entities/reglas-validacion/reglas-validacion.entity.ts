@@ -1,7 +1,13 @@
 import { randomUUID } from 'crypto';
+import { OperadorCondicion } from '../../enums/operador-condicional.enum';
 import { TipoDatoValidacion } from '../../enums/tipo-dato-validacion-enum';
 import { ReglaValidacionInvalidaException } from '../../exceptions';
 
+/**
+ * RF-25: regla propia de una transición (1:1, nunca compartida). Además de
+ * validar el dato, define cuándo se toma la transición: `operadorCondicion`
+ * y `valorEsperado` (`{ valor }` en IGUALDAD, `{ min, max }` en RANGO).
+ */
 export class ReglaValidacion {
   constructor(
     readonly idReglaValidacion: string,
@@ -12,6 +18,8 @@ export class ReglaValidacion {
     readonly formatoRegex: string | null,
     readonly valoresPermitidos: string[],
     readonly mensajeError: string,
+    readonly operadorCondicion: OperadorCondicion,
+    readonly valorEsperado: unknown,
   ) {
     this.validar();
   }
@@ -24,6 +32,8 @@ export class ReglaValidacion {
     formatoRegex: string | null,
     valoresPermitidos: string[],
     mensajeError: string,
+    operadorCondicion: OperadorCondicion,
+    valorEsperado: unknown,
   ): ReglaValidacion {
     return new ReglaValidacion(
       randomUUID(),
@@ -34,10 +44,12 @@ export class ReglaValidacion {
       formatoRegex,
       valoresPermitidos,
       mensajeError,
+      operadorCondicion,
+      valorEsperado,
     );
   }
 
-  /** Mismos datos con otro identificador (para no compartir la regla entre árboles). */
+  /** Mismos datos con otro identificador (cada transición copiada tiene la suya). */
   copiar(): ReglaValidacion {
     return new ReglaValidacion(
       randomUUID(),
@@ -48,35 +60,8 @@ export class ReglaValidacion {
       this.formatoRegex,
       this.valoresPermitidos,
       this.mensajeError,
-    );
-  }
-
-  /** Devuelve la regla con los cambios aplicados; `undefined` conserva el valor actual. */
-  modificar(
-    cambios: Partial<
-      Pick<
-        ReglaValidacion,
-        | 'tipoDato'
-        | 'obligatorio'
-        | 'valorMin'
-        | 'valorMax'
-        | 'formatoRegex'
-        | 'valoresPermitidos'
-        | 'mensajeError'
-      >
-    >,
-  ): ReglaValidacion {
-    return new ReglaValidacion(
-      this.idReglaValidacion,
-      cambios.tipoDato ?? this.tipoDato,
-      cambios.obligatorio ?? this.obligatorio,
-      cambios.valorMin === undefined ? this.valorMin : cambios.valorMin,
-      cambios.valorMax === undefined ? this.valorMax : cambios.valorMax,
-      cambios.formatoRegex === undefined
-        ? this.formatoRegex
-        : cambios.formatoRegex,
-      cambios.valoresPermitidos ?? this.valoresPermitidos,
-      cambios.mensajeError ?? this.mensajeError,
+      this.operadorCondicion,
+      this.valorEsperado,
     );
   }
 
@@ -137,6 +122,41 @@ export class ReglaValidacion {
     if (this.mensajeError.trim().length === 0) {
       throw new ReglaValidacionInvalidaException(
         'La regla de validación debe definir un mensaje de error.',
+      );
+    }
+
+    this.validarValorEsperado();
+  }
+
+  private validarValorEsperado(): void {
+    const esperado = this.valorEsperado;
+    const esObjeto =
+      typeof esperado === 'object' &&
+      esperado !== null &&
+      !Array.isArray(esperado);
+
+    if (this.operadorCondicion === OperadorCondicion.IGUALDAD) {
+      if (!esObjeto || !Object.hasOwn(esperado, 'valor')) {
+        throw new ReglaValidacionInvalidaException(
+          'La igualdad debe definir el valor esperado de la respuesta.',
+        );
+      }
+      return;
+    }
+
+    const { min, max } = (esObjeto ? esperado : {}) as {
+      min?: unknown;
+      max?: unknown;
+    };
+    if (
+      typeof min !== 'number' ||
+      typeof max !== 'number' ||
+      !Number.isFinite(min) ||
+      !Number.isFinite(max) ||
+      min > max
+    ) {
+      throw new ReglaValidacionInvalidaException(
+        'El rango debe definir un mínimo y un máximo coherentes.',
       );
     }
   }

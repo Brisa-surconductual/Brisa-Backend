@@ -21,10 +21,12 @@ import { ArbolConversacional } from '../../src/modules/chat/domain/entities/fluj
 import { FlujoConversacional } from '../../src/modules/chat/domain/entities/flujo/flujo-conversacional.entity';
 import { EstadoFlujoConversacional } from '../../src/modules/chat/domain/enums/estado-flujo-conversacional.enum';
 import { ModalidadConversacional } from '../../src/modules/chat/domain/enums/modalidad-conversacional-enum';
+import { OperadorCondicion } from '../../src/modules/chat/domain/enums/operador-condicional.enum';
 import {
   TipoCravingClinico,
   TipoDependenciaClinica,
 } from '../../src/modules/chat/domain/enums/perfil-clinico.enum';
+import { TipoDatoValidacion } from '../../src/modules/chat/domain/enums/tipo-dato-validacion-enum';
 import { ArbolConversacionalRepository } from '../../src/modules/chat/domain/repositories/arbol-conversacional.repository';
 import { S3_CLIENT } from '../../src/modules/cronograma/infrastructure/storage/s3-client.provider';
 import { EmailService } from '../../src/modules/usuarios/application/ports/email';
@@ -40,7 +42,13 @@ import { Rol } from '../../src/modules/usuarios/domain/enums/rol.enum';
 import { SesionRepository } from '../../src/modules/usuarios/domain/repositories/sesion.repository';
 import { UsuarioRepository } from '../../src/modules/usuarios/domain/repositories/user.repository';
 import { CorreoElectronico } from '../../src/modules/usuarios/domain/value-objects/correo_electronico.vo';
-import { arbolDominio, fecha, ids } from './fixtures/arbol-hu03.fixture';
+import {
+  arbolDominio,
+  arbolGrupalPublicable,
+  fecha,
+  ids,
+  valorEsperado,
+} from './fixtures/arbol-hu03.fixture';
 
 jest.setTimeout(30_000);
 
@@ -53,18 +61,15 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     obtenerArbol: jest.fn(),
     buscarNodo: jest.fn(),
     buscarTransicion: jest.fn(),
-    buscarReglaValidacion: jest.fn(),
     buscarTipoNodo: jest.fn(),
     listarFlujos: jest.fn(),
     listarFlujosPersonalizados: jest.fn(),
     buscarPublicadoGrupal: jest.fn(),
     buscarPublicadoPersonalizado: jest.fn(),
     obtenerUltimaVersionPersonalizada: jest.fn(),
-    contarUsosReglaValidacion: jest.fn(),
     listarAuditoriaArbol: jest.fn(),
     listarTiposNodo: jest.fn(),
     listarTiposEntrada: jest.fn(),
-    listarReglasValidacion: jest.fn(),
     listarContenidosCronograma: jest.fn(),
     existeContenidoCronograma: jest.fn(),
     guardarFlujo: jest.fn(),
@@ -72,7 +77,6 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     guardarArbolClonado: jest.fn(),
     guardarNodo: jest.fn(),
     guardarTransicion: jest.fn(),
-    guardarReglaValidacion: jest.fn(),
   } satisfies jest.Mocked<ArbolConversacionalRepository>;
   const arbolPublicado = () =>
     new ArbolConversacional(
@@ -82,12 +86,15 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     );
   const bodyFlujo = { nombre: 'Inicio', modalidad: 'GRUPAL' };
   const bodyNodo = { id_tipo_nodo: ids.tipo, contenido: { texto: 'Inicio' } };
+  const reglaTransicion = {
+    operador_condicion: 'IGUALDAD',
+    valor_esperado: valorEsperado,
+    mensaje_error: 'Respuesta requerida',
+  };
   const bodyTransicion = {
     id_nodo_origen: ids.origen,
     id_nodo_destino: ids.destino,
-    id_regla_validacion: ids.validacion,
-    operador_condicion: 'IGUALDAD',
-    valor_condicion: { valor: 'si' },
+    regla_validacion: reglaTransicion,
     orden_evaluacion: 1,
   };
   const base = '/chat/admin';
@@ -116,11 +123,6 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       cuerpo: { orden_evaluacion: 2 },
     },
     { metodo: 'get', ruta: '/catalogos' },
-    {
-      metodo: 'patch',
-      ruta: '/reglas-validacion',
-      cuerpo: { tipo_dato: 'TEXTO', mensaje_error: 'Respuesta requerida' },
-    },
   ];
   let app: INestApplication<App>;
 
@@ -214,24 +216,18 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       Promise.resolve(arbol.nodos.find((nodo) => nodo.idNodo === id) ?? null),
     );
     repo.buscarTransicion.mockResolvedValue(arbol.transiciones[0]);
-    repo.buscarReglaValidacion.mockResolvedValue(
-      arbol.transiciones[0].reglaValidacion,
-    );
     repo.buscarTipoNodo.mockResolvedValue(
       new TipoNodoConversacional(ids.tipo, 'MENSAJE'),
     );
     repo.buscarPublicadoGrupal.mockResolvedValue(null);
     repo.buscarPublicadoPersonalizado.mockResolvedValue(null);
     repo.obtenerUltimaVersionPersonalizada.mockResolvedValue(0);
-    repo.contarUsosReglaValidacion.mockResolvedValue(1);
     repo.listarTiposNodo.mockResolvedValue([
       new TipoNodoConversacional(ids.tipo, 'MENSAJE'),
     ]);
+    repo.listarContenidosCronograma.mockResolvedValue([]);
     repo.listarTiposEntrada.mockResolvedValue([
       new TipoEntradaConversacional(ids.entrada, 'TEXTO_LIBRE'),
-    ]);
-    repo.listarReglasValidacion.mockResolvedValue([
-      arbol.transiciones[0].reglaValidacion,
     ]);
   });
 
@@ -383,8 +379,11 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
         transiciones: [
           {
             id_regla: ids.transicion,
-            id_regla_validacion: ids.validacion,
-            valor_condicion: bodyTransicion.valor_condicion,
+            regla_validacion: {
+              id_regla_validacion: ids.validacion,
+              operador_condicion: 'IGUALDAD',
+              valor_esperado: valorEsperado,
+            },
           },
         ],
       },
@@ -435,7 +434,10 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
         idNodo: ids.origen,
         orden: null,
         idContenidoCronograma: null,
-        contenido: { texto: 'Mensaje' },
+        contenido: {
+          texto: 'Mensaje',
+          entrada: { tipo: 'NUMERICO', min: 0, max: 10 },
+        },
       }),
       ids.actor,
     );
@@ -445,7 +447,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     await admin('patch', `/nodos/${ids.origen}`).send({}).expect(400);
   });
 
-  it('03-E acepta la referencia a una regla reutilizable', async () => {
+  it('03-E crea la transición con su regla propia derivada del nodo origen', async () => {
     const respuesta = await admin('post', `/flujos/${ids.flujo}/transiciones`)
       .send(bodyTransicion)
       .expect(201);
@@ -453,21 +455,45 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       data: {
         id_regla: expect.any(String),
         id_flujo: ids.flujo,
-        id_regla_validacion: ids.validacion,
-        valor_condicion: bodyTransicion.valor_condicion,
+        regla_validacion: {
+          id_regla_validacion: expect.any(String),
+          operador_condicion: 'IGUALDAD',
+          valor_esperado: valorEsperado,
+          tipo_dato: 'NUMERICO',
+          mensaje_error: 'Respuesta requerida',
+        },
       },
     });
     expect(respuesta.body).not.toHaveProperty('data.id_transicion');
-    expect(respuesta.body).not.toHaveProperty('data.regla_validacion');
+    expect(respuesta.body).not.toHaveProperty('data.valor_condicion');
     expect(repo.guardarTransicion).toHaveBeenCalledWith(
       expect.objectContaining({
         idFlujo: ids.flujo,
         reglaValidacion: expect.objectContaining({
-          idReglaValidacion: ids.validacion,
+          operadorCondicion: OperadorCondicion.IGUALDAD,
+          valorEsperado,
+          tipoDato: TipoDatoValidacion.NUMERICO,
         }),
       }),
       ids.actor,
     );
+  });
+
+  it('03-E rechaza reutilizar una regla existente por id', async () => {
+    await admin('post', `/flujos/${ids.flujo}/transiciones`)
+      .send({ ...bodyTransicion, id_regla_validacion: ids.validacion })
+      .expect(400);
+    expect(repo.guardarTransicion).not.toHaveBeenCalled();
+  });
+
+  it('03-E rechaza un valor esperado que el nodo origen no define', async () => {
+    await admin('post', `/flujos/${ids.flujo}/transiciones`)
+      .send({
+        ...bodyTransicion,
+        regla_validacion: { ...reglaTransicion, valor_esperado: { valor: 11 } },
+      })
+      .expect(400);
+    expect(repo.guardarTransicion).not.toHaveBeenCalled();
   });
 
   it.each(Object.keys(bodyTransicion))('03-E requiere %s', async (campo) => {
@@ -500,7 +526,6 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
         idFlujo: ids.flujo,
         ordenEvaluacion: 2,
         idNodoDestino: ids.destino,
-        valorCondicion: bodyTransicion.valor_condicion,
         reglaValidacion: expect.objectContaining({
           idReglaValidacion: ids.validacion,
         }),
@@ -509,18 +534,15 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     );
   });
 
-  it.each([
-    'id_nodo_destino',
-    'id_regla_validacion',
-    'operador_condicion',
-    'valor_condicion',
-    'orden_evaluacion',
-  ])('03-F rechaza null en %s', async (campo) => {
-    await admin('patch', `/transiciones/${ids.transicion}`)
-      .send({ [campo]: null })
-      .expect(400);
-    expect(repo.guardarTransicion).not.toHaveBeenCalled();
-  });
+  it.each(['id_nodo_destino', 'regla_validacion', 'orden_evaluacion'])(
+    '03-F rechaza null en %s',
+    async (campo) => {
+      await admin('patch', `/transiciones/${ids.transicion}`)
+        .send({ [campo]: null })
+        .expect(400);
+      expect(repo.guardarTransicion).not.toHaveBeenCalled();
+    },
+  );
 
   it('03-F impide cambiar el origen y rechaza un PATCH vacío', async () => {
     await admin('patch', `/transiciones/${ids.transicion}`)
@@ -532,34 +554,50 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
   });
 
   it.each([null, 'si', 1, true, []])(
-    '03-E exige un objeto para valor_condicion: %j',
+    '03-E exige un objeto para valor_esperado: %j',
     async (valor) => {
       await admin('post', `/flujos/${ids.flujo}/transiciones`)
-        .send({ ...bodyTransicion, valor_condicion: valor })
+        .send({
+          ...bodyTransicion,
+          regla_validacion: { ...reglaTransicion, valor_esperado: valor },
+        })
         .expect(400);
       expect(repo.guardarTransicion).not.toHaveBeenCalled();
     },
   );
 
-  it.each(['si', 1, true, []])(
-    '03-F rechaza condiciones escalares o arreglos: %j',
-    async (valor) => {
-      await admin('patch', `/transiciones/${ids.transicion}`)
-        .send({ valor_condicion: valor })
-        .expect(400);
-      expect(repo.guardarTransicion).not.toHaveBeenCalled();
-    },
-  );
-
-  it('03-F conserva el objeto de condición sin inventar claves por operador', async () => {
-    const condicion = { respuesta: 'otra', opciones: ['a', 'b'] };
+  it('03-F reemplaza la regla propia completa y la reconstruye desde el nodo', async () => {
     await admin('patch', `/transiciones/${ids.transicion}`)
-      .send({ valor_condicion: condicion })
+      .send({
+        regla_validacion: {
+          operador_condicion: 'RANGO',
+          valor_esperado: { min: 2, max: 8 },
+          mensaje_error: 'Fuera del rango esperado',
+        },
+      })
       .expect(200);
     expect(repo.guardarTransicion).toHaveBeenCalledWith(
-      expect.objectContaining({ valorCondicion: condicion }),
+      expect.objectContaining({
+        reglaValidacion: expect.objectContaining({
+          operadorCondicion: OperadorCondicion.RANGO,
+          valorEsperado: { min: 2, max: 8 },
+        }),
+      }),
       ids.actor,
     );
+  });
+
+  it('03-F rechaza un rango esperado fuera del rango del nodo', async () => {
+    await admin('patch', `/transiciones/${ids.transicion}`)
+      .send({
+        regla_validacion: {
+          operador_condicion: 'RANGO',
+          valor_esperado: { min: 2, max: 20 },
+          mensaje_error: 'x',
+        },
+      })
+      .expect(400);
+    expect(repo.guardarTransicion).not.toHaveBeenCalled();
   });
 
   it('03-H entrega catálogos persistidos y enums coincidentes con el cliente Prisma', async () => {
@@ -570,150 +608,39 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       data: {
         tipos_nodo: [{ id_tipo_nodo: ids.tipo }],
         tipos_entrada: [{ id_tipo_entrada: ids.entrada }],
-        reglas_validacion: [{ id_regla_validacion: ids.validacion }],
         enums: {
           modalidad: Object.values(modalidad_enum),
           tipo_dependencia: Object.values(tipo_dependencia_enum),
           tipo_craving: Object.values(tipo_craving_enum),
-          operador_condicion: Object.values(operador_condicion_enum),
-          tipo_dato: Object.values(tipo_dato_validacion_enum),
+          operador_condicion: ['IGUALDAD', 'RANGO'],
+          tipo_dato: ['TEXTO', 'NUMERICO', 'FECHA', 'SELECCION'],
           estado_flujo: Object.values(estado_flujo_enum),
         },
       },
     });
-  });
-
-  it('03-G conserva PATCH, devuelve 201 con data y aplica valores iniciales', async () => {
-    const respuesta = await admin('patch', '/reglas-validacion')
-      .send({ tipo_dato: 'TEXTO', mensaje_error: 'Respuesta requerida' })
-      .expect(201);
-    expect(respuesta.body).toEqual({
-      data: {
-        id_regla_validacion: expect.any(String),
-        tipo_dato: 'TEXTO',
-        obligatorio: true,
-        valor_min: null,
-        valor_max: null,
-        formato_regex: null,
-        valores_permitidos: [],
-        mensaje_error: 'Respuesta requerida',
-      },
-    });
-    expect(repo.guardarReglaValidacion).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tipoDato: 'TEXTO',
-        obligatorio: true,
-        valorMin: null,
-        valorMax: null,
-        formatoRegex: null,
-        valoresPermitidos: [],
-        mensajeError: 'Respuesta requerida',
-      }),
-      ids.actor,
+    expect(respuesta.body).not.toHaveProperty('data.reglas_validacion');
+    // Lo que el dominio ofrece siempre existe en los enums de la base.
+    const { enums } = (
+      respuesta.body as {
+        data: { enums: { operador_condicion: string[]; tipo_dato: string[] } };
+      }
+    ).data;
+    expect(Object.values(operador_condicion_enum)).toEqual(
+      expect.arrayContaining(enums.operador_condicion),
+    );
+    expect(Object.values(tipo_dato_validacion_enum)).toEqual(
+      expect.arrayContaining(enums.tipo_dato),
     );
   });
 
-  it.each([
-    {},
-    { tipo_dato: 'OTRO', mensaje_error: 'Error' },
-    { tipo_dato: 'TEXTO', mensaje_error: '' },
-    { tipo_dato: 'TEXTO', mensaje_error: '   ' },
-    { tipo_dato: 'TEXTO', mensaje_error: 'Error', obligatorio: null },
-    { tipo_dato: 'TEXTO', mensaje_error: 'Error', valores_permitidos: [1] },
-    { tipo_dato: 'TEXTO', mensaje_error: 'Error', valor_min: 'cero' },
-    { tipo_dato: 'TEXTO', mensaje_error: 'Error', id_flujo: ids.flujo },
-    { tipo_dato: 'TEXTO', mensaje_error: 'Error', creado_por: ids.otroFlujo },
-  ])('03-G rechaza un cuerpo inválido: %j', async (cuerpo) => {
-    await admin('patch', '/reglas-validacion').send(cuerpo).expect(400);
-    expect(repo.guardarReglaValidacion).not.toHaveBeenCalled();
-  });
-
-  it('03-G conserva false, cero y decimales al crear una regla numérica', async () => {
-    const cuerpo = {
-      tipo_dato: 'NUMERICO',
-      obligatorio: false,
-      valor_min: 0,
-      valor_max: 2.75,
-      mensaje_error: '  Fuera de rango  ',
-    };
-    const respuesta = await admin('patch', '/reglas-validacion')
-      .send(cuerpo)
-      .expect(201);
-    expect(respuesta.body).toEqual({
-      data: {
-        id_regla_validacion: expect.any(String),
-        ...cuerpo,
-        mensaje_error: 'Fuera de rango',
-        formato_regex: null,
-        valores_permitidos: [],
-      },
-    });
-    expect(repo.guardarReglaValidacion).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tipoDato: 'NUMERICO',
-        obligatorio: false,
-        valorMin: 0,
-        valorMax: 2.75,
-        formatoRegex: null,
-        valoresPermitidos: [],
-        mensajeError: 'Fuera de rango',
-      }),
-      ids.actor,
-    );
-  });
-
-  it('03-G devuelve las opciones de selección como arreglo de texto reutilizable', async () => {
-    const respuesta = await admin('patch', '/reglas-validacion')
-      .send({
-        tipo_dato: 'SELECCION',
-        valores_permitidos: ['si', 'no'],
-        mensaje_error: 'Elige una opción',
-      })
-      .expect(201);
-    expect(respuesta.body).toMatchObject({
-      data: {
-        id_regla_validacion: expect.any(String),
-        tipo_dato: 'SELECCION',
-        valores_permitidos: ['si', 'no'],
-      },
-    });
-  });
-
-  it('03-G permite crear, consultar y reutilizar la regla sin asignarle un flujo en el body', async () => {
-    await admin('patch', '/reglas-validacion')
-      .send({ tipo_dato: 'TEXTO', mensaje_error: 'Respuesta requerida' })
-      .expect(201);
-    const catalogos = await admin('get', '/catalogos').expect(200);
-    expect(catalogos.body).toMatchObject({
-      data: { reglas_validacion: [{ id_regla_validacion: ids.validacion }] },
-    });
-    const transicion = await admin('post', `/flujos/${ids.flujo}/transiciones`)
-      .send(bodyTransicion)
-      .expect(201);
-    expect(transicion.body).toHaveProperty(
-      'data.id_regla_validacion',
-      ids.validacion,
-    );
-    expect(repo.guardarReglaValidacion).toHaveBeenCalledTimes(1);
-    expect(repo.guardarTransicion).toHaveBeenCalledWith(
-      expect.objectContaining({
-        reglaValidacion: expect.objectContaining({
-          idReglaValidacion: ids.validacion,
-        }),
-      }),
-      ids.actor,
-    );
-  });
-
-  it('03-G crea la regla con POST y conserva PATCH por compatibilidad', async () => {
-    for (const metodo of ['post', 'patch'] as const) {
-      repo.guardarReglaValidacion.mockClear();
+  it.each(['post', 'patch'] as const)(
+    '03-G ya no expone una regla reutilizable suelta (%s /reglas-validacion)',
+    async (metodo) => {
       await admin(metodo, '/reglas-validacion')
         .send({ tipo_dato: 'TEXTO', mensaje_error: 'Error' })
-        .expect(201);
-      expect(repo.guardarReglaValidacion).toHaveBeenCalledTimes(1);
-    }
-  });
+        .expect(404);
+    },
+  );
 
   it('responde 404 para nodo y transición inexistentes', async () => {
     repo.buscarNodo.mockResolvedValueOnce(null);
@@ -784,7 +711,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       ]);
     });
 
-    it('crea una transición con la regla embebida y la devuelve completa', async () => {
+    it('crea una transición con su regla propia y la devuelve completa', async () => {
       const respuesta = await historico(
         'post',
         `/chat/administracion/flujos/${ids.flujo}/transiciones`,
@@ -792,19 +719,27 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
         .send({
           id_nodo_origen: ids.origen,
           id_nodo_destino: ids.destino,
-          operador_condicion: 'IGUALDAD',
-          valor_condicion: { valor: 'si' },
           orden_evaluacion: 2,
-          regla_validacion: { tipo_dato: 'TEXTO', mensaje_error: 'Requerida' },
+          regla_validacion: {
+            operador_condicion: 'IGUALDAD',
+            valor_esperado: valorEsperado,
+            mensaje_error: 'Requerida',
+          },
         })
         .expect(201);
       expect(respuesta.body).toMatchObject({
         id_flujo: ids.flujo,
-        regla_validacion: { tipo_dato: 'TEXTO', mensaje_error: 'Requerida' },
+        regla_validacion: {
+          operador_condicion: 'IGUALDAD',
+          valor_esperado: valorEsperado,
+          tipo_dato: 'NUMERICO',
+          mensaje_error: 'Requerida',
+        },
       });
     });
 
     it('POST /chat/administracion/flujos/:id/publicar responde el flujo completo', async () => {
+      repo.obtenerArbol.mockResolvedValueOnce(arbolGrupalPublicable());
       const respuesta = await historico(
         'post',
         `/chat/administracion/flujos/${ids.flujo}/publicar`,
@@ -990,6 +925,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
     });
 
     it('05-C entrega únicamente los campos de publicación documentados', async () => {
+      repo.obtenerArbol.mockResolvedValueOnce(arbolGrupalPublicable());
       const respuesta = await admin(
         'post',
         `/flujos/${ids.flujo}/publicar`,
@@ -1112,7 +1048,7 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       publicar: {
         leer: () => repo.obtenerArbol,
         persistir: () => repo.guardarFlujo,
-        valido: () => arbol,
+        valido: () => arbolGrupalPublicable(),
         invalido: () => arbolPublicado(),
       },
       archivar: {
@@ -1129,13 +1065,13 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
         const { leer, persistir, invalido } = accionesFlujo[accion];
         await admin('post', `/flujos/no-uuid/${accion}`).expect(400);
         expect(persistir()).not.toHaveBeenCalled();
-        (leer() as jest.Mock).mockResolvedValueOnce(invalido());
+        leer().mockResolvedValueOnce(invalido());
         const respuesta = await admin(
           'post',
           `/flujos/${ids.flujo}/${accion}`,
         ).expect(409);
         expect(respuesta.body).toHaveProperty('codigo', 'ESTADO_INVALIDO');
-        (leer() as jest.Mock).mockResolvedValueOnce(null);
+        leer().mockResolvedValueOnce(null);
         await admin('post', `/flujos/${ids.flujo}/${accion}`).expect(404);
         expect(persistir()).not.toHaveBeenCalled();
       },
@@ -1145,13 +1081,13 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       '%s ignora el body: el actor siempre sale de la sesión',
       async (accion) => {
         const { leer, valido } = accionesFlujo[accion];
-        (leer() as jest.Mock).mockResolvedValueOnce(valido());
+        leer().mockResolvedValueOnce(valido());
 
         await admin('post', `/flujos/${ids.flujo}/${accion}`)
           .send({ creado_por: ids.otroFlujo })
           .expect(accion === 'clonar-version' ? 201 : 200);
 
-        const llamada = (accionesFlujo[accion].persistir() as jest.Mock).mock
+        const llamada = accionesFlujo[accion].persistir().mock
           .calls[0] as unknown[];
         expect(llamada).toContain(ids.actor);
         expect(llamada).not.toContain(ids.otroFlujo);
@@ -1162,8 +1098,8 @@ describe('HU-03 administrativa HTTP con guards y casos de uso reales', () => {
       '%s sanitiza errores inesperados de base de datos',
       async (accion) => {
         const { leer, persistir, valido } = accionesFlujo[accion];
-        (leer() as jest.Mock).mockResolvedValueOnce(valido());
-        (persistir() as jest.Mock).mockRejectedValueOnce(
+        leer().mockResolvedValueOnce(valido());
+        persistir().mockRejectedValueOnce(
           new Error('conexion-privada-simulada'),
         );
         const respuesta = await admin(

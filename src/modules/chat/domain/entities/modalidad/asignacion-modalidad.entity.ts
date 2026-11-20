@@ -3,11 +3,7 @@ import {
   AsignacionNoVigenteException,
   ModalidadNoGrupalException,
 } from '../../exceptions';
-
-export interface TransicionAPersonalizada {
-  readonly cerrada: AsignacionModalidad;
-  readonly nueva: AsignacionModalidad;
-}
+import { TransicionAPersonalizada } from '../../results/transicion-a-personalizada';
 
 export class AsignacionModalidad {
   constructor(

@@ -6,7 +6,6 @@ import { ConsultarArbolConversacionalUseCase } from './use-cases/arbol-conversac
 import { ConsultarCatalogosChatUseCase } from './use-cases/arbol-conversacional/consultar-catalogos-chat.use-case';
 import { CrearFlujoConversacionalUseCase } from './use-cases/arbol-conversacional/crear-flujo-conversacional.use-case';
 import { CrearNodoConversacionalUseCase } from './use-cases/arbol-conversacional/crear-nodo-conversacional.use-case';
-import { CrearReglaValidacionUseCase } from './use-cases/arbol-conversacional/crear-regla-validacion.use-case';
 import { CrearTransicionConversacionalUseCase } from './use-cases/arbol-conversacional/crear-transicion-conversacional.use-case';
 import { ListarFlujosUseCase } from './use-cases/arbol-conversacional/listar-flujos.use-case';
 import { ListarTiposNodoUseCase } from './use-cases/arbol-conversacional/listar-tipos-nodo.use-case';
@@ -50,7 +49,6 @@ export const ChatApplicationProviders = [
   ActualizarNodoConversacionalUseCase,
   CrearTransicionConversacionalUseCase,
   ActualizarTransicionConversacionalUseCase,
-  CrearReglaValidacionUseCase,
   ConsultarCatalogosChatUseCase,
   ListarTiposNodoUseCase,
   ListarArbolesPersonalizadosUseCase,

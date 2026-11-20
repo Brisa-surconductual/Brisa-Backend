@@ -32,6 +32,7 @@ export const nodoRespuesta = (
     new Date(),
   );
 
+/** Por defecto: numérica, obligatoria, RANGO 0..10. */
 export const reglaRespuesta = (cambios: Partial<ReglaValidacion> = {}) =>
   new ReglaValidacion(
     'validacion',
@@ -42,21 +43,20 @@ export const reglaRespuesta = (cambios: Partial<ReglaValidacion> = {}) =>
     cambios.formatoRegex ?? null,
     cambios.valoresPermitidos ?? [],
     cambios.mensajeError ?? 'Revise su respuesta.',
+    cambios.operadorCondicion ?? OperadorCondicion.RANGO,
+    cambios.valorEsperado ?? { min: 0, max: 10 },
   );
 
 export const transicionRespuesta = (
-  condicion: unknown = { min: 0, max: 10 },
-  operador = OperadorCondicion.RANGO,
-  regla = reglaRespuesta({ valorMin: 0, valorMax: 10 }),
+  regla: ReglaValidacion | null = reglaRespuesta(),
   orden = 1,
+  idNodoDestino = idsRespuesta.destino,
 ) =>
   new TransicionConversacional(
     `transicion-${orden}`,
     idsRespuesta.flujo,
     idsRespuesta.nodo,
-    idsRespuesta.destino,
-    operador,
-    condicion,
+    idNodoDestino,
     orden,
     regla,
     new Date(),
