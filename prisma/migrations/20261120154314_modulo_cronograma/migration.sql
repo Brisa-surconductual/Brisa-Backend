@@ -7,7 +7,7 @@
 -- Dialecto: PostgreSQL 15+ (Supabase). Ejecutar con el rol dba.
 -- Orden: schema, enums, tablas, indices, FKs, checks, funciones/triggers,
 --        procedimientos (funciones), vistas, cambios en otros esquemas, grants.
--- Todo corre en una sola transaccion implicita: si algo falla, no queda nada.
+-- Todo corre en una sola transaccion implicita: si algo falla, no queda nada .
 -- =====================================================================
 
 -- 1. ESQUEMA ----------------------------------------------------------
