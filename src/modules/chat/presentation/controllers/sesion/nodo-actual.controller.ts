@@ -1,20 +1,11 @@
-import {
-  Controller,
-  Get,
-  Header,
-  Param,
-  ParseUUIDPipe,
-  UseFilters,
-} from '@nestjs/common';
+import { Controller, Get, Header, Param, ParseUUIDPipe } from '@nestjs/common';
 import { PresentacionNodoActualDtoResponse } from '../../../application/dto/presentacion-nodo-actual.dto-response';
 import { ConsultarNodoActualUseCase } from '../../../application/use-cases/sesion/consultar-nodo-actual.use-case';
 import { AccesoEstudiante } from '../../decorators/acceso.decorators';
 import { IdUsuarioSesion } from '../../decorators/id-usuario-sesion.decorator';
-import { ErrorContratoChatFilter } from '../../filters/error-contrato-chat.filter';
 
-@Controller( '/chat/sesiones')
+@Controller('/chat/sesiones')
 @AccesoEstudiante()
-@UseFilters(ErrorContratoChatFilter)
 export class NodoActualController {
   constructor(private readonly consultar: ConsultarNodoActualUseCase) {}
 

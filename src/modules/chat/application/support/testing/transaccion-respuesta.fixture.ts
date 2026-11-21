@@ -44,6 +44,12 @@ export function transaccionRespuestaPrueba() {
         .fn<Promise<void>, [RegistroDeRespuesta]>()
         .mockResolvedValue(undefined),
     },
+    estado: {
+      insertarPaso: jest.fn().mockResolvedValue(undefined),
+      avanzarDesdeOrigen: jest.fn().mockResolvedValue(true),
+      actualizarEstado: jest.fn().mockResolvedValue(undefined),
+      validarHistorial: jest.fn().mockResolvedValue(true),
+    },
     perfil: {
       capturarDimension: jest.fn().mockResolvedValue({
         aplicado: true,

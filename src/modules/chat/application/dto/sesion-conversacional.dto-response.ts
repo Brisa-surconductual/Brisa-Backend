@@ -1,11 +1,12 @@
 import { UbicacionTemporalUsuarioDtoResponse } from '../../../cronograma/application/dto/cronograma/ubicacion-temporal-usuario.dto-response';
-import { NodoConversacional } from '../../domain/entities/flujo/nodo-conversacional.entity';
 import { SesionConversacional } from '../../domain/entities/sesion/sesion-conversacional.entity';
 import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
 import {
   TipoCravingClinico,
   TipoDependenciaClinica,
 } from '../../domain/enums/perfil-clinico.enum';
+import { HistorialInteraccionesDtoResponse } from './historial-interacciones.dto-response';
+import { PresentacionNodoActualDtoResponse } from './presentacion-nodo-actual.dto-response';
 
 export class PerfilClinicoContextoDtoResponse {
   tipo_dependencia!: TipoDependenciaClinica;
@@ -42,22 +43,25 @@ export class SesionConversacionalDtoResponse {
   estado_actual!: SesionConversacional['estadoActual'];
   fecha_inicio!: Date;
   fecha_ultima_interaccion!: Date;
+  ultima_secuencia!: number;
 }
 
 export class NodoActualDtoResponse {
   id_nodo!: string;
   tipo_nodo!: string;
-  contenido!: Record<string, unknown>;
-  es_nodo_inicial!: boolean;
-  orden!: number | null;
+  es_terminal!: boolean;
+  bloques!: PresentacionNodoActualDtoResponse['nodo']['bloques'];
+  entrada!: PresentacionNodoActualDtoResponse['nodo']['entrada'];
 
-  static desde(nodo: NodoConversacional): NodoActualDtoResponse {
+  static desde(
+    nodo: PresentacionNodoActualDtoResponse['nodo'],
+  ): NodoActualDtoResponse {
     return {
       id_nodo: nodo.idNodo,
-      tipo_nodo: nodo.nombreTipoNodo,
-      contenido: nodo.contenido,
-      es_nodo_inicial: nodo.esNodoInicial,
-      orden: nodo.orden,
+      tipo_nodo: nodo.tipoNodo,
+      es_terminal: nodo.esTerminal,
+      bloques: nodo.bloques,
+      entrada: nodo.entrada,
     };
   }
 }
@@ -71,18 +75,22 @@ export class UbicacionTemporalSesionDtoResponse {
 /** Resultado de RF-24: sesión preparada y nodo en el que queda posicionada. */
 export class InicioSesionConversacionalDtoResponse {
   reanudada!: boolean;
+  recuperada_desde_historial!: boolean;
   sesion!: SesionConversacionalDtoResponse;
   nodo_actual!: NodoActualDtoResponse;
+  historial_reciente!: HistorialInteraccionesDtoResponse['data'];
   ubicacion_temporal!: UbicacionTemporalSesionDtoResponse;
 
   static crear(
     sesion: SesionConversacional,
-    nodo: NodoConversacional,
-    reanudada: boolean,
+    nodo: PresentacionNodoActualDtoResponse['nodo'],
+    historial: HistorialInteraccionesDtoResponse['data'],
     ubicacion: UbicacionTemporalUsuarioDtoResponse,
+    estado: { reanudada: boolean; recuperadaDesdeHistorial: boolean },
   ): InicioSesionConversacionalDtoResponse {
     return {
-      reanudada,
+      reanudada: estado.reanudada,
+      recuperada_desde_historial: estado.recuperadaDesdeHistorial,
       sesion: {
         id_sesion: sesion.idSesion,
         id_flujo_conversacional: sesion.idFlujoConversacional,
@@ -93,8 +101,10 @@ export class InicioSesionConversacionalDtoResponse {
         estado_actual: sesion.estadoActual,
         fecha_inicio: sesion.fechaInicio,
         fecha_ultima_interaccion: sesion.fechaUltimaInteraccion,
+        ultima_secuencia: historial.items.at(-1)?.secuencia ?? 0,
       },
       nodo_actual: NodoActualDtoResponse.desde(nodo),
+      historial_reciente: historial,
       ubicacion_temporal: {
         id_unidad_temporal: ubicacion.id_unidad_temporal,
         nombre_unidad: ubicacion.nombre_unidad,

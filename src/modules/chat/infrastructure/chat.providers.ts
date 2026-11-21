@@ -23,6 +23,12 @@ import { HistorialInteraccionesRepository } from '../domain/repositories/histori
 import { PrismaHistorialInteraccionesRepository } from './persistence/prisma-historial-interacciones.repository';
 import { BullMqEventosSeguimientoWorker } from './messaging/bullmq-eventos-seguimiento.worker';
 import { PrismaEventosSeguimientoRepository } from './persistence/prisma-eventos-seguimiento.repository';
+import { PerfilClinicoVigentePort } from '../application/ports/perfil-clinico-vigente.port';
+import { PrismaPerfilClinicoVigenteAdapter } from './persistence/prisma-perfil-clinico-vigente.adapter';
+import { RecuperarSesionConversacionalPort } from '../application/ports/recuperar-sesion-conversacional.port';
+import { PrismaRecuperarSesionConversacionalRepository } from './persistence/prisma-recuperar-sesion-conversacional.repository';
+import { RegistroErroresConversacionalesRepository } from '../domain/repositories/registro-errores-conversacionales.repository';
+import { PrismaRegistroErroresConversacionalesRepository } from './persistence/prisma-registro-errores-conversacionales.repository';
 import {
   FirmarRecursoNodoPort,
   PresentacionNodoActualPort,
@@ -31,6 +37,12 @@ import {
 export const ChatInfrastructureProviders = [
   PrismaEventosSeguimientoRepository,
   BullMqEventosSeguimientoWorker,
+  {
+    provide: PerfilClinicoVigentePort,
+    useClass: PrismaPerfilClinicoVigenteAdapter,
+    provide: RegistroErroresConversacionalesRepository,
+    useClass: PrismaRegistroErroresConversacionalesRepository,
+  },
   {
     provide: ProcesarRespuestaPort,
     useClass: PrismaProcesarRespuestaRepository,
@@ -41,9 +53,14 @@ export const ChatInfrastructureProviders = [
     useClass: PrismaPresentacionNodoActualRepository,
   },
   { provide: FirmarRecursoNodoPort, useClass: S3FirmarRecursoNodoAdapter },
+  PrismaHistorialInteraccionesRepository,
   {
     provide: HistorialInteraccionesRepository,
-    useClass: PrismaHistorialInteraccionesRepository,
+    useExisting: PrismaHistorialInteraccionesRepository,
+  },
+  {
+    provide: RecuperarSesionConversacionalPort,
+    useClass: PrismaRecuperarSesionConversacionalRepository,
   },
   {
     provide: ModalidadProgramaRepository,

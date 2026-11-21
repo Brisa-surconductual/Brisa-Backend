@@ -15,7 +15,7 @@ import { IdUsuarioSesion } from '../../decorators/id-usuario-sesion.decorator';
 import { EstadoSesionIniciadaInterceptor } from '../../interceptors/estado-http.interceptors';
 import { RespuestaHttp } from '../../interceptors/respuesta-http.interceptor';
 
-/** RF-24: inicio o reanudación de la sesión conversacional del estudiante. */
+/** RF-24 / RF-32: inicialización y recuperación de la sesión del estudiante. */
 @Controller('/chat/sesiones')
 @AccesoEstudiante()
 export class SesionesConversacionalesController {

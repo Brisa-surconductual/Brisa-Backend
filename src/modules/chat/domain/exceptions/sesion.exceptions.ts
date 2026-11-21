@@ -4,7 +4,10 @@ export class SesionConversacionalNoEncontradaException extends DomainException {
   readonly tipo = 'NO_ENCONTRADO';
 
   constructor() {
-    super('No se pudo recuperar el contenido del chat.', 'SESION_NO_ENCONTRADA');
+    super(
+      'No se pudo recuperar el contenido del chat.',
+      'SESION_NO_ENCONTRADA',
+    );
   }
 }
 
@@ -26,6 +29,17 @@ export class SesionNoReanudableException extends DomainException {
     super(
       'La sesión conversacional no se puede reanudar en su estado actual.',
       'SESION_NO_REANUDABLE',
+    );
+  }
+}
+
+export class EstadoSesionInconsistenteException extends DomainException {
+  readonly tipo = 'CONFLICTO';
+
+  constructor() {
+    super(
+      'El estado de la conversación es inconsistente. No fue posible recuperar la sesión.',
+      'ESTADO_INCONSISTENTE',
     );
   }
 }
