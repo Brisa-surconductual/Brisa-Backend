@@ -599,6 +599,7 @@ model chat_sesiones {
   fecha_inicio                                                                                    DateTime                 @default(now()) @db.Timestamptz(6)
   fecha_ultima_interaccion                                                                        DateTime                 @default(now()) @db.Timestamptz(6)
   estado_sesiones                                                                                 estado_sesiones?
+  eventos_seguimiento                                                                             eventos_seguimiento[]
   eventos_sincronizacion                                                                          eventos_sincronizacion[]
   historial_nodos                                                                                 historial_nodos[]
   interacciones                                                                                   interacciones[]
@@ -715,6 +716,26 @@ model registro_errores {
 
   @@index([x_request_id], map: "ix_registro_errores_request_id")
   @@index([id_usuario, fecha_error], map: "ix_registro_errores_ventana_cliente", where: raw("((origen)::text = 'CLIENTE'::text)"))
+  @@schema("chat")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model eventos_seguimiento {
+  id_evento        String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_sesion        String                         @db.Uuid
+  id_usuario       String                         @db.Uuid
+  modalidad        modalidad_enum
+  tipo_dependencia tipo_dependencia_enum?
+  tipo_craving     tipo_craving_enum?
+  origen_evento    origen_evento_seguimiento_enum
+  estado           estado_evento_seguimiento_enum @default(ENCOLADO)
+  timestamp        DateTime                       @db.Timestamptz(6)
+  proximo_envio_en DateTime                       @default(now()) @db.Timestamptz(6)
+  entregado_en     DateTime?                      @db.Timestamptz(6)
+  sesiones         chat_sesiones                  @relation(fields: [id_sesion], references: [id_sesion], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([id_sesion, origen_evento], map: "uq_eventos_seguimiento_sesion_origen")
+  @@index([proximo_envio_en, id_evento], map: "ix_eventos_seguimiento_pendientes", where: raw("(estado <> 'ENTREGADO'::chat.estado_evento_seguimiento_enum)"))
   @@schema("chat")
 }
 
@@ -929,6 +950,21 @@ enum tipo_dato_validacion_enum {
 enum tipo_dependencia_enum {
   ABSTINENCIA_FISICA
   TOLERANCIA
+
+  @@schema("chat")
+}
+
+enum estado_evento_seguimiento_enum {
+  ENCOLADO
+  ENTREGADO
+  ERROR_REINTENTO
+
+  @@schema("chat")
+}
+
+enum origen_evento_seguimiento_enum {
+  CIERRE_SESION
+  SINCRONIZACION_OFFLINE
 
   @@schema("chat")
 }
