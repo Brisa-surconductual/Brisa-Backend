@@ -1,27 +1,22 @@
-import {
-  BloqueNodoDtoResponse,
-  EntradaNodoDtoResponse,
-} from './presentacion-nodo-actual.dto-response';
+import { BloqueNodoDtoResponse } from './presentacion-nodo-actual.dto-response';
 
-/** `nodo` reutiliza la forma del RF-26 a propósito (ver contrato RF-31/32). */
 export interface InteraccionHistorialDtoResponse {
   id_interaccion: string;
   secuencia: number;
   timestamp_interaccion: string;
-  registrada_en: string;
   nodo: {
-    idNodo: string;
+    id_nodo: string;
+    tipo_nodo: string;
     bloques: BloqueNodoDtoResponse[];
-    entrada: EntradaNodoDtoResponse | null;
   };
-  respuesta: { tipo_entrada: string; valor: unknown };
+  respuesta: { tipo_entrada: string; valor: unknown; etiqueta: string | null };
+  id_nodo_destino: string;
 }
 
 export class HistorialInteraccionesDtoResponse {
   data!: {
-    id_sesion: string;
-    ultima_secuencia: number;
+    items: InteraccionHistorialDtoResponse[];
     hay_mas: boolean;
-    interacciones: InteraccionHistorialDtoResponse[];
+    siguiente_cursor: number | null;
   };
 }

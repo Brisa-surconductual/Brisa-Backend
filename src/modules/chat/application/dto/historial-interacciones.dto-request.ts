@@ -15,7 +15,8 @@ export class ConsultarHistorialInteraccionesDtoRequest {
   @Transform(enteroConsulta)
   @IsInt()
   @Min(1)
-  antes_de?: number;
+  @Max(2_147_483_647)
+  antes_de_secuencia?: number;
 
   @Transform(enteroConsulta)
   @IsInt()

@@ -5,6 +5,7 @@ import { DecisionRespuesta } from '../../domain/policies/motor-respuesta-convers
 import { PerfilClinicoRepository } from '../../domain/repositories/perfil-clinico.repository';
 import { ResultadoRespuesta } from '../dto/procesar-respuesta.dto-response';
 import { EstadoConectividadRespuesta } from '../dto/procesar-respuesta.dto-request';
+import { EstadoConversacionalTransaccion } from './estado-conversacional.port';
 
 export interface SolicitudRespuesta {
   idSesion: string;
@@ -45,6 +46,7 @@ export interface TransaccionRespuesta {
   contexto: ContextoRespuestaTransaccion;
   registro: RegistroRespuestaTransaccion;
   perfil: PerfilClinicoRepository;
+  estado: EstadoConversacionalTransaccion;
 }
 
 /** Aplicación coordina el negocio; el adaptador asegura una única transacción. */

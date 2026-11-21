@@ -105,33 +105,5 @@ export class PrismaRegistroRespuestaRepository implements RegistroRespuestaTrans
         },
       },
     });
-    await this.tx.historial_nodos.create({
-      data: {
-        id_sesion: s.idSesion,
-        id_nodo: s.idNodo,
-        id_usuario: s.idUsuario,
-        respuesta_usuario: valor,
-        id_nodo_destino: decision.idNodoDestino,
-        timestamp_interaccion: fechaCaptura,
-        id_interaccion: s.idInteraccion,
-      },
-    });
-    await this.tx.chat_sesiones.update({
-      where: { id_sesion: s.idSesion },
-      data: {
-        id_nodo_actual: decision.idNodoDestino,
-        fecha_ultima_interaccion: ahora,
-      },
-    });
-    await this.tx.estado_sesiones.update({
-      where: { id_sesion: s.idSesion },
-      data: {
-        estado_actual: resultado.estado_sesion,
-        fecha_actualizacion: ahora,
-        ...(resultado.estado_sesion === 'COMPLETADA' && {
-          fecha_completada: ahora,
-        }),
-      },
-    });
   }
 }

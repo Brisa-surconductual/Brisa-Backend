@@ -18,6 +18,8 @@ const ESTADOS = {
 /** Adaptador de errores del contrato del estudiante; no altera los guards globales. */
 @Catch()
 export class ErrorContratoChatFilter implements ExceptionFilter {
+  protected readonly codigoSolicitudInvalida: string | null = null;
+
   catch(error: unknown, host: ArgumentsHost): void {
     let statusCode = 500;
     let codigo: string | null = 'CONTENIDO_NO_DISPONIBLE';
@@ -35,7 +37,7 @@ export class ErrorContratoChatFilter implements ExceptionFilter {
           message?: string | string[];
           mensaje?: string;
         };
-        codigo = datos.codigo ?? null;
+        codigo = datos.codigo ?? this.codigoHttpPredeterminado(statusCode);
         mensaje =
           datos.mensaje ??
           (Array.isArray(datos.message)
@@ -43,7 +45,7 @@ export class ErrorContratoChatFilter implements ExceptionFilter {
             : datos.message) ??
           error.message;
       } else {
-        codigo = null;
+        codigo = this.codigoHttpPredeterminado(statusCode);
         mensaje = body;
       }
     }
@@ -53,4 +55,13 @@ export class ErrorContratoChatFilter implements ExceptionFilter {
       .status(statusCode)
       .json({ statusCode, codigo, mensaje });
   }
+
+  private codigoHttpPredeterminado(estado: number): string | null {
+    return estado === 400 ? this.codigoSolicitudInvalida : null;
+  }
+}
+
+@Catch()
+export class ErrorHistorialChatFilter extends ErrorContratoChatFilter {
+  protected readonly codigoSolicitudInvalida = 'PARAMETRO_INVALIDO';
 }
