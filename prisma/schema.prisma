@@ -123,6 +123,7 @@ model usuarios {
   nodos                                                                             nodos[]
   perfil_clinico                                                                    perfil_clinico?
   punto_control                                                                     punto_control[]
+  registro_errores                                                                  registro_errores[]
   chat_sesiones                                                                     chat_sesiones[]
   sincronizaciones                                                                  sincronizaciones[]
   tipo_terapia_tipo_terapia_administrador_responsableTousuarios                     tipo_terapia[]             @relation("tipo_terapia_administrador_responsableTousuarios")
@@ -486,6 +487,7 @@ model nodos {
   flujo_conversacion                                        flujo_conversacion     @relation(fields: [id_flujo], references: [id_flujo], onDelete: Cascade, onUpdate: NoAction, map: "fk_nodo_flujo")
   tipo_nodo                                                 tipo_nodo              @relation(fields: [id_tipo_nodo], references: [id_tipo_nodo], onUpdate: NoAction, map: "fk_nodo_tipo")
   punto_control                                             punto_control[]
+  registro_errores                                          registro_errores[]
   reglas_nodos_reglas_nodos_id_nodo_destino_id_flujoTonodos reglas_nodos[]         @relation("reglas_nodos_id_nodo_destino_id_flujoTonodos")
   reglas_nodos_reglas_nodos_id_nodo_origen_id_flujoTonodos  reglas_nodos[]         @relation("reglas_nodos_id_nodo_origen_id_flujoTonodos")
   respuestas                                                respuestas[]
@@ -600,6 +602,7 @@ model chat_sesiones {
   eventos_sincronizacion                                                                          eventos_sincronizacion[]
   historial_nodos                                                                                 historial_nodos[]
   interacciones                                                                                   interacciones[]
+  registro_errores                                                                                registro_errores[]
   flujo_conversacion                                                                              flujo_conversacion?      @relation(fields: [id_flujo_conversacional], references: [id_flujo], onUpdate: NoAction, map: "fk_sesion_flujo")
   flujo_conversacion_sesiones_id_flujo_conversacional_version_arbol_utilizadaToflujo_conversacion flujo_conversacion?      @relation("sesiones_id_flujo_conversacional_version_arbol_utilizadaToflujo_conversacion", fields: [id_flujo_conversacional, version_arbol_utilizada], references: [id_flujo, version], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_flujo_version")
   nodos                                                                                           nodos?                   @relation(fields: [id_nodo_actual, id_flujo_conversacional], references: [id_nodo, id_flujo], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_nodo_actual")
@@ -692,6 +695,26 @@ model eventos_sincronizacion {
 
   @@index([id_sesion], map: "idx_eventos_sync_sesion")
   @@index([id_usuario, fecha_inicio(sort: Desc)], map: "idx_eventos_sync_usuario_fecha")
+  @@schema("chat")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model registro_errores {
+  id_registro_error BigInt         @id @default(autoincrement())
+  x_request_id      String         @db.VarChar(64)
+  origen            String         @db.VarChar(7)
+  codigo            String         @db.VarChar(64)
+  status_http       Int?           @db.SmallInt
+  id_usuario        String?        @db.Uuid
+  id_sesion         String?        @db.Uuid
+  id_nodo           String?        @db.Uuid
+  fecha_error       DateTime       @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  nodos             nodos?         @relation(fields: [id_nodo], references: [id_nodo], onUpdate: NoAction)
+  sesiones          chat_sesiones? @relation(fields: [id_sesion], references: [id_sesion], onUpdate: NoAction)
+  usuarios          usuarios?      @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
+
+  @@index([x_request_id], map: "ix_registro_errores_request_id")
+  @@index([id_usuario, fecha_error], map: "ix_registro_errores_ventana_cliente", where: raw("((origen)::text = 'CLIENTE'::text)"))
   @@schema("chat")
 }
 
