@@ -89,8 +89,8 @@ Cualquier otro parámetro de query se rechaza con 400 (validación global `forbi
   perfil clínico (`tipo_dependencia`, `tipo_craving`), igual que el RF-26 (RF-24B, RF-27B).
 - **Versión del árbol.** Cada nodo se presenta tal como está en la versión con la que se
   recorrió la sesión (RF-31). Los nodos de un árbol archivado se siguen mostrando.
-- **Recuperación (RF-32).** La reanudación sigue en `POST /chat/sesiones/iniciar`, que
-  devuelve la sesión y el nodo actual. El GET completa el contexto con el historial reciente.
+- **Recuperación (RF-32).** `POST /chat/sesiones/iniciar` devuelve el nodo actual y la
+  primera página del historial. El GET permite seguir paginando hacia atrás.
 - **Paginación.** El GET usa la clave única existente `(id_sesion, secuencia)` de `chat.interacciones`.
 
 ## Registro del estado conversacional (RF-31)
@@ -111,6 +111,40 @@ históricos anteriores al vínculo con `id_interaccion` se verifican con los dat
 disponibles. La verificación admite sesiones cuyo flujo se haya archivado.
 
 Los eventos que deben pausar una sesión siguen pendientes de definición en el RF.
+
+## Recuperar la sesión conversacional (RF-32, #310)
+
+`POST /chat/sesiones/iniciar` exige cookie de sesión de estudiante, alcance completo
+y el encabezado `X-CSRF-Token`. Responde `201` para una sesión nueva y `200` cuando
+reutiliza una existente. El identificador del estudiante se obtiene de la sesión autenticada.
+
+La envoltura `data` incluye `reanudada`, `recuperada_desde_historial`, `sesion`,
+`nodo_actual`, `historial_reciente` y `ubicacion_temporal`. `nodo_actual` usa la misma
+presentación de bloques y entrada de RF-26, con `id_nodo`, `tipo_nodo` y `es_terminal`.
+`historial_reciente` usa el formato del GET y contiene las últimas 20 interacciones.
+`sesion.ultima_secuencia` es la secuencia del último elemento o `0` si está vacío.
+
+La recuperación conserva el flujo y la versión fijados al iniciar la sesión, incluso
+si el flujo se archivó. Si el puntero discrepa del último destino válido registrado,
+se restaura dentro de la transacción que verifica la integridad del historial. Una
+sesión pausada se reactiva conservando la fecha de su última interacción. Si el
+estado sigue siendo inconsistente, la transacción se revierte y devuelve `409`.
+
+| HTTP | Código | Caso |
+| --- | --- | --- |
+| 401 | según el guard | Falta una sesión de autenticación válida. |
+| 403 | `CSRF_INVALIDO` | El token falta o es inválido. Los guards de rol y alcance también pueden devolver `403`. |
+| 404 | `SIN_FLUJO_PUBLICADO` | No hay un árbol aplicable al iniciar una conversación. |
+| 409 | `PERFIL_INCOMPLETO` | El contexto personalizado requiere un perfil completo. |
+| 409 | `ESTADO_INCONSISTENTE` | No se pudo recuperar un nodo y un historial válidos. |
+| 409 | `SESION_ERROR_CONFIGURACION` | Ya existe una sesión en `ERROR_CONFIGURACION`. |
+| 409 | `FLUJO_NO_PUBLICADO` | RF-26B conserva este error de inicio cuando el árbol personalizado está configurado, pero aún no se puede usar. |
+| 422 | `SIN_CRONOGRAMA` | El estudiante no tiene un cronograma asignado. |
+| 500 | según el fallo | La lectura, escritura o presentación no pudo completarse. |
+
+Una sesión sin completar impide crear otra. Queda por definir cómo rehabilitar una
+sesión en `ERROR_CONFIGURACION` una vez corregido su árbol. La recuperación sin
+conexión se realiza en el almacenamiento local del cliente según RF-34.
 
 ## Trazabilidad
 

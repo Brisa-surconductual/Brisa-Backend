@@ -50,7 +50,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
   const sesiones = {
     buscarPorIdYUsuario: jest.fn(),
     guardar: jest.fn(),
-    buscarUltimaReanudable: jest.fn(),
+    buscarUltimaNoCompletada: jest.fn(),
   };
   const arboles = { buscarNodo: jest.fn() };
   const lecturas = { tieneSalidas: jest.fn(), consultarRecursos: jest.fn() };
@@ -122,7 +122,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
   });
   afterEach(() => {
     expect(sesiones.guardar).not.toHaveBeenCalled();
-    expect(sesiones.buscarUltimaReanudable).not.toHaveBeenCalled();
+    expect(sesiones.buscarUltimaNoCompletada).not.toHaveBeenCalled();
   });
   afterAll(async () => app.close());
 

@@ -11,6 +11,7 @@ import { Rol } from '../../../../usuarios/domain/enums/rol.enum';
 import { AlcanceSesion } from '../../../../usuarios/domain/enums/alcance-sesion.enum';
 import { SessionAuthGuard } from '../../../../usuarios/presentation/guards/session-auth.guard';
 import { PresentarNodoActualService } from '../../../application/services/presentar-nodo-actual.service';
+import { PresentarHistorialConversacionalService } from '../../../application/services/presentar-historial-conversacional.service';
 import { presentadorNodoPrueba } from '../../../application/support/testing/presentacion-nodo.fixture';
 import { ConsultarHistorialInteraccionesUseCase } from '../../../application/use-cases/sesion/consultar-historial-interacciones.use-case';
 import { NodoConversacional } from '../../../domain/entities/flujo/nodo-conversacional.entity';
@@ -33,9 +34,9 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:id_sesion/historial (HTTP)', () => {
   const sesiones = {
     buscarPorIdYUsuario: jest.fn(),
     guardar: jest.fn(),
-    buscarUltimaReanudable: jest.fn(),
+    buscarUltimaNoCompletada: jest.fn(),
   };
-  const arboles = { buscarNodo: jest.fn() };
+  const arboles = { buscarNodosPorIds: jest.fn() };
   const historial = { consultar: jest.fn() };
   let app: INestApplication<App>;
   let autenticacion: {
@@ -48,6 +49,7 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:id_sesion/historial (HTTP)', () => {
       controllers: [HistorialInteraccionesController],
       providers: [
         ConsultarHistorialInteraccionesUseCase,
+        PresentarHistorialConversacionalService,
         {
           provide: PresentarNodoActualService,
           useValue: presentadorNodoPrueba(),
@@ -107,7 +109,7 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:id_sesion/historial (HTTP)', () => {
             : null,
         ),
     );
-    arboles.buscarNodo.mockResolvedValue(
+    arboles.buscarNodosPorIds.mockResolvedValue([
       new NodoConversacional(
         idNodo,
         idFlujo,
@@ -124,7 +126,7 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:id_sesion/historial (HTTP)', () => {
         fecha,
         fecha,
       ),
-    );
+    ]);
     historial.consultar.mockResolvedValue({
       hayMas: true,
       interacciones: [
@@ -264,11 +266,11 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:id_sesion/historial (HTTP)', () => {
       statusCode: 422,
       codigo: 'HISTORIAL_INCONSISTENTE',
     });
-    expect(arboles.buscarNodo).not.toHaveBeenCalled();
+    expect(arboles.buscarNodosPorIds).not.toHaveBeenCalled();
   });
 
   it('responde 500 CONTENIDO_NO_DISPONIBLE ante un fallo al preparar el nodo', async () => {
-    arboles.buscarNodo.mockRejectedValue(new Error('Fallo de lectura'));
+    arboles.buscarNodosPorIds.mockRejectedValue(new Error('Fallo de lectura'));
     const r = await request(app.getHttpServer()).get(ruta).expect(500);
     expect(r.body).toMatchObject({ codigo: 'CONTENIDO_NO_DISPONIBLE' });
   });
