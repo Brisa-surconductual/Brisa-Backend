@@ -32,6 +32,15 @@ process.env.DATABASE_URL = connection;
 const source = (name) =>
   require(resolve(__dirname, '../../../src/modules/chat', name));
 const { PrismaService } = require('../../../prisma/prisma.service.ts');
+const { PrismaRegistroErroresConversacionalesRepository } = source(
+  'infrastructure/persistence/prisma-registro-errores-conversacionales.repository.ts',
+);
+const { ErrorConversacionalFilter } = source(
+  'presentation/filters/error-conversacional.filter.ts',
+);
+const { RecursoConversacionalNoDisponibleException } = source(
+  'application/exceptions/recurso-conversacional-no-disponible.exception.ts',
+);
 const { PrismaProcesarRespuestaRepository } = source(
   'infrastructure/persistence/prisma-procesar-respuesta.repository.ts',
 );
@@ -75,6 +84,9 @@ const { FormatoRespuestaAdapter } = source(
   'infrastructure/validation/formato-respuesta.adapter.ts',
 );
 const prisma = new PrismaService();
+const registroErrores = new PrismaRegistroErroresConversacionalesRepository(
+  prisma,
+);
 const sql = new Client({ connectionString: connection });
 const persistencia = new PrismaProcesarRespuestaRepository(prisma);
 const historial = new PrismaHistorialInteraccionesRepository(prisma);
@@ -447,6 +459,156 @@ async function historialValido(idSesion) {
       "INSERT INTO chat.estado_conectividad (nombre) VALUES ('SIN_CONEXION')",
     );
     await q(migracion('20261120230000_chat_validar_historial_rf31'));
+    await q(migracion('20261120234000_chat_registro_errores_rf37'));
+    await check(
+      'RF-37 registra el fallo de backend después de revertir la interacción y el puntero',
+      async () => {
+        const e = await crear();
+        const antes = await snapshot(e.sesion);
+        await q(`CREATE FUNCTION chat.rf37_fallar_estado() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN RAISE EXCEPTION 'detalle técnico que no debe salir'; END;
+        $$; CREATE TRIGGER rf37_fallar_estado BEFORE UPDATE ON chat.estado_sesiones
+        FOR EACH ROW EXECUTE FUNCTION chat.rf37_fallar_estado();`);
+        let fallo;
+        try {
+          await enviar(e);
+        } catch (error) {
+          fallo = error;
+        } finally {
+          await q(
+            `DROP TRIGGER rf37_fallar_estado ON chat.estado_sesiones; DROP FUNCTION chat.rf37_fallar_estado()`,
+          );
+        }
+        assert.ok(fallo);
+        assert.equal(codigo(fallo), 'ERROR_PERSISTENCIA');
+        assert.deepEqual(await snapshot(e.sesion), antes);
+
+        const cabeceras = new Map();
+        const respuesta = {
+          headersSent: false,
+          setHeader(nombre, valor) {
+            cabeceras.set(nombre, valor);
+          },
+          status(statusCode) {
+            assert.equal(statusCode, 500);
+            return this;
+          },
+          json(body) {
+            assert.deepEqual(body, {
+              statusCode: 500,
+              codigo: 'ERROR_PERSISTENCIA',
+              mensaje: 'No se pudo guardar tu respuesta. Inténtalo de nuevo.',
+            });
+          },
+        };
+        const filtro = new ErrorConversacionalFilter(registroErrores, {});
+        await filtro.catch(fallo, {
+          getType: () => 'http',
+          switchToHttp: () => ({
+            getRequest: () => ({
+              method: 'POST',
+              path: `/chat/sesiones/${e.sesion}/respuestas`,
+              params: { id_sesion: e.sesion },
+              autenticacion: { usuario: { id_usuario: usuario } },
+              get: () => 'rollback-rf37',
+            }),
+            getResponse: () => respuesta,
+          }),
+        });
+        assert.equal(cabeceras.get('X-Request-Id'), 'rollback-rf37');
+        const { rows } = await q(
+          `SELECT origen,codigo,status_http,id_usuario,id_sesion,id_nodo FROM chat.registro_errores WHERE x_request_id=$1`,
+          ['rollback-rf37'],
+        );
+        assert.deepEqual(rows, [
+          {
+            origen: 'BACKEND',
+            codigo: 'ERROR_PERSISTENCIA',
+            status_http: 500,
+            id_usuario: usuario,
+            id_sesion: e.sesion,
+            id_nodo: e.nodo,
+          },
+        ]);
+        assert.deepEqual(await snapshot(e.sesion), antes);
+      },
+    );
+    await check(
+      'RF-37 comparte la cuota entre solicitudes concurrentes y valida el propietario',
+      async () => {
+        const e = await crear();
+        const reporte = {
+          idUsuario: usuario,
+          idSesion: e.sesion,
+          codigo: 'ERROR_PRESENTACION',
+          xRequestId: 'cuota-rf37',
+        };
+        assert.equal(
+          await registroErrores.registrarCliente({
+            ...reporte,
+            idUsuario: otroUsuario,
+          }),
+          'SESION_NO_ENCONTRADA',
+        );
+        const resultados = await Promise.all(
+          Array.from({ length: 12 }, () =>
+            registroErrores.registrarCliente(reporte),
+          ),
+        );
+        assert.equal(
+          resultados.filter((resultado) => resultado === 'REGISTRADO').length,
+          10,
+        );
+        assert.equal(
+          resultados.filter((resultado) => resultado === 'LIMITE').length,
+          2,
+        );
+        assert.equal(
+          (
+            await q(
+              `SELECT count(*)::int AS total FROM chat.registro_errores WHERE origen='CLIENTE' AND id_usuario=$1`,
+              [usuario],
+            )
+          ).rows[0].total,
+          10,
+        );
+        assert.equal(
+          await registroErrores.registrarCliente({
+            ...reporte,
+            idUsuario: otroUsuario,
+            idSesion: null,
+          }),
+          'REGISTRADO',
+        );
+        await q(
+          `UPDATE chat.registro_errores SET fecha_error=statement_timestamp()-interval '61 seconds' WHERE origen='CLIENTE' AND id_usuario=$1`,
+          [usuario],
+        );
+        assert.equal(
+          await registroErrores.registrarCliente(reporte),
+          'REGISTRADO',
+        );
+      },
+    );
+    await check(
+      'RF-37 revierte la reparación del puntero y la reanudación cuando falla la presentación',
+      async () => {
+        const e = await crear();
+        await enviar(e);
+        await q(
+          `UPDATE chat.sesiones SET id_nodo_actual=NULL WHERE id_sesion=$1`,
+          [e.sesion],
+        );
+        await q(
+          `UPDATE chat.estado_sesiones SET estado_actual='PAUSADA',fecha_pausa=now() WHERE id_sesion=$1`,
+          [e.sesion],
+        );
+        const fallo = new RecursoConversacionalNoDisponibleException();
+        await sinCambios(e, 'RECURSO_NO_DISPONIBLE', () =>
+          recuperar.recuperar(e.sesion, usuario, () => Promise.reject(fallo)),
+        );
+      },
+    );
     await check(
       'RF-32 repara y reactiva la sesión archivada con sus últimas veinte interacciones',
       async () => {

@@ -60,12 +60,12 @@ export class IniciarOReanudarSesionUseCase {
 
     const ubicacion = await this.calcularUbicacion.execute(idUsuario);
     if (existente !== null) {
-      const estado = await this.recuperacion.recuperar(
+      const respuesta = await this.recuperacion.recuperar(
         existente.idSesion,
         idUsuario,
+        (estado) => this.construirRespuesta(estado, true, ubicacion),
       );
-      if (estado !== null)
-        return this.construirRespuesta(estado, true, ubicacion);
+      if (respuesta !== null) return respuesta;
     }
 
     let contexto: ContextoConversacionalDtoResponse;
@@ -126,12 +126,13 @@ export class IniciarOReanudarSesionUseCase {
       const concurrente =
         await this.sesiones.buscarUltimaNoCompletada(idUsuario);
       if (concurrente === null) throw new EstadoSesionInconsistenteException();
-      const estado = await this.recuperacion.recuperar(
+      const respuesta = await this.recuperacion.recuperar(
         concurrente.idSesion,
         idUsuario,
+        (estado) => this.construirRespuesta(estado, true, ubicacion),
       );
-      if (estado === null) throw new EstadoSesionInconsistenteException();
-      return this.construirRespuesta(estado, true, ubicacion);
+      if (respuesta === null) throw new EstadoSesionInconsistenteException();
+      return respuesta;
     }
     return respuestaNueva;
   }

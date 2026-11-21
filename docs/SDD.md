@@ -286,6 +286,7 @@ No todas las secciones aplican a toda spec (p. ej. una regla de negocio interna 
 | [`CONTRATO_RF27_RF28_RF29.md`](CONTRATO_RF27_RF28_RF29.md) | RF-27 / RF-27B / RF-28 / RF-29 | M-3 (Chat) | IMPLEMENTADA | Reglas vigentes; el request/response camelCase quedó OBSOLETO, rige el de RF-30 |
 | [`CONTRATO_RF30_INTERACCIONES.md`](CONTRATO_RF30_INTERACCIONES.md) | RF-30 | M-3 (Chat) | IMPLEMENTADA (PR #59) | Contrato vigente de `POST /chat/sesiones/:id_sesion/respuestas` |
 | [`CONTRATO_RF31_RF32_HISTORIAL.md`](CONTRATO_RF31_RF32_HISTORIAL.md) | RF-31 / RF-32 (con RF-30, RF-33) | M-3 (Chat) | Tareas #306 y #310 | `GET /chat/sesiones/{id_sesion}/historial` y recuperación con `POST /chat/sesiones/iniciar` |
+| [`CONTRATO_RF37_ERRORES_CONVERSACIONALES.md`](CONTRATO_RF37_ERRORES_CONVERSACIONALES.md) | RF-37 | M-3 (Chat) | Tarea #314 | Filtro global, registro correlacionado y `POST /chat/errores-cliente` |
 | [`RF25B_DECISIONES_TECNICAS.md`](RF25B_DECISIONES_TECNICAS.md) | RF-25B | Por confirmar | N/A (decisión técnica) | No es contrato de comportamiento |
 
 > Esta tabla se mantiene al día en esta misma sesión y en las siguientes: cada spec nueva o cambio de estado se refleja aquí.

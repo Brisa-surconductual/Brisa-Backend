@@ -21,6 +21,7 @@ import {
   SesionErrorConfiguracionException,
 } from '../../../domain/exceptions/sesion.exceptions';
 import { SesionesConversacionalesController } from './sesiones-conversacionales.controller';
+import { instalarFiltroConversacionalPrueba } from '../../support/testing/filtro-error-conversacional.fixture';
 
 describe('RF-24 / RF-32 POST /chat/sesiones/iniciar (HTTP)', () => {
   const ruta = '/chat/sesiones/iniciar';
@@ -122,6 +123,7 @@ describe('RF-24 / RF-32 POST /chat/sesiones/iniciar (HTTP)', () => {
       .compile();
 
     app = modulo.createNestApplication();
+    instalarFiltroConversacionalPrueba(app);
     app.use(cookieParser());
     await app.init();
   });

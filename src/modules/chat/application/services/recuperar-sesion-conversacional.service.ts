@@ -25,7 +25,17 @@ export class RecuperarSesionConversacionalService {
   recuperar(
     idSesion: string,
     idUsuario: string,
-  ): Promise<EstadoSesionRecuperado | null> {
+  ): Promise<EstadoSesionRecuperado | null>;
+  recuperar<T>(
+    idSesion: string,
+    idUsuario: string,
+    finalizar: (estado: EstadoSesionRecuperado) => Promise<T>,
+  ): Promise<T | null>;
+  recuperar<T>(
+    idSesion: string,
+    idUsuario: string,
+    finalizar?: (estado: EstadoSesionRecuperado) => Promise<T>,
+  ): Promise<EstadoSesionRecuperado | T | null> {
     return this.persistencia.ejecutar(async (tx) => {
       const anterior = await tx.bloquearSesion(idSesion, idUsuario);
       if (anterior === null) throw new EstadoSesionInconsistenteException();
@@ -53,12 +63,13 @@ export class RecuperarSesionConversacionalService {
       });
       if (historial === null) throw new EstadoSesionInconsistenteException();
 
-      return {
+      const estado = {
         sesion,
         nodo,
         historial,
         recuperadaDesdeHistorial: anterior.idNodoActual !== nodo.idNodo,
       };
+      return finalizar === undefined ? estado : finalizar(estado);
     });
   }
 }
