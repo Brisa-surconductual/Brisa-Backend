@@ -5,6 +5,7 @@ import { RolesGuard } from '../../shared/presentation/guards/role-guard';
 import { UsersModule } from '../usuarios/users.module';
 import { CronogramaModule } from '../cronograma/cronograma.module';
 import { ChatApplicationProviders } from './application/chat.providers';
+import { PerfilClinicoVigentePort } from './application/ports/perfil-clinico-vigente.port';
 import { ChatInfrastructureProviders } from './infrastructure/chat.providers';
 import { ChatPresentationProviders } from './presentation/chat.providers';
 import { DomainExceptionFilter } from './presentation/filters/domain-exception.filter';
@@ -19,6 +20,6 @@ import { ConsultarPublicadoPersonalizadoUseCase } from './application/use-cases/
     RolesGuard,
     { provide: APP_FILTER, useClass: DomainExceptionFilter },
   ],
-  exports: [ConsultarPublicadoPersonalizadoUseCase],
+  exports: [ConsultarPublicadoPersonalizadoUseCase, PerfilClinicoVigentePort],
 })
 export class ChatModule {}

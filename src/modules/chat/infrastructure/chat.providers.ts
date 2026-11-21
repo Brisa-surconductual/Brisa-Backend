@@ -21,12 +21,18 @@ import { PrismaPresentacionNodoActualRepository } from './persistence/prisma-pre
 import { S3FirmarRecursoNodoAdapter } from './storage/s3-firmar-recurso-nodo.adapter';
 import { HistorialInteraccionesRepository } from '../domain/repositories/historial-interacciones.repository';
 import { PrismaHistorialInteraccionesRepository } from './persistence/prisma-historial-interacciones.repository';
+import { PerfilClinicoVigentePort } from '../application/ports/perfil-clinico-vigente.port';
+import { PrismaPerfilClinicoVigenteAdapter } from './persistence/prisma-perfil-clinico-vigente.adapter';
 import {
   FirmarRecursoNodoPort,
   PresentacionNodoActualPort,
 } from '../application/ports/presentacion-nodo-actual.port';
 
 export const ChatInfrastructureProviders = [
+  {
+    provide: PerfilClinicoVigentePort,
+    useClass: PrismaPerfilClinicoVigenteAdapter,
+  },
   {
     provide: ProcesarRespuestaPort,
     useClass: PrismaProcesarRespuestaRepository,
