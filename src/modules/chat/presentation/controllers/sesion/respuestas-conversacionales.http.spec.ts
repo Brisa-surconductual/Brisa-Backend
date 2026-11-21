@@ -16,6 +16,7 @@ import {
   TransaccionRespuesta,
 } from '../../../application/ports/procesar-respuesta.port';
 import { huellaInteraccion } from '../../../application/services/huella-interaccion';
+import { EstadoConversacionalService } from '../../../application/services/estado-conversacional.service';
 import { ProcesarRespuestaUseCase } from '../../../application/use-cases/sesion/procesar-respuesta.use-case';
 import {
   idsRespuesta as ids,
@@ -32,7 +33,7 @@ import { OperadorCondicion as Op } from '../../../domain/enums/operador-condicio
 import { TipoDatoValidacion as Dato } from '../../../domain/enums/tipo-dato-validacion-enum';
 import { ModalidadConversacional } from '../../../domain/enums/modalidad-conversacional-enum';
 import { FormatoRespuestaAdapter } from '../../../infrastructure/validation/formato-respuesta.adapter';
-import { DomainExceptionFilter } from '../../filters/domain-exception.filter';
+import { instalarFiltroConversacionalPrueba } from '../../support/testing/filtro-error-conversacional.fixture';
 import { RespuestasConversacionalesController } from './respuestas-conversacionales.controller';
 
 describe('RF-30 POST respuestas (HTTP)', () => {
@@ -96,6 +97,7 @@ describe('RF-30 POST respuestas (HTTP)', () => {
       controllers: [RespuestasConversacionalesController],
       providers: [
         ProcesarRespuestaUseCase,
+        EstadoConversacionalService,
         RolesGuard,
         { provide: ProcesarRespuestaPort, useValue: persistencia },
         {
@@ -122,7 +124,7 @@ describe('RF-30 POST respuestas (HTTP)', () => {
         transform: true,
       }),
     );
-    app.useGlobalFilters(new DomainExceptionFilter());
+    instalarFiltroConversacionalPrueba(app);
     await app.init();
   });
   beforeEach(() => {
@@ -270,6 +272,7 @@ describe('RF-30 POST respuestas (HTTP)', () => {
         'NODO_DESACTUALIZADO',
       ),
       409,
+      'La conversación avanzó. Consulta la pregunta actual.',
     ],
     [
       new RespuestaConversacionalNoEncontradaException(
@@ -277,19 +280,32 @@ describe('RF-30 POST respuestas (HTTP)', () => {
         'SESION_NO_ENCONTRADA',
       ),
       404,
+      'No se pudo recuperar el contenido del chat.',
     ],
   ] as const)(
     'conserva errores de dominio y su formato',
-    async (error, estado) => {
+    async (error, estado, mensaje) => {
       ejecutar.mockRejectedValueOnce(error);
       const r = await post(body()).expect(estado);
       expect(r.body).toEqual({
         statusCode: estado,
         codigo: error.codigo,
-        mensaje: error.message,
+        mensaje,
       });
     },
   );
+  it.each([
+    ['avanzarDesdeOrigen', 409, 'NODO_DESACTUALIZADO'],
+    ['validarHistorial', 422, 'HISTORIAL_INCONSISTENTE'],
+  ] as const)(
+    'propaga el error de estado conversacional de %s',
+    async (operacion, http, codigo) => {
+      tx.estado[operacion].mockResolvedValue(false);
+      const r = await post(body()).expect(http);
+      expect(r.body).toMatchObject({ statusCode: http, codigo });
+    },
+  );
+
   it('nodo terminal no escribe una nueva respuesta', async () => {
     tx.contexto.buscarTransiciones.mockResolvedValue([]);
     const r = await post(body()).expect(409);

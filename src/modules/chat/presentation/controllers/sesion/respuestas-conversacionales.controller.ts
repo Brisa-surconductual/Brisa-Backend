@@ -6,7 +6,6 @@ import {
   ParseUUIDPipe,
   Post,
   Res,
-  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -15,12 +14,10 @@ import { ProcesarRespuestaUseCase } from '../../../application/use-cases/sesion/
 import { CsrfSessionGuard } from '../../../../usuarios/presentation/guards/csrf-session.guard';
 import { AccesoEstudiante } from '../../decorators/acceso.decorators';
 import { IdUsuarioSesion } from '../../decorators/id-usuario-sesion.decorator';
-import { ErrorRespuestaChatFilter } from '../../filters/error-respuesta-chat.filter';
 import { ValidarInteraccionPipe } from '../../pipes/validar-interaccion.pipe';
 
 @Controller('/chat/sesiones')
 @AccesoEstudiante()
-@UseFilters(ErrorRespuestaChatFilter)
 export class RespuestasConversacionalesController {
   constructor(private readonly procesar: ProcesarRespuestaUseCase) {}
 

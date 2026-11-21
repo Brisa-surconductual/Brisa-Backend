@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { SesionConversacional } from '../../domain/entities/sesion/sesion-conversacional.entity';
 import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
@@ -11,8 +12,11 @@ import { PrismaSesionConversacionalRepository } from './prisma-sesion-conversaci
 describe('PrismaSesionConversacionalRepository - guardar', () => {
   const buscarPorId = jest.fn();
   const buscarActiva = jest.fn();
-  const crear = jest.fn();
-  const actualizarSesion = jest.fn();
+  const crear = jest.fn<Promise<unknown>, [Prisma.chat_sesionesCreateArgs]>();
+  const actualizarSesion = jest.fn<
+    Promise<unknown>,
+    [Prisma.chat_sesionesUpdateArgs]
+  >();
   const actualizarEstado = jest.fn();
   const bloquear = jest.fn();
   const transaccion = jest.fn();
@@ -148,22 +152,20 @@ describe('PrismaSesionConversacionalRepository - guardar', () => {
       fecha,
     );
 
-    it('registra la sesión sin flujo, versión ni nodo, aunque haya una activa', async () => {
+    it('registra la sesión sin flujo, versión ni nodo si no hay una pendiente', async () => {
       buscarPorId.mockResolvedValue(null);
       buscarActiva.mockResolvedValue(null);
 
       await repository.guardar(conError);
 
-      expect(crear).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          id_sesion: conError.idSesion,
-          modalidad_activa: ModalidadConversacional.PERSONALIZADA,
-          tipo_dependencia: TipoDependenciaClinica.TOLERANCIA,
-          tipo_craving: TipoCravingClinico.NEGATIVO,
-          estado_sesiones: { create: { estado_actual: 'ERROR_CONFIGURACION' } },
-        }),
+      const datos = crear.mock.calls[0]?.[0].data;
+      expect(datos).toMatchObject({
+        id_sesion: conError.idSesion,
+        modalidad_activa: ModalidadConversacional.PERSONALIZADA,
+        tipo_dependencia: TipoDependenciaClinica.TOLERANCIA,
+        tipo_craving: TipoCravingClinico.NEGATIVO,
+        estado_sesiones: { create: { estado_actual: 'ERROR_CONFIGURACION' } },
       });
-      const datos = crear.mock.calls[0][0].data as Record<string, unknown>;
       expect(datos).not.toHaveProperty('id_flujo_conversacional');
       expect(datos).not.toHaveProperty('id_nodo_actual');
       expect(datos).not.toHaveProperty('version_arbol_utilizada');
@@ -171,16 +173,32 @@ describe('PrismaSesionConversacionalRepository - guardar', () => {
 
     it('reutiliza la sesión con error del usuario en lugar de crear otra', async () => {
       buscarPorId.mockResolvedValue(null);
-      buscarActiva.mockResolvedValue({ id_sesion: 'previa' });
+      buscarActiva.mockResolvedValue({
+        id_sesion: 'previa',
+        estado_sesiones: { estado_actual: 'ERROR_CONFIGURACION' },
+      });
 
       await repository.guardar(conError);
 
       expect(crear).not.toHaveBeenCalled();
-      expect(actualizarSesion).toHaveBeenCalledWith({
+      expect(actualizarSesion.mock.calls[0]?.[0]).toMatchObject({
         where: { id_sesion: 'previa' },
-        data: expect.objectContaining({ fecha_ultima_interaccion: fecha }),
+        data: { fecha_ultima_interaccion: fecha },
       });
       expect(actualizarEstado).toHaveBeenCalledTimes(1);
+    });
+
+    it('preserva una sesión activa si otro inicio intenta registrar un error', async () => {
+      buscarPorId.mockResolvedValue(null);
+      buscarActiva.mockResolvedValue({
+        id_sesion: 'previa',
+        estado_sesiones: { estado_actual: 'ACTIVA' },
+      });
+      await expect(repository.guardar(conError)).rejects.toBeInstanceOf(
+        SesionActivaExistenteException,
+      );
+      expect(crear).not.toHaveBeenCalled();
+      expect(actualizarSesion).not.toHaveBeenCalled();
     });
 
     it('no se considera reanudable', () => {
