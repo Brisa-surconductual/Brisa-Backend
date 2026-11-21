@@ -7,7 +7,7 @@ import { CronogramaModule } from '../cronograma/cronograma.module';
 import { ChatApplicationProviders } from './application/chat.providers';
 import { ChatInfrastructureProviders } from './infrastructure/chat.providers';
 import { ChatPresentationProviders } from './presentation/chat.providers';
-import { DomainExceptionFilter } from './presentation/filters/domain-exception.filter';
+import { ErrorConversacionalFilter } from './presentation/filters/error-conversacional.filter';
 import { ConsultarPublicadoPersonalizadoUseCase } from './application/use-cases/arbol-personalizado/consultar-publicado-personalizado.use-case';
 
 @Module({
@@ -17,7 +17,7 @@ import { ConsultarPublicadoPersonalizadoUseCase } from './application/use-cases/
     ...ChatApplicationProviders,
     ...ChatInfrastructureProviders,
     RolesGuard,
-    { provide: APP_FILTER, useClass: DomainExceptionFilter },
+    { provide: APP_FILTER, useClass: ErrorConversacionalFilter },
   ],
   exports: [ConsultarPublicadoPersonalizadoUseCase],
 })

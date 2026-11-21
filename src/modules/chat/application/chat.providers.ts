@@ -30,12 +30,14 @@ import { PrepararEntradaNodoActualService } from './services/preparar-entrada-no
 import { EstadoConversacionalService } from './services/estado-conversacional.service';
 import { PresentarHistorialConversacionalService } from './services/presentar-historial-conversacional.service';
 import { RecuperarSesionConversacionalService } from './services/recuperar-sesion-conversacional.service';
+import { ReportarErrorConversacionalUseCase } from './use-cases/sesion/reportar-error-conversacional.use-case';
 
 export const ChatApplicationProviders = [
   ProcesarRespuestaUseCase,
   EstadoConversacionalService,
   PresentarHistorialConversacionalService,
   RecuperarSesionConversacionalService,
+  ReportarErrorConversacionalUseCase,
   PresentarNodoActualService,
   PresentarBloquesNodoActualService,
   PrepararEntradaNodoActualService,

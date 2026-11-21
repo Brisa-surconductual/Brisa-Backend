@@ -23,12 +23,18 @@ import { HistorialInteraccionesRepository } from '../domain/repositories/histori
 import { PrismaHistorialInteraccionesRepository } from './persistence/prisma-historial-interacciones.repository';
 import { RecuperarSesionConversacionalPort } from '../application/ports/recuperar-sesion-conversacional.port';
 import { PrismaRecuperarSesionConversacionalRepository } from './persistence/prisma-recuperar-sesion-conversacional.repository';
+import { RegistroErroresConversacionalesRepository } from '../domain/repositories/registro-errores-conversacionales.repository';
+import { PrismaRegistroErroresConversacionalesRepository } from './persistence/prisma-registro-errores-conversacionales.repository';
 import {
   FirmarRecursoNodoPort,
   PresentacionNodoActualPort,
 } from '../application/ports/presentacion-nodo-actual.port';
 
 export const ChatInfrastructureProviders = [
+  {
+    provide: RegistroErroresConversacionalesRepository,
+    useClass: PrismaRegistroErroresConversacionalesRepository,
+  },
   {
     provide: ProcesarRespuestaPort,
     useClass: PrismaProcesarRespuestaRepository,

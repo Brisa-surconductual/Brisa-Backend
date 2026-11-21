@@ -15,7 +15,7 @@ import { SesionConversacional } from '../../../domain/entities/sesion/sesion-con
 import { ModalidadConversacional } from '../../../domain/enums/modalidad-conversacional-enum';
 import { ArbolConversacionalRepository } from '../../../domain/repositories/arbol-conversacional.repository';
 import { SesionConversacionalRepository } from '../../../domain/repositories/sesion-conversacional.repository';
-import { DomainExceptionFilter } from '../../filters/domain-exception.filter';
+import { instalarFiltroConversacionalPrueba } from '../../support/testing/filtro-error-conversacional.fixture';
 import { NodoActualController } from './nodo-actual.controller';
 import { PresentarNodoActualService } from '../../../application/services/presentar-nodo-actual.service';
 import { presentadorNodoPrueba } from '../../../application/support/testing/presentacion-nodo.fixture';
@@ -87,7 +87,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
       })
       .compile();
     app = modulo.createNestApplication();
-    app.useGlobalFilters(new DomainExceptionFilter());
+    instalarFiltroConversacionalPrueba(app);
     await app.init();
   });
   beforeEach(() => {
@@ -378,6 +378,19 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
       'cronograma/recursos/contenido/objeto',
     );
     expect(datos.bloques[0].orden).toBe(3);
+
+    firmar.lectura.mockRejectedValueOnce(
+      new Error('detalle privado del almacenamiento'),
+    );
+    const fallo = await request(app.getHttpServer())
+      .get(`/chat/sesiones/${idSesion}/nodo-actual`)
+      .expect(503);
+    expect(fallo.body).toEqual({
+      statusCode: 503,
+      codigo: 'RECURSO_NO_DISPONIBLE',
+      mensaje:
+        'No fue posible cargar el contenido en este momento. Inténtalo de nuevo más tarde.',
+    });
   });
   it('no firma una referencia privada ajena al contenido del nodo', async () => {
     arboles.buscarNodo.mockResolvedValue(

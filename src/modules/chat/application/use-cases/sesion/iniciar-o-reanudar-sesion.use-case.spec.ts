@@ -14,7 +14,10 @@ import { SesionConversacional } from '../../../domain/entities/sesion/sesion-con
 import { DeterminarContextoConversacionalUseCase } from './determinar-contexto-conversacional.use-case';
 import { IniciarOReanudarSesionUseCase } from './iniciar-o-reanudar-sesion.use-case';
 import { PresentarHistorialConversacionalService } from '../../services/presentar-historial-conversacional.service';
-import { RecuperarSesionConversacionalService } from '../../services/recuperar-sesion-conversacional.service';
+import {
+  EstadoSesionRecuperado,
+  RecuperarSesionConversacionalService,
+} from '../../services/recuperar-sesion-conversacional.service';
 import { presentadorNodoPrueba } from '../../support/testing/presentacion-nodo.fixture';
 import {
   PerfilClinicoIncompletoException,
@@ -58,7 +61,10 @@ describe('IniciarOReanudarSesionUseCase', () => {
     existeAsignacion: jest.fn(),
   };
 
-  const recuperar = jest.fn();
+  const recuperar = jest.fn<
+    Promise<EstadoSesionRecuperado | null>,
+    [string, string]
+  >();
   const presentador = presentadorNodoPrueba();
 
   const casoDeUso = new IniciarOReanudarSesionUseCase(
@@ -67,7 +73,16 @@ describe('IniciarOReanudarSesionUseCase', () => {
     determinarContexto as unknown as DeterminarContextoConversacionalUseCase,
     calcularUbicacion as unknown as CalcularUbicacionTemporalUsuarioUseCase,
     asignacionCronograma,
-    { recuperar } as unknown as RecuperarSesionConversacionalService,
+    {
+      async recuperar<T>(
+        sesion: string,
+        usuario: string,
+        finalizar: (estado: EstadoSesionRecuperado) => Promise<T>,
+      ) {
+        const estado = await recuperar(sesion, usuario);
+        return estado === null ? null : finalizar(estado);
+      },
+    } as unknown as RecuperarSesionConversacionalService,
     presentador,
     new PresentarHistorialConversacionalService(
       arboles as unknown as ArbolConversacionalRepository,

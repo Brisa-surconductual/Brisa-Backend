@@ -4,6 +4,7 @@ import {
   BloquesNodoActual,
 } from '../../domain/policies/bloques-nodo-actual.policy';
 import { BloqueNodoDtoResponse } from '../dto/presentacion-nodo-actual.dto-response';
+import { RecursoConversacionalNoDisponibleException } from '../exceptions/recurso-conversacional-no-disponible.exception';
 import {
   FirmarRecursoNodoPort,
   RecursoNodoActual,
@@ -36,7 +37,9 @@ export class PresentarBloquesNodoActualService {
       }
     }
     if (bloques.length === 0) throw new Error('Contenido no disponible.');
-    return Promise.all(bloques.map((b) => this.presentar(b, recursos)));
+    return Promise.all(
+      bloques.map((bloque) => this.presentar(bloque, recursos)),
+    );
   }
 
   private async presentar(
@@ -68,7 +71,11 @@ export class PresentarBloquesNodoActualService {
         recurso.tipo !== (b.tipo === 'GIF' ? 'IMAGEN' : b.tipo)
       )
         throw new Error('Recurso no disponible para este nodo.');
-      const acceso = await this.firmar.lectura(recurso.claveAlmacenamiento);
+      const acceso = await this.firmar
+        .lectura(recurso.claveAlmacenamiento)
+        .catch(() => {
+          throw new RecursoConversacionalNoDisponibleException();
+        });
       return {
         orden: b.orden,
         tipo: b.tipo,

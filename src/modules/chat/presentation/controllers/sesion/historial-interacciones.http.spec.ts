@@ -20,7 +20,7 @@ import { ModalidadConversacional } from '../../../domain/enums/modalidad-convers
 import { ArbolConversacionalRepository } from '../../../domain/repositories/arbol-conversacional.repository';
 import { HistorialInteraccionesRepository } from '../../../domain/repositories/historial-interacciones.repository';
 import { SesionConversacionalRepository } from '../../../domain/repositories/sesion-conversacional.repository';
-import { DomainExceptionFilter } from '../../filters/domain-exception.filter';
+import { instalarFiltroConversacionalPrueba } from '../../support/testing/filtro-error-conversacional.fixture';
 import { HistorialInteraccionesController } from './historial-interacciones.controller';
 
 describe('RF-31 / RF-32 GET /chat/sesiones/:id_sesion/historial (HTTP)', () => {
@@ -80,7 +80,7 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:id_sesion/historial (HTTP)', () => {
         forbidNonWhitelisted: true,
       }),
     );
-    app.useGlobalFilters(new DomainExceptionFilter());
+    instalarFiltroConversacionalPrueba(app);
     await app.init();
   });
   beforeEach(() => {
