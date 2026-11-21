@@ -21,12 +21,16 @@ import { PrismaPresentacionNodoActualRepository } from './persistence/prisma-pre
 import { S3FirmarRecursoNodoAdapter } from './storage/s3-firmar-recurso-nodo.adapter';
 import { HistorialInteraccionesRepository } from '../domain/repositories/historial-interacciones.repository';
 import { PrismaHistorialInteraccionesRepository } from './persistence/prisma-historial-interacciones.repository';
+import { BullMqEventosSeguimientoWorker } from './messaging/bullmq-eventos-seguimiento.worker';
+import { PrismaEventosSeguimientoRepository } from './persistence/prisma-eventos-seguimiento.repository';
 import {
   FirmarRecursoNodoPort,
   PresentacionNodoActualPort,
 } from '../application/ports/presentacion-nodo-actual.port';
 
 export const ChatInfrastructureProviders = [
+  PrismaEventosSeguimientoRepository,
+  BullMqEventosSeguimientoWorker,
   {
     provide: ProcesarRespuestaPort,
     useClass: PrismaProcesarRespuestaRepository,
