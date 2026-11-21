@@ -3,14 +3,13 @@ export interface InteraccionRegistrada {
   idInteraccion: string;
   secuencia: number;
   timestampInteraccion: Date;
-  registradaEn: Date;
   idNodo: string;
+  idNodoDestino: string;
   tipoEntrada: string;
   valor: unknown;
 }
 
 export interface PaginaHistorialInteracciones {
-  ultimaSecuencia: number;
   hayMas: boolean;
   /** Orden ascendente de secuencia. */
   interacciones: InteraccionRegistrada[];
@@ -27,7 +26,8 @@ export interface ConsultaHistorialInteracciones {
  * pertenencia de la sesión al usuario la comprueba el caso de uso.
  */
 export abstract class HistorialInteraccionesRepository {
+  /** Devuelve null cuando el historial no supera la verificación de integridad. */
   abstract consultar(
     consulta: ConsultaHistorialInteracciones,
-  ): Promise<PaginaHistorialInteracciones>;
+  ): Promise<PaginaHistorialInteracciones | null>;
 }

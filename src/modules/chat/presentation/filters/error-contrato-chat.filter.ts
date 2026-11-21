@@ -5,6 +5,7 @@ import {
   HttpException,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { CsrfTokenInvalidoException } from '../../../usuarios/domain/exeption/csrf-token-invalido.exception';
 import { DomainException } from '../../domain/exceptions/domain.exception';
 
 const ESTADOS = {
@@ -18,10 +19,16 @@ const ESTADOS = {
 /** Adaptador de errores del contrato del estudiante; no altera los guards globales. */
 @Catch()
 export class ErrorContratoChatFilter implements ExceptionFilter {
+  protected readonly codigoSolicitudInvalida: string | null = null;
+  protected readonly errorInterno: { codigo: string | null; mensaje: string } =
+    {
+      codigo: 'CONTENIDO_NO_DISPONIBLE',
+      mensaje: 'El contenido del nodo no está disponible.',
+    };
+
   catch(error: unknown, host: ArgumentsHost): void {
     let statusCode = 500;
-    let codigo: string | null = 'CONTENIDO_NO_DISPONIBLE';
-    let mensaje = 'El contenido del nodo no está disponible.';
+    let { codigo, mensaje } = this.errorInterno;
     if (error instanceof DomainException) {
       statusCode = ESTADOS[error.tipo];
       codigo = error.codigo ?? null;
@@ -35,7 +42,7 @@ export class ErrorContratoChatFilter implements ExceptionFilter {
           message?: string | string[];
           mensaje?: string;
         };
-        codigo = datos.codigo ?? null;
+        codigo = datos.codigo ?? this.codigoHttpPredeterminado(statusCode);
         mensaje =
           datos.mensaje ??
           (Array.isArray(datos.message)
@@ -43,14 +50,33 @@ export class ErrorContratoChatFilter implements ExceptionFilter {
             : datos.message) ??
           error.message;
       } else {
-        codigo = null;
+        codigo = this.codigoHttpPredeterminado(statusCode);
         mensaje = body;
       }
     }
+    if (error instanceof CsrfTokenInvalidoException) codigo = 'CSRF_INVALIDO';
     host
       .switchToHttp()
       .getResponse<Response>()
       .status(statusCode)
       .json({ statusCode, codigo, mensaje });
   }
+
+  private codigoHttpPredeterminado(estado: number): string | null {
+    return estado === 400 ? this.codigoSolicitudInvalida : null;
+  }
+}
+
+@Catch()
+export class ErrorHistorialChatFilter extends ErrorContratoChatFilter {
+  protected readonly codigoSolicitudInvalida = 'PARAMETRO_INVALIDO';
+}
+
+@Catch()
+export class ErrorInicioSesionChatFilter extends ErrorContratoChatFilter {
+  protected readonly errorInterno = {
+    codigo: null,
+    mensaje:
+      'No fue posible recuperar la sesión en este momento. Intente nuevamente más tarde.',
+  };
 }

@@ -8,6 +8,7 @@ import {
 import { PrismaContextoRespuestaRepository } from './prisma-contexto-respuesta.repository';
 import { PrismaRegistroRespuestaRepository } from './prisma-registro-respuesta.repository';
 import { PrismaPerfilRespuestaRepository } from './prisma-perfil-respuesta.repository';
+import { PrismaEstadoConversacionalRepository } from './prisma-estado-conversacional.repository';
 
 @Injectable()
 export class PrismaProcesarRespuestaRepository implements ProcesarRespuestaPort {
@@ -20,6 +21,7 @@ export class PrismaProcesarRespuestaRepository implements ProcesarRespuestaPort 
           contexto: new PrismaContextoRespuestaRepository(tx),
           registro: new PrismaRegistroRespuestaRepository(tx),
           perfil: new PrismaPerfilRespuestaRepository(tx),
+          estado: new PrismaEstadoConversacionalRepository(tx),
         }),
       {
         isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,

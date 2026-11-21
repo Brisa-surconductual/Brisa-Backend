@@ -21,6 +21,7 @@ import {
   ProcesarRespuestaPort,
 } from '../../ports/procesar-respuesta.port';
 import { huellaInteraccion } from '../../services/huella-interaccion';
+import { EstadoConversacionalService } from '../../services/estado-conversacional.service';
 
 @Injectable()
 export class ProcesarRespuestaUseCase {
@@ -30,6 +31,7 @@ export class ProcesarRespuestaUseCase {
   constructor(
     private readonly persistencia: ProcesarRespuestaPort,
     private readonly formato: ComprobarFormatoRespuestaPort,
+    private readonly estado: EstadoConversacionalService,
   ) {}
 
   async execute(
@@ -138,6 +140,17 @@ export class ProcesarRespuestaUseCase {
           resultado,
           huella,
           ahora,
+        });
+        await this.estado.registrarPaso(tx.estado, {
+          idSesion,
+          idUsuario,
+          idInteraccion,
+          idNodoOrigen: nodo.idNodo,
+          idNodoDestino: destino.idNodo,
+          valor: decision.respuesta,
+          timestampInteraccion: dto.timestamp_interaccion,
+          ahora,
+          esTerminal,
         });
         return resultado;
       });

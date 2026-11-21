@@ -38,15 +38,79 @@ const { PrismaProcesarRespuestaRepository } = source(
 const { ProcesarRespuestaUseCase } = source(
   'application/use-cases/sesion/procesar-respuesta.use-case.ts',
 );
+const { EstadoConversacionalService } = source(
+  'application/services/estado-conversacional.service.ts',
+);
+const { PrismaHistorialInteraccionesRepository } = source(
+  'infrastructure/persistence/prisma-historial-interacciones.repository.ts',
+);
+const { PrismaRecuperarSesionConversacionalRepository } = source(
+  'infrastructure/persistence/prisma-recuperar-sesion-conversacional.repository.ts',
+);
+const { PrismaSesionConversacionalRepository } = source(
+  'infrastructure/persistence/prisma-sesion-conversacional.repository.ts',
+);
+const { RecuperarSesionConversacionalService } = source(
+  'application/services/recuperar-sesion-conversacional.service.ts',
+);
+const { SesionConversacional } = source(
+  'domain/entities/sesion/sesion-conversacional.entity.ts',
+);
+const { IniciarOReanudarSesionUseCase } = source(
+  'application/use-cases/sesion/iniciar-o-reanudar-sesion.use-case.ts',
+);
+const { PresentarHistorialConversacionalService } = source(
+  'application/services/presentar-historial-conversacional.service.ts',
+);
+const { presentadorNodoPrueba } = source(
+  'application/support/testing/presentacion-nodo.fixture.ts',
+);
+const { PrismaArbolConversacionalRepository } = source(
+  'infrastructure/persistence/prisma-arbol-conversacional.repository.ts',
+);
+const { PrismaPresentacionNodoActualRepository } = source(
+  'infrastructure/persistence/prisma-presentacion-nodo-actual.repository.ts',
+);
 const { FormatoRespuestaAdapter } = source(
   'infrastructure/validation/formato-respuesta.adapter.ts',
 );
 const prisma = new PrismaService();
 const sql = new Client({ connectionString: connection });
 const persistencia = new PrismaProcesarRespuestaRepository(prisma);
+const historial = new PrismaHistorialInteraccionesRepository(prisma);
+const recuperar = new RecuperarSesionConversacionalService(
+  new PrismaRecuperarSesionConversacionalRepository(prisma, historial),
+);
+const sesiones = new PrismaSesionConversacionalRepository(prisma);
+const arboles = new PrismaArbolConversacionalRepository(prisma);
+const presentador = presentadorNodoPrueba(
+  new PrismaPresentacionNodoActualRepository(prisma),
+);
+const casoInicio = (determinarContexto) =>
+  new IniciarOReanudarSesionUseCase(
+    sesiones,
+    arboles,
+    { execute: determinarContexto },
+    {
+      execute: () =>
+        Promise.resolve({
+          id_unidad_temporal: null,
+          nombre_unidad: null,
+          cronograma_finalizado: false,
+        }),
+    },
+    { existeAsignacion: () => Promise.resolve(true) },
+    recuperar,
+    presentador,
+    new PresentarHistorialConversacionalService(arboles, presentador),
+  );
+const iniciar = casoInicio(() =>
+  Promise.reject(new Error('No debe elegir un árbol nuevo al recuperar')),
+);
 const caso = new ProcesarRespuestaUseCase(
   persistencia,
   new FormatoRespuestaAdapter(),
+  new EstadoConversacionalService(),
 );
 const usuario = randomUUID(),
   otroUsuario = randomUUID(),
@@ -111,7 +175,16 @@ async function crear({
   const contenido = {
     texto: 'Contenido intacto',
     instrucciones: 'Instrucción',
-    entrada: { tipo_entrada: tipo },
+    entrada: {
+      tipo_entrada: tipo,
+      ...(tipoDato === 'NUMERICO' && { min: 0, max: 10 }),
+      ...([
+        'OPCION_UNICA',
+        'SELECCION_UNICA',
+        'MULTISELECCION',
+        'SELECCION_MULTIPLE',
+      ].includes(tipo) && { opciones: permitido }),
+    },
     ...(captura !== null &&
       (capturaLegada
         ? { captura_perfil: captura }
@@ -149,10 +222,10 @@ async function crear({
       usuario,
     ],
   );
-  if (regla) {
+  if (regla && tipo !== 'CONTINUAR') {
     await q(
-      `INSERT INTO chat.reglas_validaciones(id_regla_validacion,tipo_dato,obligatorio,valor_min,valor_max,formato_regex,valores_permitidos,mensaje_error)
-      VALUES($1,$2,$3,$4,$5,$6,$7,'Respuesta fuera de lo permitido')`,
+      `INSERT INTO chat.reglas_validaciones(id_regla_validacion,tipo_dato,obligatorio,valor_min,valor_max,formato_regex,valores_permitidos,mensaje_error,operador_condicion,valor_esperado)
+      VALUES($1,$2,$3,$4,$5,$6,$7,'Respuesta fuera de lo permitido',$8,$9)`,
       [
         validacion,
         tipoDato,
@@ -161,38 +234,28 @@ async function crear({
         tipoDato === 'NUMERICO' ? 10 : null,
         regex,
         permitido,
+        operador,
+        condicion,
       ],
     );
+  }
+  if (regla) {
     await q(
-      `INSERT INTO chat.reglas_nodos(id_flujo,id_nodo_origen,id_nodo_destino,operador_condicion,valor_condicion,orden_evaluacion)
-      VALUES($1,$2,$3,$4,$5,1)`,
-      [flujo, nodo, destino, operador, condicion],
+      `INSERT INTO chat.reglas_nodos(id_flujo,id_nodo_origen,id_nodo_destino,id_regla_validacion,orden_evaluacion)
+      VALUES($1,$2,$3,$4,1)`,
+      [flujo, nodo, destino, tipo === 'CONTINUAR' ? null : validacion],
     );
   }
-  if (regla)
-    await q('UPDATE chat.nodos SET id_regla_validacion=$1 WHERE id_nodo=$2', [
-      validacion,
-      nodo,
-    ]);
   if (!destinoTerminal) {
-    const fin = randomUUID(),
-      validacionContinuar = randomUUID();
+    const fin = randomUUID();
     await q(
       `INSERT INTO chat.nodos(id_nodo,id_flujo,id_tipo_nodo,contenido,creado_por) VALUES($1,$2,$3,$4,$5)`,
       [fin, flujoDestino, tipoMensaje, { texto: 'Final' }, usuario],
     );
     await q(
-      `INSERT INTO chat.reglas_validaciones(id_regla_validacion,tipo_dato,obligatorio,valores_permitidos,mensaje_error) VALUES($1,'TEXTO',false,ARRAY[]::text[],'Continuar')`,
-      [validacionContinuar],
+      `INSERT INTO chat.reglas_nodos(id_flujo,id_nodo_origen,id_nodo_destino,orden_evaluacion) VALUES($1,$2,$3,1)`,
+      [flujoDestino, destino, fin],
     );
-    await q(
-      `INSERT INTO chat.reglas_nodos(id_flujo,id_nodo_origen,id_nodo_destino,operador_condicion,valor_condicion,orden_evaluacion) VALUES($1,$2,$3,'IGUALDAD',$4,1)`,
-      [flujoDestino, destino, fin, { valor: null }],
-    );
-    await q('UPDATE chat.nodos SET id_regla_validacion=$1 WHERE id_nodo=$2', [
-      validacionContinuar,
-      destino,
-    ]);
   }
   await q(
     `INSERT INTO chat.sesiones(id_sesion,id_usuario,id_flujo_conversacional,version_arbol_utilizada,modalidad_activa,tipo_dependencia,tipo_craving,id_nodo_actual)
@@ -256,6 +319,16 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
   await rechaza(accion(), esperado);
   assert.deepEqual(await snapshot(e.sesion), antes);
 }
+const migracion = (nombre) =>
+  readFileSync(
+    resolve(__dirname, '../../../prisma/migrations', nombre, 'migration.sql'),
+    'utf8',
+  );
+async function historialValido(idSesion) {
+  return (
+    await q('SELECT chat.fn_validar_historial_sesion($1) AS valido', [idSesion])
+  ).rows[0].valido;
+}
 
 (async () => {
   try {
@@ -287,6 +360,8 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       tipoPregunta,
       tipoMensaje,
     ]);
+    await q(migracion('20261117140000_chat_tipo_dato_validacion_decision'));
+    await q(migracion('20261118120000_chat_regla_por_transicion'));
     const catalogosSql = readFileSync(
       resolve(
         __dirname,
@@ -370,6 +445,358 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
     );
     await q(
       "INSERT INTO chat.estado_conectividad (nombre) VALUES ('SIN_CONEXION')",
+    );
+    await q(migracion('20261120230000_chat_validar_historial_rf31'));
+    await check(
+      'RF-32 repara y reactiva la sesión archivada con sus últimas veinte interacciones',
+      async () => {
+        const e = await crear();
+        const { id_nodo_destino: ultimoOriginal } = (
+          await q(
+            'SELECT id_nodo_destino FROM chat.reglas_nodos WHERE id_nodo_origen=$1',
+            [e.destino],
+          )
+        ).rows[0];
+        const ids = Array.from({ length: 21 }, () => randomUUID());
+        await q(
+          `INSERT INTO chat.nodos(id_nodo,id_flujo,id_tipo_nodo,contenido,creado_por)
+        SELECT id,$2,$3,'{"texto":"Siguiente paso"}'::jsonb,$4 FROM unnest($1::uuid[]) id`,
+          [ids, e.flujo, tipoMensaje, usuario],
+        );
+        await q(
+          `INSERT INTO chat.reglas_nodos(id_flujo,id_nodo_origen,id_nodo_destino,orden_evaluacion)
+        SELECT $3,origen,destino,1 FROM unnest($1::uuid[],$2::uuid[]) AS pares(origen,destino)`,
+          [[ultimoOriginal, ...ids.slice(0, -1)], ids, e.flujo],
+        );
+
+        const primera = await enviar(e);
+        let paso = primera;
+        for (let secuencia = 2; secuencia <= 22; secuencia++) {
+          paso = await caso.execute(e.sesion, usuario, {
+            ...e.dto,
+            id_interaccion: randomUUID(),
+            id_nodo: paso.transicion.id_nodo_destino,
+            secuencia,
+            tipo_entrada: 'CONTINUAR',
+            valor: null,
+          });
+        }
+
+        await q(
+          `UPDATE chat.sesiones SET id_nodo_actual=NULL WHERE id_sesion=$1`,
+          [e.sesion],
+        );
+        await q(
+          `UPDATE chat.estado_sesiones SET estado_actual='PAUSADA',fecha_pausa=now() WHERE id_sesion=$1`,
+          [e.sesion],
+        );
+        const antes = await snapshot(e.sesion);
+        const comienzo = performance.now();
+        const estado = await iniciar.execute(usuario);
+        process.stdout.write(
+          `RF32_RECUPERACION_MS ${Math.round(performance.now() - comienzo)}\n`,
+        );
+        assert.equal(estado.reanudada, true);
+        assert.equal(estado.recuperada_desde_historial, true);
+        assert.equal(estado.sesion.id_sesion, e.sesion);
+        assert.equal(
+          estado.nodo_actual.id_nodo,
+          paso.transicion.id_nodo_destino,
+        );
+        assert.equal(estado.nodo_actual.es_terminal, false);
+        assert.equal(estado.nodo_actual.contenido, undefined);
+        assert.equal(estado.nodo_actual.bloques[0].texto, 'Siguiente paso');
+        assert.equal(estado.sesion.estado_actual, 'ACTIVA');
+        assert.equal(estado.sesion.version_arbol_utilizada, 1);
+        assert.equal(estado.sesion.ultima_secuencia, 22);
+        assert.equal(
+          estado.sesion.fecha_ultima_interaccion.toISOString(),
+          antes.fecha_ultima_interaccion.toISOString(),
+        );
+        assert.deepEqual(
+          estado.historial_reciente.items.map((item) => item.secuencia),
+          Array.from({ length: 20 }, (_, i) => i + 3),
+        );
+        assert.equal(estado.historial_reciente.hay_mas, true);
+        assert.equal(estado.historial_reciente.siguiente_cursor, 3);
+        assert.equal(
+          (await snapshot(e.sesion)).id_nodo_actual,
+          estado.nodo_actual.id_nodo,
+        );
+        assert.equal(
+          (await recuperar.recuperar(e.sesion, usuario))
+            .recuperadaDesdeHistorial,
+          false,
+        );
+        assert.deepEqual(await enviar(e), { ...primera, duplicada: true });
+        const previo = await historial.consultar({
+          idSesion: e.sesion,
+          antesDe: 3,
+          limite: 20,
+        });
+        assert.deepEqual(
+          previo.interacciones.map((item) => item.secuencia),
+          [1, 2],
+        );
+      },
+    );
+    await check(
+      'RF-32 revierte la reparación y conserva la pausa si el historial está corrupto',
+      async () => {
+        const e = await crear();
+        await enviar(e);
+        await q(
+          `INSERT INTO chat.interacciones(id_interaccion,id_sesion,id_nodo,secuencia) VALUES($1,$2,$3,3)`,
+          [randomUUID(), e.sesion, e.destino],
+        );
+        await q(
+          `UPDATE chat.sesiones SET id_nodo_actual=NULL WHERE id_sesion=$1`,
+          [e.sesion],
+        );
+        await q(
+          `UPDATE chat.estado_sesiones SET estado_actual='PAUSADA',fecha_pausa=now() WHERE id_sesion=$1`,
+          [e.sesion],
+        );
+        await sinCambios(e, 'ESTADO_INCONSISTENTE', () =>
+          recuperar.recuperar(e.sesion, usuario),
+        );
+      },
+    );
+    await check(
+      'RF-32 conserva una sola sesión ante creaciones concurrentes y detecta ERROR_CONFIGURACION',
+      async () => {
+        const e = await crear();
+        await q(
+          `UPDATE chat.flujo_conversacion SET estado='PUBLICADO',fecha_publicacion=now() WHERE id_flujo=$1`,
+          [e.flujo],
+        );
+        await q(`UPDATE chat.nodos SET es_nodo_inicial=true WHERE id_nodo=$1`, [
+          e.nodo,
+        ]);
+        const inicioGrupal = casoInicio(() =>
+          Promise.resolve({ modalidad: 'GRUPAL', perfil: null }),
+        );
+        const resultados = await Promise.all([
+          inicioGrupal.execute(otroUsuario),
+          inicioGrupal.execute(otroUsuario),
+        ]);
+        assert.equal(resultados.filter((r) => !r.reanudada).length, 1);
+        assert.equal(
+          resultados[0].sesion.id_sesion,
+          resultados[1].sesion.id_sesion,
+        );
+        for (const resultado of resultados) {
+          assert.equal(resultado.nodo_actual.id_nodo, e.nodo);
+          assert.equal(resultado.sesion.ultima_secuencia, 0);
+          assert.deepEqual(resultado.historial_reciente, {
+            items: [],
+            hay_mas: false,
+            siguiente_cursor: null,
+          });
+        }
+        const candidata = () =>
+          SesionConversacional.iniciar(
+            {
+              idSesion: randomUUID(),
+              idUsuario: otroUsuario,
+              idFlujoConversacional: e.flujo,
+              versionArbolUtilizada: 1,
+              modalidadActiva: 'GRUPAL',
+              tipoDependencia: null,
+              tipoCraving: null,
+              idNodoInicial: e.nodo,
+            },
+            new Date(),
+          );
+        const existente = await sesiones.buscarUltimaNoCompletada(otroUsuario);
+        assert.equal(
+          (await recuperar.recuperar(existente.idSesion, otroUsuario)).sesion
+            .idSesion,
+          existente.idSesion,
+        );
+        await q(
+          `UPDATE chat.estado_sesiones SET estado_actual='ERROR_CONFIGURACION' WHERE id_sesion=$1`,
+          [existente.idSesion],
+        );
+        assert.equal(
+          (await sesiones.buscarUltimaNoCompletada(otroUsuario)).idSesion,
+          existente.idSesion,
+        );
+        await rechaza(
+          inicioGrupal.execute(otroUsuario),
+          'SESION_ERROR_CONFIGURACION',
+        );
+        await rechaza(sesiones.guardar(candidata()), 'SESION_ACTIVA_EXISTENTE');
+        assert.equal(
+          (
+            await q(
+              'SELECT count(*)::int AS cantidad FROM chat.sesiones WHERE id_usuario=$1',
+              [otroUsuario],
+            )
+          ).rows[0].cantidad,
+          1,
+        );
+      },
+    );
+    await check(
+      'RF-31 reconoce una sesión vacía y rechaza una inexistente',
+      async () => {
+        const e = await crear();
+        assert.equal(await historialValido(e.sesion), true);
+        assert.equal(await historialValido(randomUUID()), false);
+        assert.deepEqual(
+          await historial.consultar({
+            idSesion: e.sesion,
+            antesDe: null,
+            limite: 20,
+          }),
+          {
+            hayMas: false,
+            interacciones: [],
+          },
+        );
+      },
+    );
+    await check(
+      'RF-31 rechaza huecos de secuencia y revierte el siguiente paso',
+      async () => {
+        const e = await crear();
+        await q(
+          `INSERT INTO chat.interacciones(id_interaccion,id_sesion,id_nodo,secuencia) VALUES($1,$2,$3,2)`,
+          [randomUUID(), e.sesion, e.nodo],
+        );
+        assert.equal(await historialValido(e.sesion), false);
+        assert.equal(
+          await historial.consultar({
+            idSesion: e.sesion,
+            antesDe: null,
+            limite: 20,
+          }),
+          null,
+        );
+        e.dto.secuencia = 3;
+        await sinCambios(e, 'HISTORIAL_INCONSISTENTE');
+      },
+    );
+    await check(
+      'RF-31 detecta un nodo ajeno al flujo fijado aunque la secuencia sea válida',
+      async () => {
+        const e = await crear();
+        const ajeno = await crear();
+        await q(
+          `INSERT INTO chat.historial_nodos(id_sesion,id_nodo,id_usuario,id_nodo_destino) VALUES($1,$2,$3,$4)`,
+          [e.sesion, e.nodo, usuario, ajeno.destino],
+        );
+        await q(
+          `UPDATE chat.sesiones SET id_nodo_actual=$1 WHERE id_sesion=$2`,
+          [ajeno.destino, e.sesion],
+        );
+        assert.equal(await historialValido(e.sesion), false);
+      },
+    );
+    await check(
+      'RF-31 detecta un historial desencadenado aun con nodos del mismo flujo',
+      async () => {
+        const e = await crear();
+        await enviar(e);
+        const id = randomUUID();
+        await q(
+          `INSERT INTO chat.interacciones(id_interaccion,id_sesion,id_nodo,secuencia) VALUES($1,$2,$3,2)`,
+          [id, e.sesion, e.nodo],
+        );
+        await q(
+          `INSERT INTO chat.historial_nodos(id_sesion,id_nodo,id_usuario,id_nodo_destino,id_interaccion) VALUES($1,$2,$3,$4,$5)`,
+          [e.sesion, e.nodo, usuario, e.destino, id],
+        );
+        assert.equal(await historialValido(e.sesion), false);
+      },
+    );
+    await check(
+      'RF-31 detecta desajustes del puntero y de la versión fijada',
+      async () => {
+        const e = await crear();
+        await enviar(e);
+        await q(
+          `UPDATE chat.sesiones SET id_nodo_actual=$1 WHERE id_sesion=$2`,
+          [e.nodo, e.sesion],
+        );
+        assert.equal(await historialValido(e.sesion), false);
+        await q(
+          `UPDATE chat.sesiones SET id_nodo_actual=$1, version_arbol_utilizada=2 WHERE id_sesion=$2`,
+          [e.destino, e.sesion],
+        );
+        assert.equal(await historialValido(e.sesion), false);
+      },
+    );
+    await check(
+      'RF-31 puede continuar y completar una sesión con historia previa sin vínculo',
+      async () => {
+        const e = await crear();
+        const idAnterior = randomUUID();
+        const fechaAnterior = '2026-11-06T10:00:00.123456-05:00';
+        await q(
+          `INSERT INTO chat.interacciones(id_interaccion,id_sesion,id_nodo,secuencia,timestamp_interaccion) VALUES($1,$2,$3,1,$4)`,
+          [idAnterior, e.sesion, e.nodo, fechaAnterior],
+        );
+        await q(
+          `INSERT INTO chat.historial_nodos(id_sesion,id_nodo,id_usuario,id_nodo_destino,timestamp_interaccion) VALUES($1,$2,$3,$4,$5)`,
+          [e.sesion, e.nodo, usuario, e.destino, fechaAnterior],
+        );
+        await q(
+          `INSERT INTO chat.respuestas(id_interaccion,id_nodo,id_tipo_entrada,id_estado_conectividad,valor_respuesta)
+          SELECT $1,$2,t.id_tipo_entrada,c.id_estado_conectividad,'5'::jsonb
+          FROM chat.tipo_entrada t CROSS JOIN chat.estado_conectividad c
+          WHERE t.nombre='NUMERICO' AND c.nombre='ONLINE'`,
+          [idAnterior, e.nodo],
+        );
+        await q(
+          `UPDATE chat.sesiones SET id_nodo_actual=$1 WHERE id_sesion=$2`,
+          [e.destino, e.sesion],
+        );
+        assert.equal(await historialValido(e.sesion), true);
+        const r = await caso.execute(e.sesion, usuario, {
+          ...e.dto,
+          id_nodo: e.destino,
+          tipo_entrada: 'CONTINUAR',
+          valor: null,
+          secuencia: 2,
+        });
+        assert.equal(r.estado_sesion, 'COMPLETADA');
+        assert.equal(await historialValido(e.sesion), true);
+        const pagina = await historial.consultar({
+          idSesion: e.sesion,
+          antesDe: 2,
+          limite: 20,
+        });
+        assert.deepEqual(
+          pagina.interacciones.map(({ idInteraccion, idNodoDestino }) => [
+            idInteraccion,
+            idNodoDestino,
+          ]),
+          [[idAnterior, e.destino]],
+        );
+      },
+    );
+    await check(
+      'RF-31 revierte todo si el UPDATE condicionado afecta cero filas',
+      async () => {
+        const e = await crear();
+        await q(`CREATE FUNCTION chat.rf31_cambiar_puntero() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+          UPDATE chat.sesiones SET id_nodo_actual=NEW.id_nodo_destino WHERE id_sesion=NEW.id_sesion;
+          RETURN NEW;
+        END;
+      $$;
+      CREATE TRIGGER rf31_cambiar_puntero AFTER INSERT ON chat.historial_nodos
+        FOR EACH ROW EXECUTE FUNCTION chat.rf31_cambiar_puntero();`);
+        try {
+          await sinCambios(e, 'NODO_DESACTUALIZADO');
+        } finally {
+          await q(
+            'DROP TRIGGER rf31_cambiar_puntero ON chat.historial_nodos; DROP FUNCTION chat.rf31_cambiar_puntero()',
+          );
+        }
+      },
     );
     await check(
       'numérico válido persiste respuesta, interacción, historial y puntero',
@@ -473,7 +900,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
     await check('respuesta válida sin coincidencia no avanza', async () =>
       sinCambios(
         await crear({ condicion: { valor: 9 }, operador: 'IGUALDAD' }),
-        'SIN_TRANSICION',
+        'SIN_COINCIDENCIA',
       ),
     );
     await check(
@@ -513,6 +940,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
         const nuevaInstancia = new ProcesarRespuestaUseCase(
           new PrismaProcesarRespuestaRepository(prisma),
           new FormatoRespuestaAdapter(),
+          new EstadoConversacionalService(),
         );
         assert.deepEqual(
           await nuevaInstancia.execute(e.sesion, usuario, e.dto),
@@ -554,8 +982,8 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
         tipoDato: 'SELECCION',
         permitido: ['a', 'b'],
         valor: ['b', 'a'],
-        condicion: { valores: ['a'] },
-        operador: 'CATEGORIA',
+        condicion: { valor: ['a', 'b'] },
+        operador: 'IGUALDAD',
       },
       {
         tipo: 'BOOLEANO',
@@ -789,6 +1217,28 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
           secuencia: 2,
         });
         assert.equal(siguiente.secuencia, 2);
+        const ultima = await historial.consultar({
+          idSesion: e.sesion,
+          antesDe: null,
+          limite: 1,
+        });
+        assert.equal(ultima.hayMas, true);
+        assert.equal(
+          ultima.interacciones[0].idInteraccion,
+          siguiente.id_interaccion,
+        );
+        assert.equal(
+          ultima.interacciones[0].idNodoDestino,
+          siguiente.transicion.id_nodo_destino,
+        );
+        const anterior = await historial.consultar({
+          idSesion: e.sesion,
+          antesDe: 2,
+          limite: 1,
+        });
+        assert.equal(anterior.hayMas, false);
+        assert.equal(anterior.interacciones[0].idInteraccion, a.id_interaccion);
+        assert.equal(anterior.interacciones[0].idNodoDestino, e.destino);
         const { rows } = await q(
           'SELECT secuencia, timestamp_interaccion, recursos_no_presentados FROM chat.interacciones WHERE id_sesion=$1 ORDER BY secuencia',
           [e.sesion],
@@ -892,7 +1342,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       },
     );
     await check(
-      'texto libre válido puede continuar por una condición explícita de validez',
+      'texto libre válido puede continuar por una coincidencia explícita',
       async () => {
         const e = await crear({
           tipo: 'TEXTO_LIBRE',
@@ -900,7 +1350,7 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
           valor: 'Texto que no existía antes',
           regex: '^.{3,}$',
           operador: 'IGUALDAD',
-          condicion: { campo: 'es_valida', valor: true },
+          condicion: { valor: 'Texto que no existía antes' },
         });
         assert.equal((await enviar(e)).transicion.id_nodo_destino, e.destino);
       },
@@ -937,13 +1387,8 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
           dimension === 'tipo_dependencia'
             ? ['TOLERANCIA', 'ABSTINENCIA_FISICA']
             : ['POSITIVO', 'NEGATIVO'],
-        operador: 'CATEGORIA',
-        condicion: {
-          valores:
-            dimension === 'tipo_dependencia'
-              ? ['TOLERANCIA', 'ABSTINENCIA_FISICA']
-              : ['POSITIVO', 'NEGATIVO'],
-        },
+        operador: 'IGUALDAD',
+        condicion: { valor },
         captura: dimension,
         personalizado,
       });
@@ -1013,7 +1458,11 @@ async function sinCambios(e, esperado, accion = () => enviar(e)) {
       async () => {
         const e = await clinica('tipo_craving', 'OTRO');
         await q(
-          "UPDATE chat.reglas_validaciones SET valores_permitidos=ARRAY['OTRO'] WHERE id_regla_validacion = (SELECT id_regla_validacion FROM chat.nodos WHERE id_nodo=$1)",
+          "UPDATE chat.reglas_validaciones SET valores_permitidos=ARRAY['OTRO'] WHERE id_regla_validacion = (SELECT id_regla_validacion FROM chat.reglas_nodos WHERE id_nodo_origen=$1)",
+          [e.nodo],
+        );
+        await q(
+          `UPDATE chat.nodos SET contenido = jsonb_set(contenido, '{entrada,opciones}', '["OTRO"]') WHERE id_nodo=$1`,
           [e.nodo],
         );
         await sinCambios(e, 'VALOR_NO_PERMITIDO');

@@ -73,7 +73,7 @@ describe('PrismaSesionConversacionalRepository', () => {
       estado_sesiones: { estado_actual: 'ACTIVA' },
     });
 
-    const resultado = await repository.buscarUltimaReanudable(
+    const resultado = await repository.buscarUltimaNoCompletada(
       sesionBase.id_usuario,
     );
 
@@ -92,7 +92,7 @@ describe('PrismaSesionConversacionalRepository', () => {
       estado_sesiones: { estado_actual: 'PAUSADA' },
     });
 
-    const resultado = await repository.buscarUltimaReanudable(
+    const resultado = await repository.buscarUltimaNoCompletada(
       sesionBase.id_usuario,
     );
 
@@ -103,7 +103,7 @@ describe('PrismaSesionConversacionalRepository', () => {
   it('excluye sesiones COMPLETADA de la búsqueda', async () => {
     findFirst.mockResolvedValue(null);
 
-    const resultado = await repository.buscarUltimaReanudable(
+    const resultado = await repository.buscarUltimaNoCompletada(
       sesionBase.id_usuario,
     );
 
@@ -113,28 +113,25 @@ describe('PrismaSesionConversacionalRepository', () => {
       expect.objectContaining({
         where: {
           id_usuario: sesionBase.id_usuario,
-          estado_sesiones: {
-            is: {
-              estado_actual: {
-                in: ['ACTIVA', 'PAUSADA'],
-              },
+          OR: [
+            {
+              estado_sesiones: { is: { estado_actual: { not: 'COMPLETADA' } } },
             },
-          },
+            { estado_sesiones: { is: null } },
+          ],
         },
       }),
     );
   });
 
-  it('descarta sesiones sin registro de estado', async () => {
+  it('informa la inconsistencia de una sesión sin registro de estado', async () => {
     findFirst.mockResolvedValue({
       ...sesionBase,
       estado_sesiones: null,
     });
 
-    const resultado = await repository.buscarUltimaReanudable(
-      sesionBase.id_usuario,
-    );
-
-    expect(resultado).toBeNull();
+    await expect(
+      repository.buscarUltimaNoCompletada(sesionBase.id_usuario),
+    ).rejects.toMatchObject({ codigo: 'ESTADO_INCONSISTENTE' });
   });
 });

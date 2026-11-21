@@ -70,6 +70,14 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     return nodo === null ? null : NodoConversacionalMapper.toDomain(nodo);
   }
 
+  async buscarNodosPorIds(ids: string[]): Promise<NodoConversacional[]> {
+    const nodos = await this.prisma.nodos.findMany({
+      where: { id_nodo: { in: ids } },
+      include: { tipo_nodo: { select: { nombre: true } } },
+    });
+    return nodos.map((nodo) => NodoConversacionalMapper.toDomain(nodo));
+  }
+
   async buscarTransicion(
     idTransicion: string,
   ): Promise<TransicionConversacional | null> {
