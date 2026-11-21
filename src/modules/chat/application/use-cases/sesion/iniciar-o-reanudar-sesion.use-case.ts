@@ -9,7 +9,6 @@ import {
 import { CalcularUbicacionTemporalUsuarioUseCase } from '../../../../cronograma/application/use-cases/cronograma/calcular-ubicacion-temporal-usuario.use-case';
 import { UbicacionTemporalUsuarioDtoResponse } from '../../../../cronograma/application/dto/cronograma/ubicacion-temporal-usuario.dto-response';
 import { FlujoConversacional } from '../../../domain/entities/flujo/flujo-conversacional.entity';
-import { NodoConversacional } from '../../../domain/entities/flujo/nodo-conversacional.entity';
 import { ModalidadConversacional } from '../../../domain/enums/modalidad-conversacional-enum';
 import { ArbolConversacionalRepository } from '../../../domain/repositories/arbol-conversacional.repository';
 import { SesionConversacionalRepository } from '../../../domain/repositories/sesion-conversacional.repository';
@@ -19,11 +18,19 @@ import {
   PerfilClinicoIncompletoException,
   SesionActivaExistenteException,
 } from '../../../domain/exceptions';
+import { EstadoSesionInconsistenteException } from '../../../domain/exceptions/sesion.exceptions';
 import { AsignacionCronogramaChatRepository } from '../../../domain/repositories/asignacion-cronograma-chat.repository';
 import {
   ContextoConversacionalDtoResponse,
   InicioSesionConversacionalDtoResponse,
 } from '../../dto/sesion-conversacional.dto-response';
+import { HistorialConversacionalInconsistenteException } from '../../exceptions/historial-conversacional-inconsistente.exception';
+import { PresentarHistorialConversacionalService } from '../../services/presentar-historial-conversacional.service';
+import { PresentarNodoActualService } from '../../services/presentar-nodo-actual.service';
+import {
+  EstadoSesionRecuperado,
+  RecuperarSesionConversacionalService,
+} from '../../services/recuperar-sesion-conversacional.service';
 
 @Injectable()
 export class IniciarOReanudarSesionUseCase {
@@ -33,16 +40,17 @@ export class IniciarOReanudarSesionUseCase {
     private readonly determinarContexto: DeterminarContextoConversacionalUseCase,
     private readonly calcularUbicacion: CalcularUbicacionTemporalUsuarioUseCase,
     private readonly asignacionCronograma: AsignacionCronogramaChatRepository,
+    private readonly recuperacion: RecuperarSesionConversacionalService,
+    private readonly presentarNodo: PresentarNodoActualService,
+    private readonly presentarHistorial: PresentarHistorialConversacionalService,
   ) {}
 
   async execute(
     idUsuario: string,
   ): Promise<InicioSesionConversacionalDtoResponse> {
-    const existente = await this.sesiones.buscarUltimaReanudable(idUsuario);
-
+    const existente = await this.sesiones.buscarUltimaNoCompletada(idUsuario);
     const tieneCronograma =
       await this.asignacionCronograma.existeAsignacion(idUsuario);
-
     if (!tieneCronograma) {
       throw new UnprocessableEntityException({
         codigo: 'SIN_CRONOGRAMA',
@@ -51,15 +59,16 @@ export class IniciarOReanudarSesionUseCase {
     }
 
     const ubicacion = await this.calcularUbicacion.execute(idUsuario);
-
     if (existente !== null) {
-      const sesion = await this.reanudar(existente);
-
-      return this.construirRespuesta(sesion, true, ubicacion);
+      const estado = await this.recuperacion.recuperar(
+        existente.idSesion,
+        idUsuario,
+      );
+      if (estado !== null)
+        return this.construirRespuesta(estado, true, ubicacion);
     }
 
     let contexto: ContextoConversacionalDtoResponse;
-
     try {
       contexto = await this.determinarContexto.execute(idUsuario);
     } catch (error: unknown) {
@@ -69,7 +78,6 @@ export class IniciarOReanudarSesionUseCase {
           mensaje: 'El usuario no tiene un perfil clínico completo.',
         });
       }
-
       throw error;
     }
 
@@ -77,12 +85,9 @@ export class IniciarOReanudarSesionUseCase {
       contexto.modalidad === ModalidadConversacional.GRUPAL
         ? await this.seleccionarArbolGrupal()
         : await this.seleccionarArbolPersonalizado(idUsuario, contexto);
-
     const arbol = await this.arboles.obtenerArbol(flujo.idFlujo);
-
     const nodoInicial = arbol?.nodos.find((nodo) => nodo.esNodoInicial);
-
-    if (nodoInicial === undefined) {
+    if (nodoInicial === undefined || nodoInicial.idFlujo !== flujo.idFlujo) {
       throw new InternalServerErrorException({
         codigo: 'NODO_INICIAL_NO_DISPONIBLE',
         mensaje: 'El árbol publicado no tiene un nodo inicial disponible.',
@@ -103,51 +108,51 @@ export class IniciarOReanudarSesionUseCase {
       new Date(),
     );
 
+    const respuestaNueva = await this.construirRespuesta(
+      {
+        sesion: nueva,
+        nodo: nodoInicial,
+        historial: { interacciones: [], hayMas: false },
+        recuperadaDesdeHistorial: false,
+      },
+      false,
+      ubicacion,
+    );
     try {
       await this.sesiones.guardar(nueva);
     } catch (error: unknown) {
-      if (!(error instanceof SesionActivaExistenteException)) {
-        throw error;
-      }
+      if (!(error instanceof SesionActivaExistenteException)) throw error;
 
-      const concurrente = await this.sesiones.buscarUltimaReanudable(idUsuario);
-
-      if (concurrente === null) {
-        throw error;
-      }
-
-      const sesion = await this.reanudar(concurrente);
-
-      return this.construirRespuesta(sesion, true, ubicacion);
+      const concurrente =
+        await this.sesiones.buscarUltimaNoCompletada(idUsuario);
+      if (concurrente === null) throw new EstadoSesionInconsistenteException();
+      const estado = await this.recuperacion.recuperar(
+        concurrente.idSesion,
+        idUsuario,
+      );
+      if (estado === null) throw new EstadoSesionInconsistenteException();
+      return this.construirRespuesta(estado, true, ubicacion);
     }
-
-    return this.construirRespuesta(nueva, false, ubicacion);
+    return respuestaNueva;
   }
 
   private async seleccionarArbolGrupal(): Promise<FlujoConversacional> {
     const flujo = await this.arboles.buscarPublicadoGrupal();
-
     if (flujo === null) {
       throw new NotFoundException({
         codigo: 'SIN_FLUJO_PUBLICADO',
         mensaje: 'No existe un árbol publicado para el contexto del usuario.',
       });
     }
-
     return flujo;
   }
 
-  /**
-   * RF-26B: devuelve el árbol personalizado publicado del perfil. Si no existe,
-   * no está publicado o no se pudo consultar, la sesión queda registrada en
-   * ERROR_CONFIGURACION y no se registra ningún árbol activo.
-   */
+  /** RF-26B registra en ERROR_CONFIGURACION el fallo al seleccionar un árbol personalizado. */
   private async seleccionarArbolPersonalizado(
     idUsuario: string,
     contexto: ContextoConversacionalDtoResponse,
   ): Promise<FlujoConversacional> {
     const perfil = contexto.perfil;
-
     if (perfil === null) {
       throw new ConflictException({
         codigo: 'PERFIL_INCOMPLETO',
@@ -156,17 +161,12 @@ export class IniciarOReanudarSesionUseCase {
     }
 
     let motivo: ConflictException | NotFoundException;
-
     try {
       const flujo = await this.arboles.buscarPublicadoPersonalizado(
         perfil.tipo_dependencia,
         perfil.tipo_craving,
       );
-
-      if (flujo !== null) {
-        return flujo;
-      }
-
+      if (flujo !== null) return flujo;
       const { total } = await this.arboles.listarFlujos(
         {
           modalidad: ModalidadConversacional.PERSONALIZADA,
@@ -176,7 +176,6 @@ export class IniciarOReanudarSesionUseCase {
         1,
         1,
       );
-
       motivo =
         total > 0
           ? new ConflictException({
@@ -191,16 +190,13 @@ export class IniciarOReanudarSesionUseCase {
             });
     } catch {
       await this.registrarErrorConfiguracion(idUsuario, contexto);
-
       throw new InternalServerErrorException({
         codigo: 'ERROR_CARGA_ARBOL',
         mensaje:
           'No fue posible cargar el árbol conversacional personalizado en este momento. Intente nuevamente más tarde.',
       });
     }
-
     await this.registrarErrorConfiguracion(idUsuario, contexto);
-
     throw motivo;
   }
 
@@ -223,58 +219,38 @@ export class IniciarOReanudarSesionUseCase {
         ),
       );
     } catch {
-      // Sin acción: se informa el motivo de configuración.
+      // Se informa el motivo de configuración.
     }
-  }
-
-  private async reanudar(
-    existente: SesionConversacional,
-  ): Promise<SesionConversacional> {
-    const reanudada = existente.reanudar();
-
-    if (reanudada !== existente) {
-      await this.sesiones.guardar(reanudada);
-    }
-
-    return reanudada;
   }
 
   private async construirRespuesta(
-    sesion: SesionConversacional,
+    estado: EstadoSesionRecuperado,
     reanudada: boolean,
     ubicacion: UbicacionTemporalUsuarioDtoResponse,
   ): Promise<InicioSesionConversacionalDtoResponse> {
-    const nodo =
-      sesion.idNodoActual === null
-        ? null
-        : await this.arboles.buscarNodo(sesion.idNodoActual);
-
-    if (nodo === null) {
-      throw new InternalServerErrorException({
-        codigo: 'NODO_ACTUAL_NO_DISPONIBLE',
-        mensaje: 'No se encontró el nodo actual de la sesión.',
-      });
-    }
-
-    this.verificarPertenenciaNodo(nodo, sesion);
-
-    return InicioSesionConversacionalDtoResponse.crear(
-      sesion,
-      nodo,
-      reanudada,
-      ubicacion,
-    );
-  }
-
-  private verificarPertenenciaNodo(
-    nodo: NodoConversacional,
-    sesion: SesionConversacional,
-  ): void {
-    if (nodo.idFlujo !== sesion.idFlujoConversacional) {
-      throw new InternalServerErrorException({
-        codigo: 'NODO_FUERA_DE_FLUJO',
-        mensaje: 'El nodo actual no pertenece al flujo de la sesión.',
-      });
+    const { sesion, nodo, historial, recuperadaDesdeHistorial } = estado;
+    try {
+      const [actual, reciente] = await Promise.all([
+        this.presentarNodo.preparar(sesion, nodo),
+        this.presentarHistorial.presentar(
+          historial,
+          sesion.idFlujoConversacional,
+        ),
+      ]);
+      return InicioSesionConversacionalDtoResponse.crear(
+        sesion,
+        actual.nodo,
+        reciente,
+        ubicacion,
+        {
+          reanudada,
+          recuperadaDesdeHistorial,
+        },
+      );
+    } catch (error: unknown) {
+      if (error instanceof HistorialConversacionalInconsistenteException)
+        throw new EstadoSesionInconsistenteException();
+      throw error;
     }
   }
 }

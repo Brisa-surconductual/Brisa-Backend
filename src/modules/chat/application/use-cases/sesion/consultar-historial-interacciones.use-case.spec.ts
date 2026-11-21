@@ -7,22 +7,25 @@ import { InteraccionRegistrada } from '../../../domain/repositories/historial-in
 import { ContenidoNodoNoDisponibleException } from '../../exceptions/contenido-nodo-no-disponible.exception';
 import { HistorialConversacionalInconsistenteException } from '../../exceptions/historial-conversacional-inconsistente.exception';
 import { presentadorNodoPrueba } from '../../support/testing/presentacion-nodo.fixture';
+import { PresentarHistorialConversacionalService } from '../../services/presentar-historial-conversacional.service';
 import { ConsultarHistorialInteraccionesUseCase } from './consultar-historial-interacciones.use-case';
 
 describe('ConsultarHistorialInteraccionesUseCase (RF-31 / RF-32)', () => {
   const fecha = new Date('2026-11-20T14:00:00Z');
   const sesiones = {
     buscarPorIdYUsuario: jest.fn(),
-    buscarUltimaReanudable: jest.fn(),
+    buscarUltimaNoCompletada: jest.fn(),
     guardar: jest.fn(),
   };
-  const arboles = { buscarNodo: jest.fn() };
+  const arboles = { buscarNodosPorIds: jest.fn() };
   const historial = { consultar: jest.fn() };
   const caso = new ConsultarHistorialInteraccionesUseCase(
     sesiones,
-    arboles as unknown as ArbolConversacionalRepository,
     historial,
-    presentadorNodoPrueba(),
+    new PresentarHistorialConversacionalService(
+      arboles as unknown as ArbolConversacionalRepository,
+      presentadorNodoPrueba(),
+    ),
   );
 
   const sesion = new SesionConversacional(
@@ -81,8 +84,10 @@ describe('ConsultarHistorialInteraccionesUseCase (RF-31 / RF-32)', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     sesiones.buscarPorIdYUsuario.mockResolvedValue(sesion);
-    arboles.buscarNodo.mockImplementation((id: string) =>
-      Promise.resolve(nodos[id] ?? null),
+    arboles.buscarNodosPorIds.mockImplementation((ids: string[]) =>
+      Promise.resolve(
+        ids.flatMap((id) => (nodos[id] === undefined ? [] : [nodos[id]])),
+      ),
     );
     historial.consultar.mockResolvedValue({
       hayMas: false,
@@ -94,7 +99,7 @@ describe('ConsultarHistorialInteraccionesUseCase (RF-31 / RF-32)', () => {
   });
   afterEach(() => {
     expect(sesiones.guardar).not.toHaveBeenCalled();
-    expect(sesiones.buscarUltimaReanudable).not.toHaveBeenCalled();
+    expect(sesiones.buscarUltimaNoCompletada).not.toHaveBeenCalled();
   });
 
   it('devuelve las interacciones en orden con su destino y los bloques del nodo', async () => {
@@ -152,7 +157,8 @@ describe('ConsultarHistorialInteraccionesUseCase (RF-31 / RF-32)', () => {
       antesDe: 6,
       limite: 2,
     });
-    expect(arboles.buscarNodo).toHaveBeenCalledTimes(1);
+    expect(arboles.buscarNodosPorIds).toHaveBeenCalledTimes(1);
+    expect(arboles.buscarNodosPorIds).toHaveBeenCalledWith(['nodo-1']);
     expect(r.data).toMatchObject({ siguiente_cursor: 4, hay_mas: true });
   });
 
@@ -178,7 +184,7 @@ describe('ConsultarHistorialInteraccionesUseCase (RF-31 / RF-32)', () => {
   });
 
   it('responde HISTORIAL_INCONSISTENTE si un nodo del historial es de otro flujo', async () => {
-    arboles.buscarNodo.mockResolvedValue(
+    arboles.buscarNodosPorIds.mockResolvedValue([
       new NodoConversacional(
         'nodo-1',
         'otro-flujo',
@@ -192,7 +198,7 @@ describe('ConsultarHistorialInteraccionesUseCase (RF-31 / RF-32)', () => {
         fecha,
         fecha,
       ),
-    );
+    ]);
     await expect(
       caso.execute('sesion', 'usuario', { limite: 20 }),
     ).rejects.toBeInstanceOf(HistorialConversacionalInconsistenteException);
@@ -203,7 +209,7 @@ describe('ConsultarHistorialInteraccionesUseCase (RF-31 / RF-32)', () => {
     await expect(
       caso.execute('sesion', 'usuario', { limite: 20 }),
     ).rejects.toBeInstanceOf(HistorialConversacionalInconsistenteException);
-    expect(arboles.buscarNodo).not.toHaveBeenCalled();
+    expect(arboles.buscarNodosPorIds).not.toHaveBeenCalled();
   });
 
   it('convierte un fallo inesperado de lectura en CONTENIDO_NO_DISPONIBLE', async () => {

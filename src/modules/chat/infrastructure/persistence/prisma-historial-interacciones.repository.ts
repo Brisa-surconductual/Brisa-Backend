@@ -17,70 +17,71 @@ import { validarHistorialSesion } from './prisma-validar-historial-sesion';
 export class PrismaHistorialInteraccionesRepository implements HistorialInteraccionesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async consultar({
-    idSesion,
-    antesDe,
-    limite,
-  }: ConsultaHistorialInteracciones): Promise<PaginaHistorialInteracciones | null> {
-    return this.prisma.$transaction(
-      async (tx) => {
-        if (!(await validarHistorialSesion(tx, idSesion))) return null;
+  consultar(
+    consulta: ConsultaHistorialInteracciones,
+  ): Promise<PaginaHistorialInteracciones | null> {
+    return this.prisma.$transaction((tx) => this.consultarEn(tx, consulta), {
+      isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+    });
+  }
 
-        const filas = await tx.interacciones.findMany({
-          where: {
-            id_sesion: idSesion,
-            ...(antesDe === null ? {} : { secuencia: { lt: antesDe } }),
-          },
-          orderBy: { secuencia: 'desc' },
-          // Una fila extra indica si quedan interacciones más antiguas.
-          take: limite + 1,
-          select: {
-            id_interaccion: true,
-            secuencia: true,
-            timestamp_interaccion: true,
-            id_nodo: true,
-            historial_nodos: { select: { id_nodo_destino: true } },
-            respuestas: {
-              where: { es_valida: true },
-              take: 1,
-              select: {
-                valor_respuesta: true,
-                tipo_entrada: { select: { nombre: true } },
-              },
-            },
-          },
-        });
+  async consultarEn(
+    tx: Prisma.TransactionClient,
+    { idSesion, antesDe, limite }: ConsultaHistorialInteracciones,
+  ): Promise<PaginaHistorialInteracciones | null> {
+    if (!(await validarHistorialSesion(tx, idSesion))) return null;
 
-        const pagina = filas.slice(0, limite).reverse();
-        const sinVinculo = pagina
-          .filter((fila) => fila.historial_nodos === null)
-          .map((fila) => fila.id_interaccion);
-        const destinosHistoricos = await this.buscarDestinosSinVinculo(
-          tx,
-          sinVinculo,
-        );
-        const interacciones: InteraccionRegistrada[] = [];
-        for (const fila of pagina) {
-          const respuesta = fila.respuestas[0];
-          const idNodoDestino =
-            fila.historial_nodos?.id_nodo_destino ??
-            destinosHistoricos.get(fila.id_interaccion);
-          if (respuesta === undefined || idNodoDestino === undefined)
-            return null;
-          interacciones.push({
-            idInteraccion: fila.id_interaccion,
-            secuencia: fila.secuencia,
-            timestampInteraccion: fila.timestamp_interaccion,
-            idNodo: fila.id_nodo,
-            idNodoDestino,
-            tipoEntrada: respuesta.tipo_entrada.nombre,
-            valor: respuesta.valor_respuesta,
-          });
-        }
-        return { hayMas: filas.length > limite, interacciones };
+    const filas = await tx.interacciones.findMany({
+      where: {
+        id_sesion: idSesion,
+        ...(antesDe === null ? {} : { secuencia: { lt: antesDe } }),
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      orderBy: { secuencia: 'desc' },
+      // Una fila extra indica si quedan interacciones más antiguas.
+      take: limite + 1,
+      select: {
+        id_interaccion: true,
+        secuencia: true,
+        timestamp_interaccion: true,
+        id_nodo: true,
+        historial_nodos: { select: { id_nodo_destino: true } },
+        respuestas: {
+          where: { es_valida: true },
+          take: 1,
+          select: {
+            valor_respuesta: true,
+            tipo_entrada: { select: { nombre: true } },
+          },
+        },
+      },
+    });
+
+    const pagina = filas.slice(0, limite).reverse();
+    const sinVinculo = pagina
+      .filter((fila) => fila.historial_nodos === null)
+      .map((fila) => fila.id_interaccion);
+    const destinosHistoricos = await this.buscarDestinosSinVinculo(
+      tx,
+      sinVinculo,
     );
+    const interacciones: InteraccionRegistrada[] = [];
+    for (const fila of pagina) {
+      const respuesta = fila.respuestas[0];
+      const idNodoDestino =
+        fila.historial_nodos?.id_nodo_destino ??
+        destinosHistoricos.get(fila.id_interaccion);
+      if (respuesta === undefined || idNodoDestino === undefined) return null;
+      interacciones.push({
+        idInteraccion: fila.id_interaccion,
+        secuencia: fila.secuencia,
+        timestampInteraccion: fila.timestamp_interaccion,
+        idNodo: fila.id_nodo,
+        idNodoDestino,
+        tipoEntrada: respuesta.tipo_entrada.nombre,
+        valor: respuesta.valor_respuesta,
+      });
+    }
+    return { hayMas: filas.length > limite, interacciones };
   }
 
   /** Los pasos previos al vínculo solo se recuperan con una coincidencia exacta y única. */

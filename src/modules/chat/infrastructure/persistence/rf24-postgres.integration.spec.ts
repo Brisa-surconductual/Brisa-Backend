@@ -3,10 +3,16 @@ import { CalcularUbicacionTemporalUsuarioUseCase } from '../../../cronograma/app
 import { PrismaUbicacionTemporalUsuarioRepository } from '../../../cronograma/infrastructure/persistence/prisma-ubicacion-temporal-usuario.repository';
 import { DeterminarContextoConversacionalUseCase } from '../../application/use-cases/sesion/determinar-contexto-conversacional.use-case';
 import { IniciarOReanudarSesionUseCase } from '../../application/use-cases/sesion/iniciar-o-reanudar-sesion.use-case';
+import { PresentarHistorialConversacionalService } from '../../application/services/presentar-historial-conversacional.service';
+import { RecuperarSesionConversacionalService } from '../../application/services/recuperar-sesion-conversacional.service';
+import { presentadorNodoPrueba } from '../../application/support/testing/presentacion-nodo.fixture';
 import { PrismaArbolConversacionalRepository } from './prisma-arbol-conversacional.repository';
 import { PrismaAsignacionCronogramaChatRepository } from './prisma-asignacion-cronograma-chat.repository';
 import { PrismaContextoConversacionalRepository } from './prisma-contexto-conversacional.repository';
 import { PrismaSesionConversacionalRepository } from './prisma-sesion-conversacional.repository';
+import { PrismaHistorialInteraccionesRepository } from './prisma-historial-interacciones.repository';
+import { PrismaPresentacionNodoActualRepository } from './prisma-presentacion-nodo-actual.repository';
+import { PrismaRecuperarSesionConversacionalRepository } from './prisma-recuperar-sesion-conversacional.repository';
 
 const ejecutarIntegracion =
   process.env.RF24_INTEGRACION_DB === '1' ? describe : describe.skip;
@@ -90,6 +96,10 @@ ejecutarIntegracion('RF-24 - Integración PostgreSQL real', () => {
     const asignacionCronograma = new PrismaAsignacionCronogramaChatRepository(
       prisma,
     );
+    const presentacion = presentadorNodoPrueba(
+      new PrismaPresentacionNodoActualRepository(prisma),
+    );
+    const historial = new PrismaHistorialInteraccionesRepository(prisma);
 
     const casoDeUso = new IniciarOReanudarSesionUseCase(
       sesiones,
@@ -97,6 +107,11 @@ ejecutarIntegracion('RF-24 - Integración PostgreSQL real', () => {
       determinarContexto,
       calcularUbicacion,
       asignacionCronograma,
+      new RecuperarSesionConversacionalService(
+        new PrismaRecuperarSesionConversacionalRepository(prisma, historial),
+      ),
+      presentacion,
+      new PresentarHistorialConversacionalService(arboles, presentacion),
     );
 
     const resultado = await casoDeUso.execute(idUsuario);
@@ -106,6 +121,12 @@ ejecutarIntegracion('RF-24 - Integración PostgreSQL real', () => {
     expect(resultado.sesion.estado_actual).toBe('ACTIVA');
     expect(resultado.sesion.id_flujo_conversacional).toBe(idFlujo);
     expect(resultado.nodo_actual.id_nodo).toBe(idNodo);
+    expect(resultado.historial_reciente).toEqual({
+      items: [],
+      hay_mas: false,
+      siguiente_cursor: null,
+    });
+    expect(resultado.sesion.ultima_secuencia).toBe(0);
     expect(resultado.ubicacion_temporal.nombre_unidad).toBe(
       'Unidad de prueba RF24',
     );

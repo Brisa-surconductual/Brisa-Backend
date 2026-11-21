@@ -93,19 +93,15 @@ export class SesionConversacional {
     return this.estadoActual === 'ACTIVA' || this.estadoActual === 'PAUSADA';
   }
 
-  reanudar(): SesionConversacional {
+  reanudar(idNodo = this.idNodoActual): SesionConversacional {
     if (!this.esReanudable()) {
       throw new SesionNoReanudableException();
     }
 
-    if (this.estadoActual === 'ACTIVA') {
+    if (this.estadoActual === 'ACTIVA' && this.idNodoActual === idNodo) {
       return this;
     }
 
-    return this.conEstado('ACTIVA');
-  }
-
-  private conEstado(estado: EstadoSesionConversacional): SesionConversacional {
     return new SesionConversacional(
       this.idSesion,
       this.idUsuario,
@@ -114,8 +110,8 @@ export class SesionConversacional {
       this.modalidadActiva,
       this.tipoDependencia,
       this.tipoCraving,
-      this.idNodoActual,
-      estado,
+      idNodo,
+      'ACTIVA',
       this.fechaInicio,
       this.fechaUltimaInteraccion,
     );

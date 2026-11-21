@@ -27,6 +27,8 @@ export abstract class ArbolConversacionalRepository {
 
   abstract buscarNodo(idNodo: string): Promise<NodoConversacional | null>;
 
+  abstract buscarNodosPorIds(ids: string[]): Promise<NodoConversacional[]>;
+
   abstract buscarTransicion(
     idTransicion: string,
   ): Promise<TransicionConversacional | null>;

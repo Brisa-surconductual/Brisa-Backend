@@ -28,10 +28,14 @@ import { PresentarNodoActualService } from './services/presentar-nodo-actual.ser
 import { PresentarBloquesNodoActualService } from './services/presentar-bloques-nodo-actual.service';
 import { PrepararEntradaNodoActualService } from './services/preparar-entrada-nodo-actual.service';
 import { EstadoConversacionalService } from './services/estado-conversacional.service';
+import { PresentarHistorialConversacionalService } from './services/presentar-historial-conversacional.service';
+import { RecuperarSesionConversacionalService } from './services/recuperar-sesion-conversacional.service';
 
 export const ChatApplicationProviders = [
   ProcesarRespuestaUseCase,
   EstadoConversacionalService,
+  PresentarHistorialConversacionalService,
+  RecuperarSesionConversacionalService,
   PresentarNodoActualService,
   PresentarBloquesNodoActualService,
   PrepararEntradaNodoActualService,
