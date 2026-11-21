@@ -470,7 +470,7 @@ model interacciones {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model nodos {
   id_nodo                                                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  id_flujo                                                  String                 @unique(map: "uq_nodo_inicial_por_flujo", where: raw("(es_nodo_inicial = true)")) @db.Uuid
+  id_flujo                                                  String                 @unique(map: "uq_nodo_final_por_flujo", where: raw("(es_nodo_final = true)")) @db.Uuid
   id_tipo_nodo                                              String                 @db.Uuid
   contenido                                                 Json
   es_nodo_inicial                                           Boolean                @default(false)
@@ -479,6 +479,7 @@ model nodos {
   creado_por                                                String                 @db.Uuid
   fecha_creacion                                            DateTime               @default(now()) @db.Timestamptz(6)
   fecha_actualizacion                                       DateTime               @default(now()) @db.Timestamptz(6)
+  es_nodo_final                                             Boolean                @default(false)
   historial_nodos_historial_nodos_id_nodoTonodos            historial_nodos[]      @relation("historial_nodos_id_nodoTonodos")
   historial_nodos_historial_nodos_id_nodo_destinoTonodos    historial_nodos[]      @relation("historial_nodos_id_nodo_destinoTonodos")
   interacciones                                             interacciones[]
