@@ -17,7 +17,7 @@ import { presentadorNodoPrueba } from '../../support/testing/presentacion-nodo.f
 describe('ConsultarNodoActualUseCase (RF-26)', () => {
   const sesiones = {
     buscarPorIdYUsuario: jest.fn(),
-    buscarUltimaReanudable: jest.fn(),
+    buscarUltimaNoCompletada: jest.fn(),
     guardar: jest.fn(),
   };
   const arboles = {
@@ -85,7 +85,7 @@ describe('ConsultarNodoActualUseCase (RF-26)', () => {
   });
   afterEach(() => {
     expect(sesiones.guardar).not.toHaveBeenCalled();
-    expect(sesiones.buscarUltimaReanudable).not.toHaveBeenCalled();
+    expect(sesiones.buscarUltimaNoCompletada).not.toHaveBeenCalled();
     expect(arboles.obtenerArbol).not.toHaveBeenCalled();
     expect(arboles.buscarPublicadoGrupal).not.toHaveBeenCalled();
     expect(arboles.buscarPublicadoPersonalizado).not.toHaveBeenCalled();

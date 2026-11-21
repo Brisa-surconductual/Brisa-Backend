@@ -21,12 +21,20 @@ import { PrismaPresentacionNodoActualRepository } from './persistence/prisma-pre
 import { S3FirmarRecursoNodoAdapter } from './storage/s3-firmar-recurso-nodo.adapter';
 import { HistorialInteraccionesRepository } from '../domain/repositories/historial-interacciones.repository';
 import { PrismaHistorialInteraccionesRepository } from './persistence/prisma-historial-interacciones.repository';
+import { RecuperarSesionConversacionalPort } from '../application/ports/recuperar-sesion-conversacional.port';
+import { PrismaRecuperarSesionConversacionalRepository } from './persistence/prisma-recuperar-sesion-conversacional.repository';
+import { RegistroErroresConversacionalesRepository } from '../domain/repositories/registro-errores-conversacionales.repository';
+import { PrismaRegistroErroresConversacionalesRepository } from './persistence/prisma-registro-errores-conversacionales.repository';
 import {
   FirmarRecursoNodoPort,
   PresentacionNodoActualPort,
 } from '../application/ports/presentacion-nodo-actual.port';
 
 export const ChatInfrastructureProviders = [
+  {
+    provide: RegistroErroresConversacionalesRepository,
+    useClass: PrismaRegistroErroresConversacionalesRepository,
+  },
   {
     provide: ProcesarRespuestaPort,
     useClass: PrismaProcesarRespuestaRepository,
@@ -37,9 +45,14 @@ export const ChatInfrastructureProviders = [
     useClass: PrismaPresentacionNodoActualRepository,
   },
   { provide: FirmarRecursoNodoPort, useClass: S3FirmarRecursoNodoAdapter },
+  PrismaHistorialInteraccionesRepository,
   {
     provide: HistorialInteraccionesRepository,
-    useClass: PrismaHistorialInteraccionesRepository,
+    useExisting: PrismaHistorialInteraccionesRepository,
+  },
+  {
+    provide: RecuperarSesionConversacionalPort,
+    useClass: PrismaRecuperarSesionConversacionalRepository,
   },
   {
     provide: ModalidadProgramaRepository,

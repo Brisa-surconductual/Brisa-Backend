@@ -7,6 +7,7 @@ import {
   PresentacionNodoActualDtoResponse,
 } from '../dto/presentacion-nodo-actual.dto-response';
 import { PresentacionNodoActualPort } from '../ports/presentacion-nodo-actual.port';
+import { RecursoConversacionalNoDisponibleException } from '../exceptions/recurso-conversacional-no-disponible.exception';
 import { PresentarBloquesNodoActualService } from './presentar-bloques-nodo-actual.service';
 import { PrepararEntradaNodoActualService } from './preparar-entrada-nodo-actual.service';
 
@@ -51,7 +52,11 @@ export class PresentarNodoActualService {
     const recursos =
       nodo.idContenidoCronograma === null
         ? []
-        : await this.lecturas.consultarRecursos(nodo.idContenidoCronograma);
+        : await this.lecturas
+            .consultarRecursos(nodo.idContenidoCronograma)
+            .catch(() => {
+              throw new RecursoConversacionalNoDisponibleException();
+            });
     return {
       bloques: await this.bloques.preparar(nodo.contenido, recursos),
       entrada: this.entrada.preparar(nodo.contenido),

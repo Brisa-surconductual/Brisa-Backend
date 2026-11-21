@@ -9,9 +9,11 @@ import { NodoActualController } from './controllers/sesion/nodo-actual.controlle
 import { HistorialInteraccionesController } from './controllers/sesion/historial-interacciones.controller';
 import { TransicionesConversacionalesController } from './controllers/transicion/transiciones-conversacionales.controller';
 import { RespuestasConversacionalesController } from './controllers/sesion/respuestas-conversacionales.controller';
+import { ErroresClienteChatController } from './controllers/sesion/errores-cliente-chat.controller';
 
 export const ChatPresentationProviders = [
   RespuestasConversacionalesController,
+  ErroresClienteChatController,
   NodoActualController,
   HistorialInteraccionesController,
   SesionesConversacionalesController,

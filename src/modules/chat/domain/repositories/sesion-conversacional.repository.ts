@@ -7,16 +7,13 @@ export abstract class SesionConversacionalRepository {
     idUsuario: string,
   ): Promise<SesionConversacional | null>;
 
-  abstract buscarUltimaReanudable(
+  abstract buscarUltimaNoCompletada(
     idUsuario: string,
   ): Promise<SesionConversacional | null>;
 
   /**
-   * Persiste la sesion. Si la sesion es nueva y el usuario ya tiene una
-   * sesion activa o pausada, lanza SesionActivaExistenteException.
-   *
-   * Una sesión en ERROR_CONFIGURACION no cuenta como activa: si el usuario ya
-   * tiene una, se actualiza esa misma en lugar de crear otra.
+   * Una sesión previa sin completar impide crear otra. Si dos intentos
+   * registran un fallo de configuración, ambos conservan la misma sesión de error.
    */
   abstract guardar(sesion: SesionConversacional): Promise<void>;
 }

@@ -13,6 +13,12 @@ import { ArbolConversacionalRepository } from '../../../domain/repositories/arbo
 import { SesionConversacional } from '../../../domain/entities/sesion/sesion-conversacional.entity';
 import { DeterminarContextoConversacionalUseCase } from './determinar-contexto-conversacional.use-case';
 import { IniciarOReanudarSesionUseCase } from './iniciar-o-reanudar-sesion.use-case';
+import { PresentarHistorialConversacionalService } from '../../services/presentar-historial-conversacional.service';
+import {
+  EstadoSesionRecuperado,
+  RecuperarSesionConversacionalService,
+} from '../../services/recuperar-sesion-conversacional.service';
+import { presentadorNodoPrueba } from '../../support/testing/presentacion-nodo.fixture';
 import {
   PerfilClinicoIncompletoException,
   SesionActivaExistenteException,
@@ -31,7 +37,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
 
   const sesiones = {
     buscarPorIdYUsuario: jest.fn(),
-    buscarUltimaReanudable: jest.fn(),
+    buscarUltimaNoCompletada: jest.fn(),
     guardar: jest.fn(),
   };
 
@@ -39,7 +45,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
     buscarPublicadoGrupal: jest.fn(),
     buscarPublicadoPersonalizado: jest.fn(),
     obtenerArbol: jest.fn(),
-    buscarNodo: jest.fn(),
+    buscarNodosPorIds: jest.fn(),
     listarFlujos: jest.fn(),
   };
 
@@ -55,12 +61,33 @@ describe('IniciarOReanudarSesionUseCase', () => {
     existeAsignacion: jest.fn(),
   };
 
+  const recuperar = jest.fn<
+    Promise<EstadoSesionRecuperado | null>,
+    [string, string]
+  >();
+  const presentador = presentadorNodoPrueba();
+
   const casoDeUso = new IniciarOReanudarSesionUseCase(
     sesiones,
     arboles as unknown as ArbolConversacionalRepository,
     determinarContexto as unknown as DeterminarContextoConversacionalUseCase,
     calcularUbicacion as unknown as CalcularUbicacionTemporalUsuarioUseCase,
     asignacionCronograma,
+    {
+      async recuperar<T>(
+        sesion: string,
+        usuario: string,
+        finalizar: (estado: EstadoSesionRecuperado) => Promise<T>,
+      ) {
+        const estado = await recuperar(sesion, usuario);
+        return estado === null ? null : finalizar(estado);
+      },
+    } as unknown as RecuperarSesionConversacionalService,
+    presentador,
+    new PresentarHistorialConversacionalService(
+      arboles as unknown as ArbolConversacionalRepository,
+      presentador,
+    ),
   );
 
   const flujo = new FlujoConversacional(
@@ -122,12 +149,18 @@ describe('IniciarOReanudarSesionUseCase', () => {
     jest.resetAllMocks();
 
     calcularUbicacion.execute.mockResolvedValue(ubicacion);
-    arboles.buscarNodo.mockResolvedValue(nodo);
+    arboles.buscarNodosPorIds.mockResolvedValue([nodo]);
     asignacionCronograma.existeAsignacion.mockResolvedValue(true);
+    recuperar.mockResolvedValue({
+      sesion,
+      nodo,
+      historial: { hayMas: false, interacciones: [] },
+      recuperadaDesdeHistorial: false,
+    });
   });
 
   it('reanuda una sesión existente sin volver a determinar modalidad ni árbol', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(sesion);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(sesion);
     const resultado = await casoDeUso.execute(ids.usuario);
 
     expect(resultado.reanudada).toBe(true);
@@ -142,23 +175,54 @@ describe('IniciarOReanudarSesionUseCase', () => {
     expect(sesiones.guardar).not.toHaveBeenCalled();
   });
 
-  it('reanuda una sesión pausada y persiste su nuevo estado', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(crearSesion('PAUSADA'));
+  it('presenta el estado activo que devolvió la recuperación de una sesión pausada', async () => {
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(crearSesion('PAUSADA'));
 
     const resultado = await casoDeUso.execute(ids.usuario);
 
     expect(resultado.reanudada).toBe(true);
     expect(resultado.sesion.estado_actual).toBe('ACTIVA');
-    expect(sesiones.guardar).toHaveBeenCalledWith(
-      expect.objectContaining({
-        idSesion: ids.sesion,
-        estadoActual: 'ACTIVA',
-      }),
-    );
+    expect(recuperar).toHaveBeenCalledWith(ids.sesion, ids.usuario);
+    expect(sesiones.guardar).not.toHaveBeenCalled();
+  });
+
+  it('incluye la última secuencia y el cursor del historial recuperado', async () => {
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(sesion);
+    recuperar.mockResolvedValue({
+      sesion,
+      nodo,
+      recuperadaDesdeHistorial: true,
+      historial: {
+        hayMas: true,
+        interacciones: [22, 41].map((secuencia) => ({
+          secuencia,
+          idInteraccion: String(secuencia),
+          timestampInteraccion: fecha,
+          idNodo: ids.nodo,
+          idNodoDestino: ids.nodo,
+          tipoEntrada: 'CONTINUAR',
+          valor: null,
+        })),
+      },
+    });
+    const resultado = await casoDeUso.execute(ids.usuario);
+    expect(resultado.recuperada_desde_historial).toBe(true);
+    expect(resultado.sesion.ultima_secuencia).toBe(41);
+    expect(resultado.historial_reciente.siguiente_cursor).toBe(22);
+    expect(
+      resultado.historial_reciente.items.map((item) => item.secuencia),
+    ).toEqual([22, 41]);
+    expect(resultado.nodo_actual).toEqual({
+      id_nodo: ids.nodo,
+      tipo_nodo: 'MENSAJE',
+      es_terminal: true,
+      bloques: [{ orden: 1, tipo: 'TEXTO', texto: 'Bienvenido' }],
+      entrada: null,
+    });
   });
 
   it('reanuda la sesión creada en paralelo cuando el guardado detecta una activa', async () => {
-    sesiones.buscarUltimaReanudable
+    sesiones.buscarUltimaNoCompletada
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(sesion);
 
@@ -181,7 +245,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   });
 
   it('inicia una sesión nueva con el árbol GRUPAL publicado', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
 
     determinarContexto.execute.mockResolvedValue({
       modalidad: ModalidadConversacional.GRUPAL,
@@ -200,7 +264,13 @@ describe('IniciarOReanudarSesionUseCase', () => {
     expect(resultado.sesion.modalidad_activa).toBe(
       ModalidadConversacional.GRUPAL,
     );
-    expect(resultado.nodo_actual.es_nodo_inicial).toBe(true);
+    expect(resultado.nodo_actual.es_terminal).toBe(true);
+    expect(resultado.sesion.ultima_secuencia).toBe(0);
+    expect(resultado.historial_reciente).toEqual({
+      items: [],
+      hay_mas: false,
+      siguiente_cursor: null,
+    });
 
     expect(determinarContexto.execute).toHaveBeenCalledWith(ids.usuario);
     expect(arboles.buscarPublicadoGrupal).toHaveBeenCalledTimes(1);
@@ -241,7 +311,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
         tipoCraving,
       );
 
-      sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+      sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
 
       determinarContexto.execute.mockResolvedValue({
         modalidad: ModalidadConversacional.PERSONALIZADA,
@@ -291,7 +361,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   );
 
   it('rechaza el inicio cuando no existe un árbol GRUPAL publicado', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
 
     determinarContexto.execute.mockResolvedValue({
       modalidad: ModalidadConversacional.GRUPAL,
@@ -312,7 +382,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   });
 
   it('rechaza el inicio PERSONALIZADO sin árbol publicado', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
 
     determinarContexto.execute.mockResolvedValue({
       modalidad: ModalidadConversacional.PERSONALIZADA,
@@ -358,7 +428,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   });
 
   it('responde 409 cuando el árbol personalizado existe pero no está publicado', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
 
     determinarContexto.execute.mockResolvedValue({
       modalidad: ModalidadConversacional.PERSONALIZADA,
@@ -409,7 +479,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   });
 
   it('registra ERROR_CONFIGURACION y responde 500 si falla la consulta del árbol personalizado', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
     determinarContexto.execute.mockResolvedValue({
       modalidad: ModalidadConversacional.PERSONALIZADA,
       perfil: {
@@ -432,7 +502,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   });
 
   it('informa el motivo original aunque no se pueda registrar el error', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
     determinarContexto.execute.mockResolvedValue({
       modalidad: ModalidadConversacional.PERSONALIZADA,
       perfil: {
@@ -450,7 +520,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   });
 
   it('no registra ERROR_CONFIGURACION cuando falta el árbol GRUPAL', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
     determinarContexto.execute.mockResolvedValue({
       modalidad: ModalidadConversacional.GRUPAL,
       perfil: null,
@@ -464,7 +534,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   });
 
   it('responde PERFIL_INCOMPLETO (409) sin crear sesión', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
 
     determinarContexto.execute.mockRejectedValue(
       new PerfilClinicoIncompletoException(),
@@ -482,7 +552,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   });
 
   it('responde SIN_CRONOGRAMA (422) sin crear sesión', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
     asignacionCronograma.existeAsignacion.mockResolvedValue(false);
 
     await expect(casoDeUso.execute(ids.usuario)).rejects.toMatchObject({
@@ -498,7 +568,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   });
 
   it('propaga errores de infraestructura al verificar la asignación', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
 
     asignacionCronograma.existeAsignacion.mockRejectedValue(
       new Error('Error de conexión a PostgreSQL'),
@@ -513,7 +583,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   });
 
   it('propaga errores del cálculo temporal sin crear una sesión', async () => {
-    sesiones.buscarUltimaReanudable.mockResolvedValue(null);
+    sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
 
     calcularUbicacion.execute.mockRejectedValue(
       new Error('Error interno de Cronograma'),

@@ -5,7 +5,7 @@ import {
   TipoErrorDominio,
 } from '../../domain/exceptions/domain.exception';
 
-const RESPUESTA_HTTP: Record<
+export const HTTP_ERRORES_DOMINIO: Record<
   TipoErrorDominio,
   { statusCode: number; error: string }
 > = {
@@ -19,7 +19,7 @@ const RESPUESTA_HTTP: Record<
 @Catch(DomainException)
 export class DomainExceptionFilter implements ExceptionFilter {
   catch(exception: DomainException, host: ArgumentsHost): void {
-    const { statusCode, error } = RESPUESTA_HTTP[exception.tipo];
+    const { statusCode, error } = HTTP_ERRORES_DOMINIO[exception.tipo];
 
     host
       .switchToHttp()
