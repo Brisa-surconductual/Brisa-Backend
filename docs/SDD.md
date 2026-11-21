@@ -285,7 +285,7 @@ No todas las secciones aplican a toda spec (p. ej. una regla de negocio interna 
 | [`CONTRATO_RF26_NODO_ACTUAL.md`](CONTRATO_RF26_NODO_ACTUAL.md) | RF-26 / RF-33 | M-3 (Chat) | IMPLEMENTADA (PR #47) | Cambio 2026-11-20: tipos de entrada canónicos e `idRecurso` (`feat/chat-rf26-entradas-canonicas`) |
 | [`CONTRATO_RF27_RF28_RF29.md`](CONTRATO_RF27_RF28_RF29.md) | RF-27 / RF-27B / RF-28 / RF-29 | M-3 (Chat) | IMPLEMENTADA | Reglas vigentes; el request/response camelCase quedó OBSOLETO, rige el de RF-30 |
 | [`CONTRATO_RF30_INTERACCIONES.md`](CONTRATO_RF30_INTERACCIONES.md) | RF-30 | M-3 (Chat) | IMPLEMENTADA (PR #59) | Contrato vigente de `POST /chat/sesiones/:id_sesion/respuestas` |
-| [`CONTRATO_RF31_RF32_HISTORIAL.md`](CONTRATO_RF31_RF32_HISTORIAL.md) | RF-31 / RF-32 (con RF-30, RF-33) | M-3 (Chat) | APROBADA (implementación en `feat/chat-rf32-historial-interacciones`) | `GET /chat/sesiones/:idSesion/interacciones`; e2e con BD local pendiente |
+| [`CONTRATO_RF31_RF32_HISTORIAL.md`](CONTRATO_RF31_RF32_HISTORIAL.md) | RF-31 / RF-32 (con RF-30, RF-33) | M-3 (Chat) | Alineada con la tarea #306 | `GET /chat/sesiones/{id_sesion}/historial`, con paginación e integridad verificadas en PostgreSQL local |
 | [`RF25B_DECISIONES_TECNICAS.md`](RF25B_DECISIONES_TECNICAS.md) | RF-25B | Por confirmar | N/A (decisión técnica) | No es contrato de comportamiento |
 
 > Esta tabla se mantiene al día en esta misma sesión y en las siguientes: cada spec nueva o cambio de estado se refleja aquí.

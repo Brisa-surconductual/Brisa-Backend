@@ -22,13 +22,14 @@ import { SesionConversacionalRepository } from '../../../domain/repositories/ses
 import { DomainExceptionFilter } from '../../filters/domain-exception.filter';
 import { HistorialInteraccionesController } from './historial-interacciones.controller';
 
-describe('RF-31 / RF-32 GET /chat/sesiones/:idSesion/interacciones (HTTP)', () => {
+describe('RF-31 / RF-32 GET /chat/sesiones/:id_sesion/historial (HTTP)', () => {
   const idSesion = '32000000-0000-4000-8000-000000000001';
   const idUsuario = '32000000-0000-4000-8000-000000000002';
   const idNodo = '32000000-0000-4000-8000-000000000003';
   const idFlujo = '32000000-0000-4000-8000-000000000004';
+  const idNodoDestino = '32000000-0000-4000-8000-000000000005';
   const fecha = new Date('2026-11-20T10:00:00Z');
-  const ruta = `/chat/sesiones/${idSesion}/interacciones`;
+  const ruta = `/chat/sesiones/${idSesion}/historial`;
   const sesiones = {
     buscarPorIdYUsuario: jest.fn(),
     guardar: jest.fn(),
@@ -125,15 +126,14 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:idSesion/interacciones (HTTP)', () =
       ),
     );
     historial.consultar.mockResolvedValue({
-      ultimaSecuencia: 1,
-      hayMas: false,
+      hayMas: true,
       interacciones: [
         {
           idInteraccion: '32000000-0000-4000-8000-000000000010',
-          secuencia: 1,
+          secuencia: 21,
           timestampInteraccion: fecha,
-          registradaEn: fecha,
           idNodo,
+          idNodoDestino,
           tipoEntrada: 'ESCALA',
           valor: 7,
         },
@@ -152,17 +152,16 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:idSesion/interacciones (HTTP)', () =
       .expect('Cache-Control', 'no-store');
     expect(r.body).toEqual({
       data: {
-        id_sesion: idSesion,
-        ultima_secuencia: 1,
-        hay_mas: false,
-        interacciones: [
+        hay_mas: true,
+        siguiente_cursor: 21,
+        items: [
           {
             id_interaccion: '32000000-0000-4000-8000-000000000010',
-            secuencia: 1,
+            secuencia: 21,
             timestamp_interaccion: '2026-11-20T10:00:00.000Z',
-            registrada_en: '2026-11-20T10:00:00.000Z',
             nodo: {
-              idNodo,
+              id_nodo: idNodo,
+              tipo_nodo: 'PREGUNTA',
               bloques: [
                 {
                   orden: 1,
@@ -170,18 +169,9 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:idSesion/interacciones (HTTP)', () =
                   texto: '¿Qué tan fuerte es el deseo?',
                 },
               ],
-              entrada: {
-                tipo: 'ESCALA',
-                obligatorio: true,
-                min: 1,
-                max: 10,
-                paso: 1,
-                opciones: null,
-                etiquetas: null,
-                maxCaracteres: null,
-              },
             },
-            respuesta: { tipo_entrada: 'ESCALA', valor: 7 },
+            respuesta: { tipo_entrada: 'ESCALA', valor: 7, etiqueta: null },
+            id_nodo_destino: idNodoDestino,
           },
         ],
       },
@@ -193,9 +183,9 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:idSesion/interacciones (HTTP)', () =
     });
   });
 
-  it('acepta antes_de y limite como enteros de la query', async () => {
+  it('acepta antes_de_secuencia y limite como enteros de la query', async () => {
     await request(app.getHttpServer())
-      .get(`${ruta}?antes_de=5&limite=3`)
+      .get(`${ruta}?antes_de_secuencia=5&limite=3`)
       .expect(200);
     expect(historial.consultar).toHaveBeenCalledWith({
       idSesion,
@@ -207,18 +197,31 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:idSesion/interacciones (HTTP)', () =
   it.each([
     ['limite=21'],
     ['limite=0'],
-    ['antes_de=0'],
-    ['antes_de=abc'],
+    ['antes_de_secuencia=0'],
+    ['antes_de_secuencia=abc'],
+    ['antes_de_secuencia=2147483648'],
+    ['antes_de_secuencia=10&antes_de_secuencia=20'],
+    ['antes_de=5'],
     ['id_usuario=x'],
   ])('rechaza la query inválida %s con 400 sin leer', async (query) => {
-    await request(app.getHttpServer()).get(`${ruta}?${query}`).expect(400);
+    const r = await request(app.getHttpServer())
+      .get(`${ruta}?${query}`)
+      .expect(400);
+    expect(r.body).toMatchObject({
+      statusCode: 400,
+      codigo: 'PARAMETRO_INVALIDO',
+    });
     expect(historial.consultar).not.toHaveBeenCalled();
   });
 
   it('rechaza un idSesion que no es UUID con 400', async () => {
-    await request(app.getHttpServer())
-      .get('/chat/sesiones/no-uuid/interacciones')
+    const r = await request(app.getHttpServer())
+      .get('/chat/sesiones/no-uuid/historial')
       .expect(400);
+    expect(r.body).toMatchObject({
+      statusCode: 400,
+      codigo: 'PARAMETRO_INVALIDO',
+    });
   });
 
   it('trata la sesión de otro usuario como inexistente (404 SESION_NO_ENCONTRADA)', async () => {
@@ -244,8 +247,28 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:idSesion/interacciones (HTTP)', () =
     await request(app.getHttpServer()).get(ruta).expect(403);
   });
 
-  it('responde 500 CONTENIDO_NO_DISPONIBLE si un nodo no puede presentarse', async () => {
-    arboles.buscarNodo.mockResolvedValue(null);
+  it('responde 200 con una página vacía y sin cursor', async () => {
+    historial.consultar.mockResolvedValue({ hayMas: false, interacciones: [] });
+    await request(app.getHttpServer())
+      .get(ruta)
+      .expect(200)
+      .expect({
+        data: { items: [], hay_mas: false, siguiente_cursor: null },
+      });
+  });
+
+  it('responde 422 HISTORIAL_INCONSISTENTE si el historial no supera la validación', async () => {
+    historial.consultar.mockResolvedValue(null);
+    const r = await request(app.getHttpServer()).get(ruta).expect(422);
+    expect(r.body).toMatchObject({
+      statusCode: 422,
+      codigo: 'HISTORIAL_INCONSISTENTE',
+    });
+    expect(arboles.buscarNodo).not.toHaveBeenCalled();
+  });
+
+  it('responde 500 CONTENIDO_NO_DISPONIBLE ante un fallo al preparar el nodo', async () => {
+    arboles.buscarNodo.mockRejectedValue(new Error('Fallo de lectura'));
     const r = await request(app.getHttpServer()).get(ruta).expect(500);
     expect(r.body).toMatchObject({ codigo: 'CONTENIDO_NO_DISPONIBLE' });
   });

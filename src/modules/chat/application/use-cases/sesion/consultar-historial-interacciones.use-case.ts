@@ -1,6 +1,9 @@
 import { HttpException, Injectable } from '@nestjs/common';
 import { NodoConversacional } from '../../../domain/entities/flujo/nodo-conversacional.entity';
-import { tipoEntradaConfigurado } from '../../../domain/enums/tipo-entrada-respuesta.enum';
+import {
+  TipoEntradaRespuesta,
+  tipoEntradaConfigurado,
+} from '../../../domain/enums/tipo-entrada-respuesta.enum';
 import {
   DomainException,
   SesionConversacionalNoEncontradaException,
@@ -17,9 +20,10 @@ import {
   InteraccionHistorialDtoResponse,
 } from '../../dto/historial-interacciones.dto-response';
 import { ContenidoNodoNoDisponibleException } from '../../exceptions/contenido-nodo-no-disponible.exception';
+import { HistorialConversacionalInconsistenteException } from '../../exceptions/historial-conversacional-inconsistente.exception';
 import { PresentarNodoActualService } from '../../services/presentar-nodo-actual.service';
 
-type ContenidoPresentado = Awaited<
+type ContenidoPresentado = { tipoNodo: string } & Awaited<
   ReturnType<PresentarNodoActualService['presentarContenido']>
 >;
 
@@ -52,23 +56,25 @@ export class ConsultarHistorialInteraccionesUseCase {
 
       const pagina = await this.historial.consultar({
         idSesion: sesion.idSesion,
-        antesDe: consulta.antes_de ?? null,
+        antesDe: consulta.antes_de_secuencia ?? null,
         limite: consulta.limite,
       });
+      if (pagina === null)
+        throw new HistorialConversacionalInconsistenteException();
 
       const contenidos = await this.presentarNodos(
         pagina.interacciones,
         sesion.idFlujoConversacional,
       );
+      const items = pagina.interacciones.map((interaccion) =>
+        this.presentarInteraccion(interaccion, contenidos),
+      );
 
       return {
         data: {
-          id_sesion: sesion.idSesion,
-          ultima_secuencia: pagina.ultimaSecuencia,
+          items,
           hay_mas: pagina.hayMas,
-          interacciones: pagina.interacciones.map((i) =>
-            this.presentarInteraccion(i, contenidos),
-          ),
+          siguiente_cursor: pagina.hayMas ? items[0].secuencia : null,
         },
       };
     } catch (error: unknown) {
@@ -98,9 +104,13 @@ export class ConsultarHistorialInteraccionesUseCase {
     idFlujo: string | null,
   ): Promise<ContenidoPresentado> {
     // RF-31: el historial solo contiene nodos del flujo de la sesión.
-    if (nodo === null || nodo.idFlujo !== idFlujo || nodo.contenido == null)
-      throw new ContenidoNodoNoDisponibleException();
-    return this.presentacion.presentarContenido(nodo);
+    if (nodo === null || nodo.idFlujo !== idFlujo)
+      throw new HistorialConversacionalInconsistenteException();
+    if (nodo.contenido == null) throw new ContenidoNodoNoDisponibleException();
+    return {
+      tipoNodo: nodo.nombreTipoNodo,
+      ...(await this.presentacion.presentarContenido(nodo)),
+    };
   }
 
   private presentarInteraccion(
@@ -109,21 +119,29 @@ export class ConsultarHistorialInteraccionesUseCase {
   ): InteraccionHistorialDtoResponse {
     const contenido = contenidos.get(i.idNodo);
     if (contenido === undefined) throw new ContenidoNodoNoDisponibleException();
+    const tipoCanonico = tipoEntradaConfigurado(i.tipoEntrada);
+    const etiqueta =
+      tipoCanonico === TipoEntradaRespuesta.OPCION_UNICA
+        ? (contenido.entrada?.opciones?.find(
+            (opcion) => opcion.valor === i.valor,
+          )?.etiqueta ?? null)
+        : null;
     return {
       id_interaccion: i.idInteraccion,
       secuencia: i.secuencia,
       timestamp_interaccion: i.timestampInteraccion.toISOString(),
-      registrada_en: i.registradaEn.toISOString(),
       nodo: {
-        idNodo: i.idNodo,
+        id_nodo: i.idNodo,
+        tipo_nodo: contenido.tipoNodo,
         bloques: contenido.bloques,
-        entrada: contenido.entrada,
       },
       // RF-27: el valor se devuelve tal como se capturó.
       respuesta: {
-        tipo_entrada: tipoEntradaConfigurado(i.tipoEntrada) ?? i.tipoEntrada,
+        tipo_entrada: tipoCanonico ?? i.tipoEntrada,
         valor: i.valor,
+        etiqueta,
       },
+      id_nodo_destino: i.idNodoDestino,
     };
   }
 }

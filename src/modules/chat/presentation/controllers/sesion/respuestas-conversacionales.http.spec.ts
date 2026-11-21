@@ -16,6 +16,7 @@ import {
   TransaccionRespuesta,
 } from '../../../application/ports/procesar-respuesta.port';
 import { huellaInteraccion } from '../../../application/services/huella-interaccion';
+import { EstadoConversacionalService } from '../../../application/services/estado-conversacional.service';
 import { ProcesarRespuestaUseCase } from '../../../application/use-cases/sesion/procesar-respuesta.use-case';
 import {
   idsRespuesta as ids,
@@ -96,6 +97,7 @@ describe('RF-30 POST respuestas (HTTP)', () => {
       controllers: [RespuestasConversacionalesController],
       providers: [
         ProcesarRespuestaUseCase,
+        EstadoConversacionalService,
         RolesGuard,
         { provide: ProcesarRespuestaPort, useValue: persistencia },
         {
@@ -290,6 +292,18 @@ describe('RF-30 POST respuestas (HTTP)', () => {
       });
     },
   );
+  it.each([
+    ['avanzarDesdeOrigen', 409, 'NODO_DESACTUALIZADO'],
+    ['validarHistorial', 422, 'HISTORIAL_INCONSISTENTE'],
+  ] as const)(
+    'propaga el error de estado conversacional de %s',
+    async (operacion, http, codigo) => {
+      tx.estado[operacion].mockResolvedValue(false);
+      const r = await post(body()).expect(http);
+      expect(r.body).toMatchObject({ statusCode: http, codigo });
+    },
+  );
+
   it('nodo terminal no escribe una nueva respuesta', async () => {
     tx.contexto.buscarTransiciones.mockResolvedValue([]);
     const r = await post(body()).expect(409);

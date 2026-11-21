@@ -58,7 +58,7 @@ idéntico: se rechaza con `409` sin modificar la fila.
 | 403       | `CSRF_INVALIDO` cuando el token falta o es inválido                                                                                             |
 | 404       | `SESION_NO_ENCONTRADA`                                                                                                                          |
 | 409       | `ID_INTERACCION_REUTILIZADA`, `SECUENCIA_FUERA_DE_ORDEN`, `NODO_DESACTUALIZADO`, `NODO_TERMINAL`, `SESION_NO_ACTIVA`, `CAPTURA_FUERA_DE_GRUPAL` |
-| 422       | `INTERACCION_INCOMPLETA`                                                                                                                        |
+| 422       | `INTERACCION_INCOMPLETA`, `HISTORIAL_INCONSISTENTE` (RF-31)                                                                                       |
 | 500       | `ERROR_PERSISTENCIA`, `SIN_TRANSICION`, `DESTINO_INVALIDO`                                                                                      |
 
 La [migración de etapa 3](../prisma/migrations/20261115110915_fix_etapa3_chat/migration.sql)
