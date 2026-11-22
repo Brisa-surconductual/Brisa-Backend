@@ -54,3 +54,15 @@ export class SesionActivaExistenteException extends DomainException {
     );
   }
 }
+
+/** El usuario ya completó el árbol publicado: no se crea otra sesión de él. */
+export class ArbolYaCompletadoException extends DomainException {
+  readonly tipo = 'CONFLICTO';
+
+  constructor() {
+    super(
+      'El usuario ya completó el árbol conversacional publicado.',
+      'ARBOL_YA_COMPLETADO',
+    );
+  }
+}

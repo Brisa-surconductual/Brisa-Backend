@@ -6,7 +6,10 @@ import {
   TipoCravingClinico,
   TipoDependenciaClinica,
 } from '../../domain/enums/perfil-clinico.enum';
-import { SesionActivaExistenteException } from '../../domain/exceptions';
+import {
+  ArbolYaCompletadoException,
+  SesionActivaExistenteException,
+} from '../../domain/exceptions';
 import { PrismaSesionConversacionalRepository } from './prisma-sesion-conversacional.repository';
 
 describe('PrismaSesionConversacionalRepository - guardar', () => {
@@ -93,6 +96,43 @@ describe('PrismaSesionConversacionalRepository - guardar', () => {
     );
 
     expect(crear).not.toHaveBeenCalled();
+  });
+
+  it('consulta la COMPLETADA del mismo árbol bajo el bloqueo antes de crear', async () => {
+    buscarPorId.mockResolvedValue(null);
+    buscarActiva.mockResolvedValue(null);
+
+    await repository.guardar(sesion);
+
+    expect(buscarActiva).toHaveBeenNthCalledWith(2, {
+      where: {
+        id_usuario: sesion.idUsuario,
+        id_flujo_conversacional: sesion.idFlujoConversacional,
+        version_arbol_utilizada: 1,
+        estado_sesiones: { is: { estado_actual: 'COMPLETADA' } },
+      },
+      select: { id_sesion: true },
+    });
+    expect(bloquear.mock.invocationCallOrder[0]).toBeLessThan(
+      buscarActiva.mock.invocationCallOrder[1],
+    );
+    expect(crear).toHaveBeenCalledTimes(1);
+  });
+
+  it('no crea otra sesión de un árbol que el usuario ya completó', async () => {
+    buscarPorId.mockResolvedValue(null);
+    buscarActiva
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id_sesion: 'completada' });
+
+    await expect(repository.guardar(sesion)).rejects.toBeInstanceOf(
+      ArbolYaCompletadoException,
+    );
+
+    expect(bloquear).toHaveBeenCalledTimes(1);
+    expect(crear).not.toHaveBeenCalled();
+    expect(actualizarSesion).not.toHaveBeenCalled();
+    expect(actualizarEstado).not.toHaveBeenCalled();
   });
 
   it('actualiza el estado y registra la reanudación de una sesión pausada', async () => {

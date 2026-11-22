@@ -35,6 +35,7 @@ describe('RF-31 / RF-32 GET /chat/sesiones/:id_sesion/historial (HTTP)', () => {
     buscarPorIdYUsuario: jest.fn(),
     guardar: jest.fn(),
     buscarUltimaNoCompletada: jest.fn(),
+    buscarCompletadaDelArbol: jest.fn(),
   };
   const arboles = { buscarNodosPorIds: jest.fn() };
   const historial = { consultar: jest.fn() };

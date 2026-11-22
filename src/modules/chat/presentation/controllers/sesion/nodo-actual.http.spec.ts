@@ -51,6 +51,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
     buscarPorIdYUsuario: jest.fn(),
     guardar: jest.fn(),
     buscarUltimaNoCompletada: jest.fn(),
+    buscarCompletadaDelArbol: jest.fn(),
   };
   const arboles = { buscarNodo: jest.fn() };
   const lecturas = { esTerminal: jest.fn(), consultarRecursos: jest.fn() };

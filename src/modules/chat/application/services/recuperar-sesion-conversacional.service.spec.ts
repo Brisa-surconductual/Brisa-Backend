@@ -135,4 +135,68 @@ describe('RecuperarSesionConversacionalService (RF-32)', () => {
     );
     expect(tx.guardarReanudacion).toHaveBeenCalledTimes(1);
   });
+
+  describe('consultarCompletada', () => {
+    const finalizar = jest.fn((estado: unknown) => Promise.resolve(estado));
+
+    beforeEach(() => {
+      finalizar.mockImplementation((estado: unknown) =>
+        Promise.resolve(estado),
+      );
+    });
+
+    it('presenta la sesión COMPLETADA en su nodo final sin reanudarla', async () => {
+      const completada = sesion(nodo.idNodo, 'COMPLETADA');
+      tx.bloquearSesion.mockResolvedValue(completada);
+
+      const resultado = await servicio.consultarCompletada(
+        'sesion',
+        'usuario',
+        finalizar,
+      );
+
+      expect(resultado).toEqual({
+        sesion: completada,
+        nodo,
+        historial,
+        recuperadaDesdeHistorial: false,
+      });
+      expect(tx.buscarNodo).toHaveBeenCalledWith(nodo.idNodo);
+      expect(tx.consultarHistorial).toHaveBeenCalledWith({
+        idSesion: 'sesion',
+        antesDe: null,
+        limite: 20,
+      });
+      expect(tx.guardarReanudacion).not.toHaveBeenCalled();
+      expect(tx.buscarUltimoDestino).not.toHaveBeenCalled();
+    });
+
+    it.each<EstadoSesionConversacional>(['ACTIVA', 'PAUSADA'])(
+      'devuelve null para una sesión %s',
+      async (estado) => {
+        tx.bloquearSesion.mockResolvedValue(sesion(nodo.idNodo, estado));
+        await expect(
+          servicio.consultarCompletada('sesion', 'usuario', finalizar),
+        ).resolves.toBeNull();
+        expect(finalizar).not.toHaveBeenCalled();
+        expect(tx.guardarReanudacion).not.toHaveBeenCalled();
+      },
+    );
+
+    it('devuelve ESTADO_INCONSISTENTE si el nodo final no pertenece al árbol', async () => {
+      tx.bloquearSesion.mockResolvedValue(sesion(nodo.idNodo, 'COMPLETADA'));
+      tx.buscarNodo.mockResolvedValue(null);
+      await expect(
+        servicio.consultarCompletada('sesion', 'usuario', finalizar),
+      ).rejects.toMatchObject({ codigo: 'ESTADO_INCONSISTENTE' });
+    });
+
+    it('devuelve ESTADO_INCONSISTENTE si el historial no es válido', async () => {
+      tx.bloquearSesion.mockResolvedValue(sesion(nodo.idNodo, 'COMPLETADA'));
+      tx.consultarHistorial.mockResolvedValue(null);
+      await expect(
+        servicio.consultarCompletada('sesion', 'usuario', finalizar),
+      ).rejects.toMatchObject({ codigo: 'ESTADO_INCONSISTENTE' });
+    });
+  });
 });

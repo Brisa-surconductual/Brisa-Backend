@@ -318,4 +318,84 @@ ejecutarIntegracion('RF-24 - Integración PostgreSQL real', () => {
       `;
     }
   });
+  it('no crea otra sesión de un árbol completado, ni con duplicados ni en concurrencia', async () => {
+    const arboles = new PrismaArbolConversacionalRepository(prisma);
+    const presentacion = presentadorNodoPrueba(
+      new PrismaPresentacionNodoActualRepository(prisma),
+    );
+    const casoDeUso = new IniciarOReanudarSesionUseCase(
+      new PrismaSesionConversacionalRepository(prisma),
+      arboles,
+      new DeterminarContextoConversacionalUseCase(
+        new PrismaContextoConversacionalRepository(prisma),
+      ),
+      new CalcularUbicacionTemporalUsuarioUseCase(
+        new PrismaUbicacionTemporalUsuarioRepository(prisma),
+      ),
+      new PrismaAsignacionCronogramaChatRepository(prisma),
+      new RecuperarSesionConversacionalService(
+        new PrismaRecuperarSesionConversacionalRepository(
+          prisma,
+          new PrismaHistorialInteraccionesRepository(prisma),
+        ),
+      ),
+      presentacion,
+      new PresentarHistorialConversacionalService(arboles, presentacion),
+    );
+
+    await prisma.chat_sesiones.deleteMany({ where: { id_usuario: idUsuario } });
+
+    const inicial = await casoDeUso.execute(idUsuario);
+    expect(inicial.sesion.estado_actual).toBe('ACTIVA');
+
+    // Simula la finalización del árbol (RF-31).
+    await prisma.estado_sesiones.update({
+      where: { id_sesion: inicial.sesion.id_sesion },
+      data: { estado_actual: 'COMPLETADA', fecha_completada: new Date() },
+    });
+
+    const reingreso = await casoDeUso.execute(idUsuario);
+    expect(reingreso.reanudada).toBe(false);
+    expect(reingreso.sesion.id_sesion).toBe(inicial.sesion.id_sesion);
+    expect(reingreso.sesion.estado_actual).toBe('COMPLETADA');
+    expect(
+      await prisma.chat_sesiones.count({ where: { id_usuario: idUsuario } }),
+    ).toBe(1);
+
+    // Sesión ACTIVA duplicada creada por el defecto anterior.
+    const duplicada = await prisma.chat_sesiones.create({
+      data: {
+        id_usuario: idUsuario,
+        id_flujo_conversacional: idFlujo,
+        version_arbol_utilizada: inicial.sesion.version_arbol_utilizada,
+        modalidad_activa: 'GRUPAL',
+        id_nodo_actual: idNodo,
+        estado_sesiones: { create: { estado_actual: 'ACTIVA' } },
+      },
+    });
+
+    const [primera, segunda] = await Promise.all([
+      casoDeUso.execute(idUsuario),
+      casoDeUso.execute(idUsuario),
+    ]);
+    for (const respuesta of [primera, segunda]) {
+      expect(respuesta.sesion.id_sesion).toBe(inicial.sesion.id_sesion);
+      expect(respuesta.sesion.estado_actual).toBe('COMPLETADA');
+    }
+
+    // Ni se crean sesiones ni se reactiva la completada.
+    const sesionesFinales = await prisma.chat_sesiones.findMany({
+      where: { id_usuario: idUsuario },
+      include: { estado_sesiones: true },
+    });
+    expect(sesionesFinales).toHaveLength(2);
+    expect(
+      sesionesFinales.find((s) => s.id_sesion === inicial.sesion.id_sesion)
+        ?.estado_sesiones?.estado_actual,
+    ).toBe('COMPLETADA');
+    expect(
+      sesionesFinales.find((s) => s.id_sesion === duplicada.id_sesion)
+        ?.estado_sesiones?.estado_actual,
+    ).toBe('ACTIVA');
+  });
 });
