@@ -563,4 +563,89 @@ describe('RF-30 POST respuestas (HTTP)', () => {
       expect(tx.perfil.capturarDimension).not.toHaveBeenCalled();
     });
   });
+
+  describe('RF-30B etiquetado de variables taxonómicas', () => {
+    const nodoConVariable = (entrada: unknown, codigo: string) => {
+      const nodo = nodoRespuesta(entrada);
+      nodo.contenido.variable = { codigo };
+      return nodo;
+    };
+    const marcarNodo = (entrada: unknown, codigo: string) =>
+      tx.contexto.buscarNodo.mockImplementation((id: string) =>
+        Promise.resolve(
+          id === ids.nodo
+            ? nodoConVariable(entrada, codigo)
+            : nodoRespuesta(null, 'MENSAJE', id),
+        ),
+      );
+
+    it('etiqueta en la misma transacción, después de guardar la interacción', async () => {
+      marcarNodo({ tipo: 'NUMERICO', min: 0, max: 10 }, 'NIVEL_CRAVING');
+      await post(body()).expect(201);
+      expect(tx.variables.registrar).toHaveBeenCalledTimes(1);
+      expect(tx.variables.registrar.mock.calls[0][0]).toMatchObject({
+        idInteraccion: ids.interaccion,
+        idSesion: ids.sesion,
+        idUsuario: ids.usuario,
+        idNodo: ids.nodo,
+        codigoVariable: 'NIVEL_CRAVING',
+        valor: 5,
+        elementos: [{ valor: 5, etiqueta: 'CRAVING_MODERADO' }],
+        modalidad: ModalidadConversacional.GRUPAL,
+        perfil: { tipoDependencia: null, tipoCraving: null },
+        estado: 'PENDIENTE_PERFIL',
+        versionTaxonomia: '1.0',
+        secuencia: 1,
+      });
+      expect(tx.registro.guardar.mock.invocationCallOrder[0]).toBeLessThan(
+        tx.variables.registrar.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('guarda el snapshot del perfil y marca COMPLETO con ambas dimensiones', async () => {
+      marcarNodo({ tipo: 'NUMERICO', min: 0, max: 10 }, 'NIVEL_CRAVING');
+      tx.variables.snapshotPerfil.mockResolvedValueOnce({
+        tipoDependencia: 'TOLERANCIA',
+        tipoCraving: 'NEGATIVO',
+      });
+      await post(body()).expect(201);
+      expect(tx.variables.registrar.mock.calls[0][0]).toMatchObject({
+        perfil: { tipoDependencia: 'TOLERANCIA', tipoCraving: 'NEGATIVO' },
+        estado: 'COMPLETO',
+      });
+    });
+
+    it('no etiqueta un nodo sin variable', async () => {
+      await post(body()).expect(201);
+      expect(tx.variables.registrar).not.toHaveBeenCalled();
+    });
+
+    it('rechaza un decimal en una variable ENTERO sin escrituras (400)', async () => {
+      marcarNodo({ tipo: 'NUMERICO', min: 0, max: 10 }, 'NIVEL_CRAVING');
+      const r = await post({ ...body(), valor: 5.5 }).expect(400);
+      expect(r.body as unknown).toMatchObject({ codigo: 'TIPO_DATO_INVALIDO' });
+      expect(tx.registro.guardar).not.toHaveBeenCalled();
+      expect(tx.variables.registrar).not.toHaveBeenCalled();
+    });
+
+    it('una variable ausente de la taxonomía es error del árbol (500) sin escrituras', async () => {
+      marcarNodo({ tipo: 'NUMERICO', min: 0, max: 10 }, 'NO_EXISTE');
+      await post(body()).expect(500);
+      expect(tx.registro.guardar).not.toHaveBeenCalled();
+    });
+
+    it('un reenvío idéntico no vuelve a etiquetar', async () => {
+      marcarNodo({ tipo: 'NUMERICO', min: 0, max: 10 }, 'NIVEL_CRAVING');
+      tx.registro.buscarResultado.mockResolvedValueOnce({
+        idSesion: ids.sesion,
+        resultado: {
+          ...resultadoOriginal(),
+          registrada_en: '2026-11-13T19:40:12.481Z',
+        },
+        huella: huellaInteraccion(body()),
+      });
+      await post(body()).expect(200);
+      expect(tx.variables.registrar).not.toHaveBeenCalled();
+    });
+  });
 });

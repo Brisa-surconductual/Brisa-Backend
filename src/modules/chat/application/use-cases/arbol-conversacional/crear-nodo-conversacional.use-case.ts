@@ -12,6 +12,7 @@ import { ArbolConversacionalRepository } from '../../../domain/repositories/arbo
 import { CrearNodoConversacionalDtoRequest } from '../../dto/arbol-conversacional.dto-request';
 import { NodoConversacionalDtoResponse } from '../../dto/arbol-conversacional.dto-response';
 import { ejecutarSeguro } from '../../support/ejecutar-seguro';
+import { VariableNodoService } from '../../services/variable-nodo.service';
 
 /** RF-25: agrega un nodo a un flujo en borrador (inicial, intermedio o final). */
 @Injectable()
@@ -19,7 +20,10 @@ export class CrearNodoConversacionalUseCase {
   private readonly ordenPolicy = new OrdenNodoPolicy();
   private readonly finalPolicy = new NodoFinalPolicy();
 
-  constructor(private readonly repository: ArbolConversacionalRepository) {}
+  constructor(
+    private readonly repository: ArbolConversacionalRepository,
+    private readonly variables: VariableNodoService,
+  ) {}
 
   execute(
     idFlujo: string,
@@ -57,6 +61,8 @@ export class CrearNodoConversacionalUseCase {
         dto.es_nodo_final ?? false,
       );
       this.finalPolicy.validar(nodo, false);
+      // RF-30B: la variable del nodo filtra su tipo de respuesta.
+      await this.variables.validar(nodo);
       await this.repository.guardarNodo(nodo, idActor);
       return NodoConversacionalDtoResponse.crear(nodo);
     });

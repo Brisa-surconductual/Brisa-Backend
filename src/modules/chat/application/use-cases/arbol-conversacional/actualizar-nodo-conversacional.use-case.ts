@@ -17,6 +17,7 @@ import { ActualizarNodoConversacionalDtoRequest } from '../../dto/arbol-conversa
 import { NodoConversacionalDtoResponse } from '../../dto/arbol-conversacional.dto-response';
 import { SolicitudActualizacionVaciaException } from '../../exceptions/solicitud-actualizacion-vacia.exception';
 import { ejecutarSeguro } from '../../support/ejecutar-seguro';
+import { VariableNodoService } from '../../services/variable-nodo.service';
 
 /**
  * RF-25: edita parcialmente un nodo de un flujo en borrador; el flujo se deduce
@@ -29,7 +30,10 @@ export class ActualizarNodoConversacionalUseCase {
   private readonly ordenPolicy = new OrdenNodoPolicy();
   private readonly finalPolicy = new NodoFinalPolicy();
 
-  constructor(private readonly repository: ArbolConversacionalRepository) {}
+  constructor(
+    private readonly repository: ArbolConversacionalRepository,
+    private readonly variables: VariableNodoService,
+  ) {}
 
   execute(
     idNodo: string,
@@ -104,6 +108,8 @@ export class ActualizarNodoConversacionalUseCase {
         });
       }
       this.finalPolicy.validar(nodo, salidas.length > afectadas.length);
+      // RF-30B: la variable del nodo filtra su tipo de respuesta.
+      await this.variables.validar(nodo);
 
       await this.repository.guardarNodo(nodo, idActor, afectadas);
       return NodoConversacionalDtoResponse.crear(nodo);

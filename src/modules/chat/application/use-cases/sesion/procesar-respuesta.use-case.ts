@@ -4,14 +4,22 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { DomainException } from '../../../domain/exceptions/domain.exception';
+import { NodoConversacional } from '../../../domain/entities/flujo/nodo-conversacional.entity';
+import {
+  ElementoEtiquetado,
+  VariableTaxonomia,
+} from '../../../domain/entities/taxonomia/variable-taxonomia.entity';
 import {
   ConflictoRespuestaConversacionalException,
   ConfiguracionRespuestaInvalida,
+  configuracionRespuestaInvalida as configuracion,
   NodoEnEsperaCronogramaException,
   RespuestaConversacionalNoEncontradaException,
 } from '../../../domain/exceptions/respuesta.exceptions';
 import { MotorRespuestaConversacional } from '../../../domain/policies/motor-respuesta-conversacional.policy';
 import { CapturaPerfilRespuestaPolicy } from '../../../domain/policies/captura-perfil-respuesta.policy';
+import { EtiquetadoVariablePolicy } from '../../../domain/policies/etiquetado-variable.policy';
+import { extraerVariableNodo } from '../../../domain/policies/variable-nodo';
 import { ProcesarRespuestaDtoRequest } from '../../dto/procesar-respuesta.dto-request';
 import {
   ResultadoRespuesta,
@@ -20,6 +28,7 @@ import {
 import {
   ComprobarFormatoRespuestaPort,
   ProcesarRespuestaPort,
+  TransaccionRespuesta,
 } from '../../ports/procesar-respuesta.port';
 import { huellaInteraccion } from '../../services/huella-interaccion';
 import { EstadoConversacionalService } from '../../services/estado-conversacional.service';
@@ -29,6 +38,7 @@ import { HabilitacionNodoService } from '../../services/habilitacion-nodo.servic
 export class ProcesarRespuestaUseCase {
   private readonly motor = new MotorRespuestaConversacional();
   private readonly perfil = new CapturaPerfilRespuestaPolicy();
+  private readonly etiquetado = new EtiquetadoVariablePolicy();
 
   constructor(
     private readonly persistencia: ProcesarRespuestaPort,
@@ -109,6 +119,9 @@ export class ProcesarRespuestaUseCase {
           idDestinoImplicito,
         );
         const captura = this.perfil.capturar(nodo, decision.respuesta);
+        // RF-30B: se etiqueta antes de escribir; un valor fuera de la
+        // taxonomía es un 400 sin escrituras.
+        const etiquetado = await this.etiquetar(tx, nodo, decision.respuesta);
         const destino = await tx.contexto.buscarNodo(decision.idNodoDestino);
         if (destino === null || destino.idFlujo !== nodo.idFlujo)
           throw new ConfiguracionRespuestaInvalida(
@@ -156,6 +169,27 @@ export class ProcesarRespuestaUseCase {
           huella,
           ahora,
         });
+        // RF-30B: después de la captura clínica y de guardar la interacción
+        // (FK), con el perfil vigente en esta misma transacción.
+        if (etiquetado !== null) {
+          const perfil = await tx.variables.snapshotPerfil(idUsuario);
+          await tx.variables.registrar({
+            idInteraccion,
+            idSesion,
+            idUsuario,
+            idNodo: nodo.idNodo,
+            idVariable: etiquetado.idVariable,
+            codigoVariable: etiquetado.variable.codigo,
+            valor: decision.respuesta,
+            elementos: etiquetado.elementos,
+            modalidad: sesion.modalidadActiva,
+            perfil,
+            estado: this.etiquetado.estado(perfil),
+            versionTaxonomia: await tx.variables.versionActual(),
+            secuencia: dto.secuencia,
+            timestampInteraccion: new Date(dto.timestamp_interaccion),
+          });
+        }
         await this.estado.registrarPaso(tx.estado, {
           idSesion,
           idUsuario,
@@ -191,5 +225,26 @@ export class ProcesarRespuestaUseCase {
         { cause: error },
       );
     }
+  }
+
+  /** RF-30B: etiqueta la respuesta si el nodo captura una variable. */
+  private async etiquetar(
+    tx: TransaccionRespuesta,
+    nodo: NodoConversacional,
+    valor: unknown,
+  ): Promise<{
+    variable: VariableTaxonomia;
+    idVariable: string;
+    elementos: ElementoEtiquetado[];
+  } | null> {
+    const marca = extraerVariableNodo(nodo.contenido);
+    if (marca === null) return null;
+    const variable = await tx.variables.buscarVariable(marca.codigo);
+    if (variable === null || variable.idVariable === null)
+      return configuracion('La variable del nodo no existe en la taxonomía.');
+    const elementos = this.etiquetado.etiquetar(variable, valor);
+    return elementos === null
+      ? null
+      : { variable, idVariable: variable.idVariable, elementos };
   }
 }

@@ -6,6 +6,7 @@ import { UsersModule } from '../usuarios/users.module';
 import { CronogramaModule } from '../cronograma/cronograma.module';
 import { ChatApplicationProviders } from './application/chat.providers';
 import { PerfilClinicoVigentePort } from './application/ports/perfil-clinico-vigente.port';
+import { VariablesEtiquetadasPort } from './application/ports/variables-etiquetadas.port';
 import { ChatInfrastructureProviders } from './infrastructure/chat.providers';
 import { ChatPresentationProviders } from './presentation/chat.providers';
 import { ErrorConversacionalFilter } from './presentation/filters/error-conversacional.filter';
@@ -20,6 +21,10 @@ import { ConsultarPublicadoPersonalizadoUseCase } from './application/use-cases/
     RolesGuard,
     { provide: APP_FILTER, useClass: ErrorConversacionalFilter },
   ],
-  exports: [ConsultarPublicadoPersonalizadoUseCase, PerfilClinicoVigentePort],
+  exports: [
+    ConsultarPublicadoPersonalizadoUseCase,
+    PerfilClinicoVigentePort,
+    VariablesEtiquetadasPort,
+  ],
 })
 export class ChatModule {}

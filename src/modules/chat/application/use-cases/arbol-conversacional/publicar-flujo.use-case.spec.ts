@@ -1,3 +1,7 @@
+import {
+  variableNodoServicePrueba,
+  variablesSeed,
+} from '../../support/testing/taxonomia-variables.fixture';
 import { ArbolConversacional } from '../../../domain/entities/flujo/arbol-conversacional.entity';
 import { NodoConversacional } from '../../../domain/entities/flujo/nodo-conversacional.entity';
 import { TransicionConversacional } from '../../../domain/entities/flujo/transicion-conversacional.entity';
@@ -150,7 +154,10 @@ function arbolGrupalConPerfil(
 
 describe('PublicarFlujoUseCase (RF-25 / RF-25C)', () => {
   const repository = repositorioSimulado();
-  const useCase = new PublicarFlujoUseCase(repository);
+  const useCase = new PublicarFlujoUseCase(
+    repository,
+    variableNodoServicePrueba(),
+  );
 
   beforeEach(() => {
     jest.resetAllMocks();
@@ -440,5 +447,28 @@ describe('PublicarFlujoUseCase (RF-25 / RF-25C)', () => {
     await useCase.execute(ids.flujo, ids.actor);
 
     expect(repository.guardarFlujo).toHaveBeenCalledTimes(1);
+  });
+
+  it('RF-30B: no publica un nodo que captura una variable deshabilitada', async () => {
+    const arbolConVariable = arbolGrupalConPerfil();
+    const primero = arbolConVariable.nodos[0];
+    primero.contenido.variable = {
+      codigo: 'NIVEL_CRAVING',
+    };
+    repository.obtenerArbol.mockResolvedValue(arbolConVariable);
+    const casoDeUso = new PublicarFlujoUseCase(
+      repository,
+      variableNodoServicePrueba([
+        variablesSeed.nivelCraving.deshabilitar(false),
+      ]),
+    );
+
+    await expect(casoDeUso.execute(ids.flujo, ids.actor)).rejects.toMatchObject(
+      {
+        codigo: 'VARIABLE_DESHABILITADA',
+        detalles: { id_nodo: primero.idNodo, codigo: 'NIVEL_CRAVING' },
+      },
+    );
+    expect(repository.guardarFlujo.mock.calls).toHaveLength(0);
   });
 });
