@@ -6,7 +6,8 @@ import { ReglaValidacionInvalidaException } from '../../exceptions';
 /**
  * RF-25: regla propia de una transición (1:1, nunca compartida). Además de
  * validar el dato, define cuándo se toma la transición: `operadorCondicion`
- * y `valorEsperado` (`{ valor }` en IGUALDAD, `{ min, max }` en RANGO).
+ * y `valorEsperado` (`{ valor }` en IGUALDAD, `{ min, max }` en RANGO, `{}` en
+ * SIEMPRE, la transición por defecto).
  */
 export class ReglaValidacion {
   constructor(
@@ -134,6 +135,15 @@ export class ReglaValidacion {
       typeof esperado === 'object' &&
       esperado !== null &&
       !Array.isArray(esperado);
+
+    // RF-25: "cualquier otra respuesta" no compara nada.
+    if (this.operadorCondicion === OperadorCondicion.SIEMPRE) {
+      if (!esObjeto)
+        throw new ReglaValidacionInvalidaException(
+          'La transición por defecto no define valor esperado.',
+        );
+      return;
+    }
 
     if (this.operadorCondicion === OperadorCondicion.IGUALDAD) {
       if (!esObjeto || !Object.hasOwn(esperado, 'valor')) {

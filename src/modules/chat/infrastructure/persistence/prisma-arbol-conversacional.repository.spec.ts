@@ -16,11 +16,13 @@ import {
   ContenidoCronogramaNoEncontradoException,
   FlujoGrupalPublicadoExistenteException,
   FlujoPersonalizadoPublicadoExistenteException,
+  NodoFinalDuplicadoException,
   NodoInicialDuplicadoException,
   OrdenTransicionDuplicadoException,
   TipoNodoNoEncontradoException,
   VersionPersonalizadaDuplicadaException,
 } from '../../domain/exceptions';
+import { TransicionConversacionalMapper } from '../mappers/transicion-conversacional.mapper';
 import { PrismaArbolConversacionalRepository } from './prisma-arbol-conversacional.repository';
 
 describe('PrismaArbolConversacionalRepository', () => {
@@ -151,6 +153,7 @@ describe('PrismaArbolConversacionalRepository', () => {
       create: jest.fn(),
       update: jest.fn(),
       count: jest.fn(),
+      delete: jest.fn(),
     },
     reglas_validaciones: {
       findUnique: jest.fn(),
@@ -163,6 +166,9 @@ describe('PrismaArbolConversacionalRepository', () => {
     tipo_entrada: { findMany: jest.fn() },
     contenidos_cronograma: { findUnique: jest.fn(), findMany: jest.fn() },
     auditoria_arboles: { create: jest.fn(), findMany: jest.fn() },
+    // RF-25: `es_nodo_final` se lee y escribe con SQL parametrizado.
+    $queryRaw: jest.fn(),
+    $executeRaw: jest.fn(),
   };
   const prisma = { ...tx, $transaction: jest.fn() };
   const repo = new PrismaArbolConversacionalRepository(prisma as never);
@@ -193,6 +199,77 @@ describe('PrismaArbolConversacionalRepository', () => {
     tx.nodos.findMany.mockResolvedValue([nodoRow(ids.nodoA)]);
     tx.reglas_nodos.findMany.mockResolvedValue([transicionRow]);
     tx.auditoria_arboles.create.mockResolvedValue({});
+    tx.$queryRaw.mockResolvedValue([]);
+    tx.$executeRaw.mockResolvedValue(1);
+  });
+
+  describe('nodo final (RF-25)', () => {
+    it('marca como final los nodos que devuelve la consulta de la columna', async () => {
+      tx.$queryRaw.mockResolvedValue([{ id_nodo: ids.nodoA }]);
+
+      const arbol = await repo.obtenerArbol(ids.flujo);
+
+      expect(arbol?.nodos[0].esNodoFinal).toBe(true);
+    });
+
+    it('escribe la marca de nodo final al guardar el nodo', async () => {
+      tx.nodos.findUnique.mockResolvedValue({ id_nodo: ids.nodoA });
+      const nodo = new NodoConversacional(
+        ids.nodoA,
+        ids.flujo,
+        ids.tipo,
+        'MENSAJE',
+        { texto: 'Fin' },
+        false,
+        3,
+        null,
+        ids.actor,
+        fecha,
+        fecha,
+        true,
+      );
+
+      await repo.guardarNodo(nodo, ids.actor);
+
+      expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+      const [, valor, idNodo] = tx.$executeRaw.mock.calls[0] as unknown[];
+      expect(valor).toBe(true);
+      expect(idNodo).toBe(ids.nodoA);
+    });
+
+    it('traduce la violación de uq_nodo_final_por_flujo', async () => {
+      tx.nodos.findUnique.mockResolvedValue({ id_nodo: ids.nodoA });
+      tx.$executeRaw.mockRejectedValue(
+        errorPrisma(
+          'P2010',
+          'duplicate key value violates unique constraint "uq_nodo_final_por_flujo"',
+        ),
+      );
+
+      await expect(repo.guardarNodo(nodo, ids.actor)).rejects.toBeInstanceOf(
+        NodoFinalDuplicadoException,
+      );
+    });
+
+    it('elimina las transiciones afectadas y sus reglas en la misma transacción', async () => {
+      tx.nodos.findUnique.mockResolvedValue({ id_nodo: ids.nodoA });
+      const afectada = TransicionConversacionalMapper.toDomain(transicionRow);
+
+      await repo.guardarNodo(nodo, ids.actor, [afectada]);
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(tx.reglas_nodos.delete).toHaveBeenCalledWith({
+        where: { id_regla: afectada.idTransicion },
+      });
+      expect(tx.reglas_validaciones.delete).toHaveBeenCalledWith({
+        where: {
+          id_regla_validacion: afectada.reglaValidacion?.idReglaValidacion,
+        },
+      });
+      expect(tx.auditoria_arboles.create).toHaveBeenCalledWith(
+        auditoria('ELIMINAR_TRANSICION', ids.flujo, afectada.idTransicion),
+      );
+    });
   });
 
   describe('consultas', () => {

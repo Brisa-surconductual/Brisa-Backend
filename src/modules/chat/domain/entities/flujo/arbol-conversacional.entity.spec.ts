@@ -46,7 +46,17 @@ function nodoCaptura(idNodo: string, dimension: Dimension): NodoConversacional {
     'flujo-1',
     'tipo-1',
     'PREGUNTA',
-    { texto: 'Pregunta clínica', capturaPerfil: { dimension } },
+    {
+      texto: 'Pregunta clínica',
+      capturaPerfil: { dimension },
+      entrada: {
+        tipo: 'OPCION_UNICA',
+        opciones:
+          dimension === Dimension.TIPO_DEPENDENCIA
+            ? ['ABSTINENCIA_FISICA', 'TOLERANCIA']
+            : ['POSITIVO', 'NEGATIVO'],
+      },
+    },
     false,
     1,
     null,
@@ -199,6 +209,8 @@ describe('ArbolConversacional.diagnosticarCapturaPerfil (RF-25)', () => {
         Dimension.TIPO_CRAVING,
       ],
       dimensiones_duplicadas: [],
+      dimensiones_valores_invalidos: [],
+      dimensiones_valores_faltantes: [],
     });
   });
 
@@ -216,6 +228,8 @@ describe('ArbolConversacional.diagnosticarCapturaPerfil (RF-25)', () => {
     expect(arbol.diagnosticarCapturaPerfil()).toEqual({
       dimensiones_ausentes: [],
       dimensiones_duplicadas: [],
+      dimensiones_valores_invalidos: [],
+      dimensiones_valores_faltantes: [],
     });
   });
 
@@ -233,6 +247,8 @@ describe('ArbolConversacional.diagnosticarCapturaPerfil (RF-25)', () => {
     expect(arbol.diagnosticarCapturaPerfil()).toEqual({
       dimensiones_ausentes: [],
       dimensiones_duplicadas: [Dimension.TIPO_DEPENDENCIA],
+      dimensiones_valores_invalidos: [],
+      dimensiones_valores_faltantes: [],
     });
   });
 
@@ -246,6 +262,271 @@ describe('ArbolConversacional.diagnosticarCapturaPerfil (RF-25)', () => {
     expect(arbol.diagnosticarCapturaPerfil()).toEqual({
       dimensiones_ausentes: [Dimension.TIPO_DEPENDENCIA],
       dimensiones_duplicadas: [],
+      dimensiones_valores_invalidos: [],
+      dimensiones_valores_faltantes: [],
     });
+  });
+});
+
+// ── RF-25: nodo final, captura con valor, SIEMPRE y avance implícito ──────
+
+function nodoRF25(
+  idNodo: string,
+  orden: number,
+  contenido: Record<string, unknown>,
+  { inicial = false, final = false } = {},
+): NodoConversacional {
+  return new NodoConversacional(
+    idNodo,
+    'flujo-1',
+    'tipo-1',
+    'MENSAJE',
+    { texto: idNodo, ...contenido },
+    inicial,
+    orden,
+    null,
+    'actor-1',
+    fecha,
+    fecha,
+    final,
+  );
+}
+
+const siNo = {
+  entrada: { tipo: 'OPCION_UNICA', opciones: ['si', 'no'] },
+};
+
+function reglaIgual(valor: string): ReglaValidacion {
+  return new ReglaValidacion(
+    `regla-${valor}`,
+    TipoDatoValidacion.TEXTO,
+    true,
+    null,
+    null,
+    null,
+    [],
+    'Elige una opción',
+    OperadorCondicion.IGUALDAD,
+    { valor },
+  );
+}
+
+function reglaSiempre(): ReglaValidacion {
+  return new ReglaValidacion(
+    'regla-siempre',
+    TipoDatoValidacion.TEXTO,
+    true,
+    null,
+    null,
+    null,
+    [],
+    'Elige una opción',
+    OperadorCondicion.SIEMPRE,
+    {},
+  );
+}
+
+function salidaRF25(
+  id: string,
+  origen: string,
+  destino: string,
+  orden: number,
+  regla: ReglaValidacion | null,
+): TransicionConversacional {
+  return new TransicionConversacional(
+    id,
+    'flujo-1',
+    origen,
+    destino,
+    orden,
+    regla,
+    fecha,
+  );
+}
+
+describe('ArbolConversacional · nodo final y avance implícito (RF-25)', () => {
+  it('exige exactamente un nodo final', () => {
+    const arbol = new ArbolConversacional(
+      flujoGrupal(),
+      [nodoRF25('a', 1, {}, { inicial: true }), nodoRF25('b', 2, {})],
+      [salidaRF25('t1', 'a', 'b', 1, null)],
+    );
+
+    expect(arbol.diagnosticarEstructura()).toMatchObject({
+      sin_nodo_final: true,
+      // Sin nodo final (legado) no se reportan callejones.
+      nodos_sin_salida: [],
+    });
+  });
+
+  it('un nodo sin respuesta y sin transiciones avanza al siguiente por orden', () => {
+    const arbol = new ArbolConversacional(
+      flujoGrupal(),
+      [
+        nodoRF25('a', 1, {}, { inicial: true }),
+        nodoRF25('b', 2, {}),
+        nodoRF25('c', 3, {}, { final: true }),
+      ],
+      [],
+    );
+
+    const diagnostico = arbol.diagnosticarEstructura();
+    expect(diagnostico).toMatchObject({
+      sin_nodo_inicial: false,
+      sin_nodo_final: false,
+      nodos_huerfanos: [],
+      nodos_sin_salida: [],
+      ciclos: [],
+    });
+    expect(arbol.destinoImplicito(arbol.nodos[0])?.idNodo).toBe('b');
+    expect(arbol.destinoImplicito(arbol.nodos[2])).toBeNull();
+  });
+
+  it('la transición explícita tiene prioridad sobre el avance implícito', () => {
+    const arbol = new ArbolConversacional(
+      flujoGrupal(),
+      [
+        nodoRF25('a', 1, {}, { inicial: true }),
+        nodoRF25('b', 2, {}),
+        nodoRF25('c', 3, {}, { final: true }),
+      ],
+      [salidaRF25('t1', 'a', 'c', 1, null)],
+    );
+
+    expect(arbol.destinoImplicito(arbol.nodos[0])).toBeNull();
+    expect(arbol.diagnosticarEstructura().nodos_huerfanos).toEqual([
+      { id_nodo: 'b', orden: 2, texto: 'b' },
+    ]);
+  });
+
+  it('reporta nodos con respuesta que no tienen salida', () => {
+    const arbol = new ArbolConversacional(
+      flujoGrupal(),
+      [
+        nodoRF25('a', 1, {}, { inicial: true }),
+        nodoRF25('b', 2, siNo),
+        nodoRF25('c', 3, {}, { final: true }),
+      ],
+      [],
+    );
+
+    expect(arbol.diagnosticarEstructura().nodos_sin_salida).toEqual([
+      { id_nodo: 'b', orden: 2, texto: 'b' },
+    ]);
+  });
+});
+
+describe('ArbolConversacional · transición por defecto SIEMPRE (RF-25)', () => {
+  const nodos = [
+    nodoRF25('a', 1, siNo, { inicial: true }),
+    nodoRF25('b', 2, {}),
+    nodoRF25('c', 3, {}, { final: true }),
+  ];
+
+  it('cubre todas las respuestas en el diagnóstico de cobertura', () => {
+    const arbol = new ArbolConversacional(flujoGrupal(), nodos, [
+      salidaRF25('t1', 'a', 'b', 1, reglaIgual('si')),
+      salidaRF25('t2', 'a', 'c', 2, reglaSiempre()),
+    ]);
+
+    expect(arbol.diagnosticarCobertura().nodos_sin_cobertura).toEqual([]);
+  });
+
+  it('sugiere el siguiente orden ignorando la transición por defecto', () => {
+    const arbol = new ArbolConversacional(flujoGrupal(), nodos, [
+      salidaRF25('t1', 'a', 'b', 1, reglaIgual('si')),
+      salidaRF25('t2', 'a', 'c', 2, reglaSiempre()),
+    ]);
+
+    expect(arbol.siguienteOrdenEvaluacion('a')).toBe(2);
+    expect(arbol.siguienteOrdenEvaluacion('b')).toBe(1);
+  });
+
+  it('reubica la transición por defecto al final', () => {
+    const arbol = new ArbolConversacional(flujoGrupal(), nodos, [
+      salidaRF25('t1', 'a', 'b', 1, reglaSiempre()),
+      salidaRF25('t2', 'a', 'c', 2, reglaIgual('si')),
+    ]);
+
+    expect(arbol.reubicarTransicionPorDefecto('a')?.ordenEvaluacion).toBe(3);
+  });
+
+  it('no admite dos transiciones por defecto en el mismo origen', () => {
+    const arbol = new ArbolConversacional(flujoGrupal(), nodos, [
+      salidaRF25('t1', 'a', 'b', 1, reglaSiempre()),
+      salidaRF25('t2', 'a', 'c', 2, reglaSiempre()),
+    ]);
+
+    expect(() => arbol.validarTransicionPorDefectoUnica('a')).toThrow(
+      'cualquier otra respuesta',
+    );
+  });
+});
+
+describe('ArbolConversacional · captura de perfil con valor (RF-25 / RF-27B)', () => {
+  const captura = (dimension: Dimension, valor: string) => ({
+    capturaPerfil: { dimension, valor },
+  });
+
+  it('acepta varias ramas que cubren todos los valores de cada dimensión', () => {
+    const arbol = new ArbolConversacional(
+      flujoGrupal(),
+      [
+        nodoRF25('d1', 1, captura(Dimension.TIPO_DEPENDENCIA, 'TOLERANCIA')),
+        nodoRF25(
+          'd2',
+          2,
+          captura(Dimension.TIPO_DEPENDENCIA, 'ABSTINENCIA_FISICA'),
+        ),
+        nodoRF25('d3', 3, captura(Dimension.TIPO_DEPENDENCIA, 'TOLERANCIA')),
+        nodoRF25('c1', 4, captura(Dimension.TIPO_CRAVING, 'POSITIVO')),
+        nodoRF25('c2', 5, captura(Dimension.TIPO_CRAVING, 'NEGATIVO')),
+      ],
+      [],
+    );
+
+    expect(arbol.diagnosticarCapturaPerfil()).toEqual({
+      dimensiones_ausentes: [],
+      dimensiones_duplicadas: [],
+      dimensiones_valores_invalidos: [],
+      dimensiones_valores_faltantes: [],
+    });
+  });
+
+  it('reporta los valores que ninguna rama captura', () => {
+    const arbol = new ArbolConversacional(
+      flujoGrupal(),
+      [
+        nodoRF25('d1', 1, captura(Dimension.TIPO_DEPENDENCIA, 'TOLERANCIA')),
+        nodoRF25('c1', 2, captura(Dimension.TIPO_CRAVING, 'POSITIVO')),
+        nodoRF25('c2', 3, captura(Dimension.TIPO_CRAVING, 'NEGATIVO')),
+      ],
+      [],
+    );
+
+    expect(
+      arbol.diagnosticarCapturaPerfil().dimensiones_valores_faltantes,
+    ).toEqual([
+      {
+        dimension: Dimension.TIPO_DEPENDENCIA,
+        valores_faltantes: ['ABSTINENCIA_FISICA'],
+      },
+    ]);
+  });
+
+  it('no mezcla captura con valor y captura legado en una dimensión', () => {
+    const arbol = new ArbolConversacional(
+      flujoGrupal(),
+      [
+        nodoCaptura('legado', Dimension.TIPO_DEPENDENCIA),
+        nodoRF25('d1', 2, captura(Dimension.TIPO_DEPENDENCIA, 'TOLERANCIA')),
+        nodoCaptura('craving', Dimension.TIPO_CRAVING),
+      ],
+      [],
+    );
+
+    expect(arbol.diagnosticarCapturaPerfil().dimensiones_duplicadas).toEqual([
+      Dimension.TIPO_DEPENDENCIA,
+    ]);
   });
 });

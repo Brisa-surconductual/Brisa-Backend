@@ -27,7 +27,8 @@ export type {
 export interface DecisionRespuesta {
   tipoEntrada: string;
   idNodoDestino: string;
-  idRegla: string;
+  /** `null` en el avance implícito de un nodo sin respuesta (RF-25). */
+  idRegla: string | null;
   respuesta: ValorRespuesta;
 }
 
@@ -47,16 +48,29 @@ export class MotorRespuestaConversacional {
     formato: ComprobarFormato,
     tipoDeclarado: string,
     validarAdicional?: (valor: ValorRespuesta) => void,
+    idDestinoImplicito: string | null = null,
   ): DecisionRespuesta {
-    if (transiciones.length === 0)
+    const entrada = this.captura.entrada(nodo);
+    // RF-25: un nodo sin respuesta y sin transiciones avanza al siguiente por orden.
+    const implicito =
+      transiciones.length === 0 &&
+      idDestinoImplicito !== null &&
+      entrada.tipo === TipoEntradaRespuesta.CONTINUAR;
+    if (transiciones.length === 0 && !implicito)
       throw new ConflictoRespuestaConversacionalException(
         'Este nodo no requiere respuesta del usuario.',
         'NODO_TERMINAL',
       );
     // 1. Formato y límites básicos que define la entrada del nodo origen.
-    const entrada = this.captura.entrada(nodo);
     const valor = this.captura.capturar(respuesta, entrada, tipoDeclarado);
     validarAdicional?.(valor);
+    if (implicito)
+      return {
+        tipoEntrada: entrada.tipo,
+        idNodoDestino: idDestinoImplicito,
+        idRegla: null,
+        respuesta: valor,
+      };
     const ordenadas = [...transiciones].sort(
       (a, b) => a.ordenEvaluacion - b.ordenEvaluacion,
     );

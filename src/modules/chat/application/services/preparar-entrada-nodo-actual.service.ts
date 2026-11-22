@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { tipoEntradaConfigurado } from '../../domain/enums/tipo-entrada-respuesta.enum';
+import {
+  TipoEntradaRespuesta,
+  tipoEntradaConfigurado,
+} from '../../domain/enums/tipo-entrada-respuesta.enum';
 import { EntradaNodoDtoResponse } from '../dto/presentacion-nodo-actual.dto-response';
 
 const objeto = (v: unknown): v is Record<string, unknown> =>
@@ -30,7 +33,8 @@ export class PrepararEntradaNodoActualService {
       obligatorio: entrada.obligatorio !== false,
       min: limite(entrada.min),
       max: limite(entrada.max),
-      paso: numero(entrada.paso),
+      // RF-25: la escala numérica avanza de 1 en 1.
+      paso: tipo === TipoEntradaRespuesta.ESCALA ? 1 : numero(entrada.paso),
       opciones: this.opciones(entrada.opciones),
       etiquetas:
         typeof etiquetas.min === 'string' && typeof etiquetas.max === 'string'

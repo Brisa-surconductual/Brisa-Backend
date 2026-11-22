@@ -290,3 +290,12 @@ Verificación de la corrección RF-27B, ejecutada el 6 de noviembre de 2026:
   clínica (RF-27B) de este documento.
 - Desde la misma fecha, `GET nodo-actual` devuelve los tipos de entrada
   canónicos que este POST exige (ver «Cambios» en `CONTRATO_RF26_NODO_ACTUAL.md`).
+
+### 2026-11-21 · Motor: SIEMPRE, avance implícito, nodo final y captura con valor (RF-25)
+
+- La regla `SIEMPRE` ("cualquier otra respuesta") siempre coincide y queda última en el orden de evaluación.
+- En flujos con nodo final, un nodo sin respuesta (CONTINUAR) y sin transiciones avanza al siguiente nodo por `orden`.
+- `transicion.es_terminal` / `estado_sesion = COMPLETADA` cuando el destino es el nodo final.
+- Un nodo de captura con `capturaPerfil.valor` asigna ese valor al perfil al responderse, sin depender de la respuesta.
+- `ESCALA` valida pasos de 1 desde `min`; el `paso` configurado solo aplica a `NUMERICO`.
+- Detalle en [`CONTRATO_RF25_USABILIDAD_FLUJO.md`](CONTRATO_RF25_USABILIDAD_FLUJO.md).

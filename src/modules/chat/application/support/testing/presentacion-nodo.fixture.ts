@@ -8,7 +8,7 @@ import { PrepararEntradaNodoActualService } from '../../services/preparar-entrad
 
 export function presentadorNodoPrueba(
   lecturas: PresentacionNodoActualPort = {
-    tieneSalidas: () => Promise.resolve(false),
+    esTerminal: () => Promise.resolve(true),
     consultarRecursos: () => Promise.resolve([]),
   },
   firmar: FirmarRecursoNodoPort = {

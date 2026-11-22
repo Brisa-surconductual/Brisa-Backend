@@ -60,13 +60,24 @@ export class ReglaTransicionDtoRequest {
   @IsEnum(OperadorCondicion)
   operador_condicion?: OperadorCondicion;
 
-  /** `{ valor }` en IGUALDAD, `{ min, max }` en RANGO. */
+  /** `{ valor }` en IGUALDAD, `{ min, max }` en RANGO; se omite en SIEMPRE. */
+  @ValidateIf(
+    (dto: ReglaTransicionDtoRequest) =>
+      dto.operador_condicion !== OperadorCondicion.SIEMPRE ||
+      dto.valor_esperado !== undefined,
+  )
   @IsDefined()
   @IsObject()
   valor_esperado!: Record<string, unknown>;
 
+  /** En SIEMPRE es opcional: se usa un mensaje genérico. */
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
+  )
+  @ValidateIf(
+    (dto: ReglaTransicionDtoRequest) =>
+      dto.operador_condicion !== OperadorCondicion.SIEMPRE ||
+      dto.mensaje_error !== undefined,
   )
   @IsString()
   @IsNotEmpty()
@@ -90,9 +101,19 @@ export class CrearTransicionConversacionalDtoRequest {
   @Type(() => ReglaTransicionDtoRequest)
   regla_validacion?: ReglaTransicionDtoRequest;
 
+  /** Opcional: por defecto, máximo de las transiciones específicas del origen + 1. */
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsInt()
   @Min(1)
-  orden_evaluacion!: number;
+  orden_evaluacion?: number;
+
+  /**
+   * RF-25: destino de "cualquier otra respuesta". Crea la transición por
+   * defecto (SIEMPRE) del origen o redirige la existente.
+   */
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
+  @IsUUID()
+  id_nodo_destino_otro?: string;
 }
 
 /** `regla_validacion` reemplaza por completo la regla propia. El origen no se modifica. */

@@ -14,6 +14,8 @@ export class NodoConversacional {
     readonly creadoPor: string,
     readonly fechaCreacion: Date,
     readonly fechaActualizacion: Date,
+    /** RF-25: nodo de cierre del flujo (único por flujo; nunca también inicial). */
+    readonly esNodoFinal: boolean = false,
   ) {}
 
   static crear(
@@ -24,6 +26,7 @@ export class NodoConversacional {
     orden: number | null,
     idContenidoCronograma: string | null,
     creadoPor: string,
+    esNodoFinal = false,
   ): NodoConversacional {
     const ahora = new Date();
     return new NodoConversacional(
@@ -38,6 +41,7 @@ export class NodoConversacional {
       creadoPor,
       ahora,
       ahora,
+      esNodoFinal,
     );
   }
 
@@ -46,7 +50,11 @@ export class NodoConversacional {
     cambios: Partial<
       Pick<
         NodoConversacional,
-        'contenido' | 'esNodoInicial' | 'orden' | 'idContenidoCronograma'
+        | 'contenido'
+        | 'esNodoInicial'
+        | 'esNodoFinal'
+        | 'orden'
+        | 'idContenidoCronograma'
       >
     >,
     tipo?: TipoNodoConversacional,
@@ -65,6 +73,7 @@ export class NodoConversacional {
       this.creadoPor,
       this.fechaCreacion,
       new Date(),
+      cambios.esNodoFinal ?? this.esNodoFinal,
     );
   }
 
@@ -82,6 +91,7 @@ export class NodoConversacional {
       creadoPor,
       ahora,
       ahora,
+      this.esNodoFinal,
     );
   }
 }

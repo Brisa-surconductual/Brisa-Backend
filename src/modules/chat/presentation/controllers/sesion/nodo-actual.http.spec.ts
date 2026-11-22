@@ -53,7 +53,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
     buscarUltimaNoCompletada: jest.fn(),
   };
   const arboles = { buscarNodo: jest.fn() };
-  const lecturas = { tieneSalidas: jest.fn(), consultarRecursos: jest.fn() };
+  const lecturas = { esTerminal: jest.fn(), consultarRecursos: jest.fn() };
   const firmar = { lectura: jest.fn() };
   let app: INestApplication<App>;
   let autenticacion: {
@@ -92,7 +92,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
   });
   beforeEach(() => {
     jest.resetAllMocks();
-    lecturas.tieneSalidas.mockResolvedValue(false);
+    lecturas.esTerminal.mockResolvedValue(true);
     lecturas.consultarRecursos.mockResolvedValue([]);
     autenticacion = {
       usuario: { id_usuario: idUsuario, rol: Rol.ESTUDIANTE },
@@ -320,7 +320,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
         fecha,
       ),
     );
-    lecturas.tieneSalidas.mockResolvedValue(true);
+    lecturas.esTerminal.mockResolvedValue(false);
     lecturas.consultarRecursos.mockResolvedValue([
       {
         idRecurso,

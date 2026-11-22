@@ -7,6 +7,10 @@ import {
   OrdenNodoConSaltoException,
   OrdenNodoDuplicadoException,
   OrdenNodoInicialInvalidoException,
+  NodoFinalConEntradaException,
+  NodoFinalConSalidasException,
+  NodoInicialYFinalException,
+  TransicionesAfectadasException,
 } from '../../../domain/exceptions';
 import { SolicitudActualizacionVaciaException } from '../../exceptions/solicitud-actualizacion-vacia.exception';
 import {
@@ -14,6 +18,8 @@ import {
   ids,
   nodo,
   repositorioSimulado,
+  transicion,
+  transicionNo,
 } from '../../support/testing/arbol-fixtures';
 import { ActualizarNodoConversacionalUseCase } from './actualizar-nodo-conversacional.use-case';
 
@@ -142,5 +148,128 @@ describe('ActualizarNodoConversacionalUseCase (RF-25)', () => {
       useCase.execute(ids.nodoB, { orden: 1 }, ids.actor),
     ).rejects.toBeInstanceOf(OrdenNodoDuplicadoException);
     expect(repository.guardarNodo).not.toHaveBeenCalled();
+  });
+
+  describe('RF-25: cambio de tipo de respuesta', () => {
+    beforeEach(() => {
+      repository.buscarNodo.mockResolvedValue(nodo(ids.nodoA));
+      repository.obtenerArbol.mockResolvedValue(
+        new ArbolConversacional(
+          flujoGrupal(),
+          [nodo(ids.nodoA), nodo(ids.nodoB)],
+          [transicion(), transicionNo()],
+        ),
+      );
+    });
+    const escala = {
+      texto: 'Del 1 al 5',
+      entrada: { tipo: 'ESCALA', min: 1, max: 5, paso: 2 },
+    };
+
+    it('pide confirmación listando las transiciones que dejan de tener sentido', async () => {
+      const error = (await useCase
+        .execute(ids.nodoA, { contenido: escala }, ids.actor)
+        .catch((e: unknown) => e)) as TransicionesAfectadasException;
+
+      expect(error).toBeInstanceOf(TransicionesAfectadasException);
+      expect(error.codigo).toBe('TRANSICIONES_AFECTADAS');
+      expect(
+        (error.detalles as { transiciones: unknown[] }).transiciones,
+      ).toHaveLength(2);
+      expect(repository.guardarNodo).not.toHaveBeenCalled();
+    });
+
+    it('con confirmación guarda el nodo y elimina sus transiciones', async () => {
+      await useCase.execute(
+        ids.nodoA,
+        { contenido: escala, eliminar_transiciones_afectadas: true },
+        ids.actor,
+      );
+
+      const [guardado, , eliminadas] = repository.guardarNodo.mock.calls[0];
+      expect(eliminadas?.map((t) => t.idTransicion)).toEqual([
+        transicion().idTransicion,
+        transicionNo().idTransicion,
+      ]);
+      // RF-25: la escala avanza de 1 en 1; el paso se descarta al guardar.
+      expect(guardado.contenido.entrada).toEqual({
+        tipo: 'ESCALA',
+        min: 1,
+        max: 5,
+      });
+    });
+
+    it('no pide confirmación si el tipo de respuesta no cambia', async () => {
+      await useCase.execute(
+        ids.nodoA,
+        { contenido: { ...nodo(ids.nodoA).contenido, texto: 'Otro texto' } },
+        ids.actor,
+      );
+
+      expect(repository.guardarNodo.mock.calls[0][2]).toEqual([]);
+    });
+  });
+
+  describe('RF-25: nodo final', () => {
+    it('no puede ser también el nodo inicial', async () => {
+      repository.buscarNodo.mockResolvedValue(nodo(ids.nodoA));
+      await expect(
+        useCase.execute(
+          ids.nodoA,
+          { es_nodo_final: true, contenido: { texto: 'Fin' } },
+          ids.actor,
+        ),
+      ).rejects.toBeInstanceOf(NodoInicialYFinalException);
+    });
+
+    it('no espera respuesta', async () => {
+      await expect(
+        useCase.execute(ids.nodoB, { es_nodo_final: true }, ids.actor),
+      ).rejects.toBeInstanceOf(NodoFinalConEntradaException);
+    });
+
+    it('no puede conservar transiciones de salida', async () => {
+      repository.obtenerArbol.mockResolvedValue(
+        new ArbolConversacional(
+          flujoGrupal(),
+          [nodo(ids.nodoA), nodo(ids.nodoB)],
+          [transicion(ids.nodoB, ids.nodoA)],
+        ),
+      );
+      await expect(
+        useCase.execute(
+          ids.nodoB,
+          { es_nodo_final: true, contenido: { texto: 'Fin' } },
+          ids.actor,
+        ),
+      ).rejects.toBeInstanceOf(TransicionesAfectadasException);
+    });
+
+    it('rechaza marcar como final un nodo sin respuesta que tiene salidas', async () => {
+      const sinRespuesta = nodo(ids.nodoB).actualizar({
+        contenido: { texto: 'Info' },
+      });
+      repository.buscarNodo.mockResolvedValue(sinRespuesta);
+      repository.obtenerArbol.mockResolvedValue(
+        new ArbolConversacional(
+          flujoGrupal(),
+          [nodo(ids.nodoA), sinRespuesta],
+          [transicion(ids.nodoB, ids.nodoA)],
+        ),
+      );
+      await expect(
+        useCase.execute(ids.nodoB, { es_nodo_final: true }, ids.actor),
+      ).rejects.toBeInstanceOf(NodoFinalConSalidasException);
+    });
+
+    it('marca el nodo como final cuando cumple las reglas', async () => {
+      await useCase.execute(
+        ids.nodoB,
+        { es_nodo_final: true, contenido: { texto: 'Fin' } },
+        ids.actor,
+      );
+
+      expect(repository.guardarNodo.mock.calls[0][0].esNodoFinal).toBe(true);
+    });
   });
 });

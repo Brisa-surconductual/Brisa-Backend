@@ -26,6 +26,7 @@ import {
   NodoConversacionalDuplicadoException,
   NodoConversacionalNoEncontradoException,
   NodoDestinoNoEncontradoException,
+  NodoFinalDuplicadoException,
   NodoInicialDuplicadoException,
   NodoOrigenNoEncontradoException,
   OrdenTransicionDuplicadoException,
@@ -40,6 +41,7 @@ import { CatalogosConversacionalesMapper } from '../mappers/catalogos-conversaci
 import { FlujoConversacionalMapper } from '../mappers/flujo-conversacional.mapper';
 import { NodoConversacionalMapper } from '../mappers/nodo-conversacional.mapper';
 import { ReglaValidacionMapper } from '../mappers/regla-validacion.mapper';
+import { guardarMarcaNodoFinal, idsNodosFinales } from './consultas-nodo-final';
 import {
   INCLUIR_REGLA_DE_TRANSICION,
   TransicionConversacionalMapper,
@@ -67,7 +69,9 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       where: { id_nodo: idNodo },
       include: { tipo_nodo: { select: { nombre: true } } },
     });
-    return nodo === null ? null : NodoConversacionalMapper.toDomain(nodo);
+    if (nodo === null) return null;
+    const finales = await idsNodosFinales(this.prisma, [nodo.id_nodo]);
+    return NodoConversacionalMapper.toDomain(nodo, finales.has(nodo.id_nodo));
   }
 
   async buscarNodosPorIds(ids: string[]): Promise<NodoConversacional[]> {
@@ -75,7 +79,13 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       where: { id_nodo: { in: ids } },
       include: { tipo_nodo: { select: { nombre: true } } },
     });
-    return nodos.map((nodo) => NodoConversacionalMapper.toDomain(nodo));
+    const finales = await idsNodosFinales(
+      this.prisma,
+      nodos.map((nodo) => nodo.id_nodo),
+    );
+    return nodos.map((nodo) =>
+      NodoConversacionalMapper.toDomain(nodo, finales.has(nodo.id_nodo)),
+    );
   }
 
   async buscarTransicion(
@@ -285,6 +295,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           await tx.nodos.create({
             data: NodoConversacionalMapper.toCreateData(nodo),
           });
+          if (nodo.esNodoFinal) await guardarMarcaNodoFinal(tx, nodo);
         }
         for (const transicion of arbol.transiciones) {
           await this.persistirRegla(tx, transicion.reglaValidacion);
@@ -305,13 +316,25 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     }
   }
 
-  async guardarNodo(nodo: NodoConversacional, idActor: string): Promise<void> {
+  async guardarNodo(
+    nodo: NodoConversacional,
+    idActor: string,
+    transicionesAEliminar: TransicionConversacional[] = [],
+  ): Promise<void> {
     try {
       await this.ejecutarTransaccion(async (tx) => {
+        for (const transicion of transicionesAEliminar) {
+          await this.eliminarTransicion(tx, transicion, idActor);
+        }
         const existente = await tx.nodos.findUnique({
           where: { id_nodo: nodo.idNodo },
           select: { id_nodo: true },
         });
+        // `es_nodo_final` va fuera del cliente tipado hasta regenerar
+        // schema.prisma (RF-25). Se quita antes y se pone después del UPDATE
+        // tipado para no violar `ck_nodos_inicial_no_final` en un intercambio.
+        if (existente !== null && !nodo.esNodoFinal)
+          await guardarMarcaNodoFinal(tx, nodo);
         if (existente === null) {
           await tx.nodos.create({
             data: NodoConversacionalMapper.toCreateData(nodo),
@@ -322,6 +345,8 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
             data: NodoConversacionalMapper.toUpdateData(nodo),
           });
         }
+        if (existente === null || nodo.esNodoFinal)
+          await guardarMarcaNodoFinal(tx, nodo);
         await this.auditar(
           tx,
           nodo.idFlujo,
@@ -337,46 +362,24 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     }
   }
 
-  async guardarTransicion(
+  guardarTransicion(
     transicion: TransicionConversacional,
     idActor: string,
   ): Promise<void> {
+    return this.guardarTransiciones([transicion], idActor);
+  }
+
+  async guardarTransiciones(
+    transiciones: TransicionConversacional[],
+    idActor: string,
+  ): Promise<void> {
     try {
+      // `uq_reglas_nodos_origen_orden` es DEFERRABLE: el reordenamiento se
+      // valida al confirmar la transacción, no en cada actualización.
       await this.ejecutarTransaccion(async (tx) => {
-        await this.persistirRegla(tx, transicion.reglaValidacion);
-        const existente = await tx.reglas_nodos.findUnique({
-          where: { id_regla: transicion.idTransicion },
-          select: { id_regla: true, id_regla_validacion: true },
-        });
-        if (existente === null) {
-          await tx.reglas_nodos.create({
-            data: TransicionConversacionalMapper.toCreateData(transicion),
-          });
-        } else {
-          await tx.reglas_nodos.update({
-            where: { id_regla: transicion.idTransicion },
-            data: TransicionConversacionalMapper.toUpdateData(transicion),
-          });
-          // La regla es propia de la transición: si se reemplazó, la anterior sobra.
-          const anterior = existente.id_regla_validacion;
-          if (
-            anterior !== null &&
-            anterior !== transicion.reglaValidacion?.idReglaValidacion
-          ) {
-            await tx.reglas_validaciones.delete({
-              where: { id_regla_validacion: anterior },
-            });
-          }
+        for (const transicion of transiciones) {
+          await this.persistirTransicion(tx, transicion, idActor);
         }
-        await this.auditar(
-          tx,
-          transicion.idFlujo,
-          idActor,
-          existente === null
-            ? AccionAuditoriaArbol.CREAR_TRANSICION
-            : AccionAuditoriaArbol.EDITAR_TRANSICION,
-          transicion.idTransicion,
-        );
       });
     } catch (error: unknown) {
       this.traducirErrorTransicion(error);
@@ -384,6 +387,72 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
   }
 
   // ── Soporte ──────────────────────────────────────────────────────────────
+
+  private async persistirTransicion(
+    tx: Prisma.TransactionClient,
+    transicion: TransicionConversacional,
+    idActor: string,
+  ): Promise<void> {
+    await this.persistirRegla(tx, transicion.reglaValidacion);
+    const existente = await tx.reglas_nodos.findUnique({
+      where: { id_regla: transicion.idTransicion },
+      select: { id_regla: true, id_regla_validacion: true },
+    });
+    if (existente === null) {
+      await tx.reglas_nodos.create({
+        data: TransicionConversacionalMapper.toCreateData(transicion),
+      });
+    } else {
+      await tx.reglas_nodos.update({
+        where: { id_regla: transicion.idTransicion },
+        data: TransicionConversacionalMapper.toUpdateData(transicion),
+      });
+      // La regla es propia de la transición: si se reemplazó, la anterior sobra.
+      const anterior = existente.id_regla_validacion;
+      if (
+        anterior !== null &&
+        anterior !== transicion.reglaValidacion?.idReglaValidacion
+      ) {
+        await tx.reglas_validaciones.delete({
+          where: { id_regla_validacion: anterior },
+        });
+      }
+    }
+    await this.auditar(
+      tx,
+      transicion.idFlujo,
+      idActor,
+      existente === null
+        ? AccionAuditoriaArbol.CREAR_TRANSICION
+        : AccionAuditoriaArbol.EDITAR_TRANSICION,
+      transicion.idTransicion,
+    );
+  }
+
+  /** Elimina la transición y luego su regla propia (la FK apunta a la regla). */
+  private async eliminarTransicion(
+    tx: Prisma.TransactionClient,
+    transicion: TransicionConversacional,
+    idActor: string,
+  ): Promise<void> {
+    await tx.reglas_nodos.delete({
+      where: { id_regla: transicion.idTransicion },
+    });
+    if (transicion.reglaValidacion !== null) {
+      await tx.reglas_validaciones.delete({
+        where: {
+          id_regla_validacion: transicion.reglaValidacion.idReglaValidacion,
+        },
+      });
+    }
+    await this.auditar(
+      tx,
+      transicion.idFlujo,
+      idActor,
+      AccionAuditoriaArbol.ELIMINAR_TRANSICION,
+      transicion.idTransicion,
+    );
+  }
 
   private async persistirFlujo(
     tx: Prisma.TransactionClient,
@@ -455,9 +524,15 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       }),
     ]);
 
+    const finales = await idsNodosFinales(
+      cliente,
+      nodos.map((nodo) => nodo.id_nodo),
+    );
     return new ArbolConversacional(
       FlujoConversacionalMapper.toDomain(flujo),
-      nodos.map((nodo) => NodoConversacionalMapper.toDomain(nodo)),
+      nodos.map((nodo) =>
+        NodoConversacionalMapper.toDomain(nodo, finales.has(nodo.id_nodo)),
+      ),
       transiciones.map((transicion) =>
         TransicionConversacionalMapper.toDomain(transicion),
       ),
@@ -514,6 +589,11 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
         throw new NodoInicialDuplicadoException();
       }
       throw new NodoConversacionalDuplicadoException();
+    }
+    // La marca de nodo final se escribe con SQL crudo: su violación llega como
+    // error de consulta (P2010 / 23505), no como P2002.
+    if (detalle.includes('uq_nodo_final_por_flujo')) {
+      throw new NodoFinalDuplicadoException();
     }
     if (this.esErrorPrisma(error, 'P2003')) {
       if (

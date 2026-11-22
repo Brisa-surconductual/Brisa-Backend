@@ -102,9 +102,14 @@ export abstract class ArbolConversacionalRepository {
     idActor: string,
   ): Promise<void>;
 
+  /**
+   * Guarda el nodo. Si se indican transiciones, las elimina (con sus reglas)
+   * en la misma transacción: RF-25, cambio de tipo de respuesta confirmado.
+   */
   abstract guardarNodo(
     nodo: NodoConversacional,
     idActor: string,
+    transicionesAEliminar?: TransicionConversacional[],
   ): Promise<void>;
 
   /**
@@ -113,6 +118,15 @@ export abstract class ArbolConversacionalRepository {
    */
   abstract guardarTransicion(
     transicion: TransicionConversacional,
+    idActor: string,
+  ): Promise<void>;
+
+  /**
+   * Guarda varias transiciones en una sola transacción (p. ej. la específica,
+   * la de "cualquier otra respuesta" y su reubicación al final del orden).
+   */
+  abstract guardarTransiciones(
+    transiciones: TransicionConversacional[],
     idActor: string,
   ): Promise<void>;
 }

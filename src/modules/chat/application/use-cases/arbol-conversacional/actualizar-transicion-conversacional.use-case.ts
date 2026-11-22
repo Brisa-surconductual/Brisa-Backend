@@ -9,13 +9,15 @@ import { TransicionConversacionalDtoResponse } from '../../dto/arbol-conversacio
 import { ActualizarTransicionConversacionalDtoRequest } from '../../dto/chat-admin.dto-request';
 import { SolicitudActualizacionVaciaException } from '../../exceptions/solicitud-actualizacion-vacia.exception';
 import { ejecutarSeguro } from '../../support/ejecutar-seguro';
+import { reorganizarTransicionesOrigen } from '../../support/reorganizar-transiciones-origen';
 import { solicitudReglaTransicion } from '../../support/solicitud-regla-transicion';
 import { verificarNodosDelFlujo } from '../../support/verificar-nodos-del-flujo';
 
 /**
  * RF-25: edita parcialmente una transición de un flujo en borrador. Su regla
  * es propia: si se envía, se reconstruye completa desde el nodo origen y la
- * anterior se descarta. El flujo se deduce de la transición.
+ * anterior se descarta. El flujo se deduce de la transición. La transición
+ * "cualquier otra respuesta" del origen sigue quedando última.
  */
 @Injectable()
 export class ActualizarTransicionConversacionalUseCase {
@@ -57,10 +59,17 @@ export class ActualizarTransicionConversacionalUseCase {
                 solicitudReglaTransicion(dto.regla_validacion),
               ),
       });
-      arbol.conTransicion(transicion).validarAusenciaCiclos();
-
-      await this.repository.guardarTransicion(transicion, idActor);
-      return TransicionConversacionalDtoResponse.crear(transicion);
+      const { arbol: resultado, aGuardar } = reorganizarTransicionesOrigen(
+        arbol,
+        encontrada.idNodoOrigen,
+        [transicion],
+      );
+      await this.repository.guardarTransiciones(aGuardar, idActor);
+      return TransicionConversacionalDtoResponse.crear(
+        resultado.transiciones.find(
+          (t) => t.idTransicion === transicion.idTransicion,
+        ) ?? transicion,
+      );
     });
   }
 }

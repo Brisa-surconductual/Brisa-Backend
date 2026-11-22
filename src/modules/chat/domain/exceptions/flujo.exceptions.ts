@@ -125,6 +125,11 @@ export class NodoCapturaPerfilInvalidoException extends DomainException {
        * validación cuyos `valores_permitidos` coincidan con el dominio
        * clínico (o no tiene ninguna regla asociada). */
       dimensiones_valores_invalidos: DimensionPerfilClinico[];
+      /** RF-27B: dimensiones con captura por valor a las que les falta algún valor. */
+      dimensiones_valores_faltantes?: {
+        dimension: DimensionPerfilClinico;
+        valores_faltantes: string[];
+      }[];
     },
   ) {
     super(

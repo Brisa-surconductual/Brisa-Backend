@@ -156,12 +156,22 @@ describe('RF-27/28/29 motor de respuestas', () => {
       ).toThrow(RespuestaUsuarioInvalida);
     });
 
-    it('respeta paso de escala y precisión numérica', () => {
+    it('respeta paso numérico y precisión; la escala avanza de 1 en 1 (RF-25)', () => {
       expect(
-        resolver(4, { tipo_entrada: 'ESCALA', min: 0, max: 10, paso: 2 })
+        resolver(4, { tipo_entrada: 'NUMERICO', min: 0, max: 10, paso: 2 })
           .respuesta,
       ).toBe(4);
-      expect(() => resolver(3, { tipo_entrada: 'ESCALA', paso: 2 })).toThrow();
+      expect(() =>
+        resolver(3, { tipo_entrada: 'NUMERICO', min: 0, max: 10, paso: 2 }),
+      ).toThrow();
+      // En ESCALA el paso configurado se ignora: 3 es válido, 2.5 no.
+      expect(
+        resolver(3, { tipo_entrada: 'ESCALA', min: 0, max: 10, paso: 2 })
+          .respuesta,
+      ).toBe(3);
+      expect(() =>
+        resolver(2.5, { tipo_entrada: 'ESCALA', min: 0, max: 10 }),
+      ).toThrow();
       expect(() =>
         resolver(2.5, { tipo_entrada: 'NUMERICO', decimales: 0 }),
       ).toThrow();
@@ -374,6 +384,64 @@ describe('RF-27/28/29 motor de respuestas', () => {
           errorDe(() => motor.resolver(nodo, [], null, formato, 'CONTINUAR')),
         ).toMatchObject({ codigo: 'NODO_TERMINAL' });
       }
+    });
+
+    it('un nodo sin respuesta y sin transiciones avanza al destino implícito (RF-25)', () => {
+      const decision = motor.resolver(
+        nodoRespuesta(null, 'MENSAJE'),
+        [],
+        null,
+        formato,
+        'CONTINUAR',
+        undefined,
+        'siguiente-por-orden',
+      );
+      expect(decision).toMatchObject({
+        idNodoDestino: 'siguiente-por-orden',
+        idRegla: null,
+        tipoEntrada: 'CONTINUAR',
+      });
+    });
+
+    it('el destino implícito no aplica a nodos que esperan respuesta', () => {
+      expect(
+        errorDe(() =>
+          motor.resolver(
+            nodoRespuesta(numerica),
+            [],
+            5,
+            formato,
+            'NUMERICO',
+            undefined,
+            'siguiente-por-orden',
+          ),
+        ),
+      ).toMatchObject({ codigo: 'NODO_TERMINAL' });
+    });
+
+    it('la regla SIEMPRE coincide con cualquier respuesta y queda como respaldo', () => {
+      const especifica = transicionRespuesta(
+        reglaRespuesta({
+          operadorCondicion: Op.IGUALDAD,
+          valorEsperado: { valor: 7 },
+        }),
+        1,
+        'destino-7',
+      );
+      const porDefecto = transicionRespuesta(
+        reglaRespuesta({
+          operadorCondicion: Op.SIEMPRE,
+          valorEsperado: {},
+        }),
+        2,
+        'destino-otro',
+      );
+      expect(
+        resolver(7, numerica, [porDefecto, especifica]).idNodoDestino,
+      ).toBe('destino-7');
+      expect(
+        resolver(3, numerica, [porDefecto, especifica]).idNodoDestino,
+      ).toBe('destino-otro');
     });
 
     it('un nodo sin respuesta (CONTINUAR) avanza por su primera transición, sin regla', () => {

@@ -83,6 +83,10 @@ export class ProcesarRespuestaUseCase {
           );
         this.perfil.comprobarModalidad(nodo, sesion.modalidadActiva);
         const transiciones = await tx.contexto.buscarTransiciones(nodo.idNodo);
+        const idDestinoImplicito =
+          transiciones.length === 0
+            ? await tx.contexto.siguienteNodoImplicito(nodo.idNodo)
+            : null;
         const decision = this.motor.resolver(
           nodo,
           transiciones,
@@ -92,6 +96,7 @@ export class ProcesarRespuestaUseCase {
           (valor) => {
             this.perfil.capturar(nodo, valor);
           },
+          idDestinoImplicito,
         );
         const captura = this.perfil.capturar(nodo, decision.respuesta);
         const destino = await tx.contexto.buscarNodo(decision.idNodoDestino);
@@ -100,10 +105,10 @@ export class ProcesarRespuestaUseCase {
             'DESTINO_INVALIDO',
             'El nodo destino no es válido.',
           );
-        const esTerminal = !(await tx.contexto.tieneSalidas(
+        const esTerminal = await tx.contexto.esTerminal(
           destino.idNodo,
           nodo.idFlujo,
-        ));
+        );
         const ahora = new Date();
         const resultado: ResultadoRespuesta = {
           id_interaccion: idInteraccion,

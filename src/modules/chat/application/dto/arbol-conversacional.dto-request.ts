@@ -34,6 +34,11 @@ export class CrearNodoConversacionalDtoRequest {
   @IsOptional()
   @IsUUID()
   id_contenido_cronograma?: string;
+
+  /** RF-25: nodo de cierre del flujo (único; nunca también inicial). */
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
+  @IsBoolean()
+  es_nodo_final: boolean = false;
 }
 
 export class ActualizarNodoConversacionalDtoRequest {
@@ -58,6 +63,18 @@ export class ActualizarNodoConversacionalDtoRequest {
   @IsOptional()
   @IsUUID()
   id_contenido_cronograma?: string | null;
+
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
+  @IsBoolean()
+  es_nodo_final?: boolean;
+
+  /**
+   * RF-25: confirma que se eliminen las transiciones de salida que dejan de
+   * tener sentido al cambiar el tipo de respuesta del nodo.
+   */
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
+  @IsBoolean()
+  eliminar_transiciones_afectadas?: boolean;
 }
 
 export class CrearFlujoGrupalDtoRequest {

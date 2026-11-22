@@ -60,6 +60,7 @@ export class NodoConversacionalDtoResponse {
   tipo_nodo!: string;
   contenido!: Record<string, unknown>;
   es_nodo_inicial!: boolean;
+  es_nodo_final!: boolean;
   orden!: number | null;
   id_contenido_cronograma!: string | null;
   creado_por!: string;
@@ -74,6 +75,7 @@ export class NodoConversacionalDtoResponse {
       tipo_nodo: nodo.nombreTipoNodo,
       contenido: nodo.contenido,
       es_nodo_inicial: nodo.esNodoInicial,
+      es_nodo_final: nodo.esNodoFinal,
       orden: nodo.orden,
       id_contenido_cronograma: nodo.idContenidoCronograma,
       creado_por: nodo.creadoPor,
@@ -120,6 +122,8 @@ export class TransicionConversacionalDtoResponse {
   /** `null` cuando el nodo origen no espera respuesta (transición automática). */
   regla_validacion!: ReglaTransicionDtoResponse | null;
   fecha_creacion!: Date;
+  /** RF-25: al crear, la transición "cualquier otra respuesta" del origen tras el cambio. */
+  transicion_por_defecto?: TransicionConversacionalDtoResponse | null;
 
   static crear(
     transicion: TransicionConversacional,

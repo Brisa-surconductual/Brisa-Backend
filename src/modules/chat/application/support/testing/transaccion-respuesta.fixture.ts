@@ -35,7 +35,8 @@ export function transaccionRespuestaPrueba() {
         ),
       ),
       buscarTransiciones: jest.fn().mockResolvedValue([transicionRespuesta()]),
-      tieneSalidas: jest.fn().mockResolvedValue(true),
+      esTerminal: jest.fn().mockResolvedValue(false),
+      siguienteNodoImplicito: jest.fn().mockResolvedValue(null),
     },
     registro: {
       buscarResultado: jest.fn().mockResolvedValue(null),

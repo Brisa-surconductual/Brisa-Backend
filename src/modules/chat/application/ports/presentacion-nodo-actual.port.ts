@@ -10,8 +10,8 @@ export interface RecursoNodoActual {
 }
 
 export abstract class PresentacionNodoActualPort {
-  /** Si el nodo tiene al menos una transición saliente (si no, es terminal). */
-  abstract tieneSalidas(idNodo: string, idFlujo: string): Promise<boolean>;
+  /** RF-25: terminal = nodo final del flujo (legado: sin transiciones de salida). */
+  abstract esTerminal(idNodo: string, idFlujo: string): Promise<boolean>;
   abstract consultarRecursos(idContenido: string): Promise<RecursoNodoActual[]>;
 }
 
