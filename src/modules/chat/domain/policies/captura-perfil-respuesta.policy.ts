@@ -10,11 +10,17 @@ import { CapturarRespuesta } from './capturar-respuesta.policy';
 import { respuestaVacia } from './configuracion-entrada-respuesta';
 import { DimensionPerfilCapturada } from '../repositories/perfil-clinico.repository';
 import { CapturarDimensionPerfilPolicy } from './capturar-dimension-perfil.policy';
-import { extraerDimensionCapturaPerfil } from './dimension-captura-perfil';
+import {
+  extraerCapturaPerfil,
+  extraerDimensionCapturaPerfil,
+} from './dimension-captura-perfil';
 
 export type CapturaPerfilRespuesta = DimensionPerfilCapturada;
 
-/** RF-27B: solo el árbol designa qué nodo captura cada dimensión. */
+/**
+ * RF-27B: solo el árbol designa qué nodo captura cada dimensión. Con valor
+ * fijo (RF-25) el nodo lo asigna; sin él, sale de la selección única.
+ */
 export class CapturaPerfilRespuestaPolicy {
   private readonly perfil = new CapturarDimensionPerfilPolicy();
 
@@ -30,8 +36,12 @@ export class CapturaPerfilRespuestaPolicy {
     nodo: NodoConversacional,
     valor: unknown,
   ): CapturaPerfilRespuesta | null {
-    const dimension = this.dimension(nodo);
-    if (dimension == null) return null;
+    const captura = extraerCapturaPerfil(nodo.contenido);
+    if (captura == null) return null;
+    const { dimension } = captura;
+    // Captura por rama (RF-25): el nodo ya define el valor; la respuesta solo avanza.
+    if (captura.valor !== null)
+      return this.perfil.validarValor(dimension, captura.valor);
     if (
       new CapturarRespuesta().entrada(nodo).tipo !==
       TipoEntradaRespuesta.OPCION_UNICA

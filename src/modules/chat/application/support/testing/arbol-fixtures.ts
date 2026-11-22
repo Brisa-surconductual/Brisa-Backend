@@ -180,6 +180,7 @@ export function repositorioSimulado(): jest.Mocked<ArbolConversacionalRepository
     'guardarArbolClonado',
     'guardarNodo',
     'guardarTransicion',
+    'guardarTransiciones',
   ] as const;
   return Object.fromEntries(
     metodos.map((metodo) => [metodo, jest.fn()]),

@@ -1,6 +1,10 @@
 import { Prisma } from '@prisma/client';
 import { ContextoRespuestaTransaccion } from '../../application/ports/procesar-respuesta.port';
 import { NodoConversacionalMapper } from '../mappers/nodo-conversacional.mapper';
+import {
+  esNodoTerminal,
+  idSiguienteNodoPorOrden,
+} from './consultas-nodo-final';
 import { SesionConversacionalMapper } from '../mappers/sesion-conversacional.mapper';
 import {
   INCLUIR_REGLA_DE_TRANSICION,
@@ -44,11 +48,11 @@ export class PrismaContextoRespuestaRepository implements ContextoRespuestaTrans
     return filas.map((f) => TransicionConversacionalMapper.toDomain(f));
   }
 
-  async tieneSalidas(idNodo: string, idFlujo: string): Promise<boolean> {
-    return (
-      (await this.tx.reglas_nodos.count({
-        where: { id_nodo_origen: idNodo, id_flujo: idFlujo },
-      })) > 0
-    );
+  esTerminal(idNodo: string, idFlujo: string): Promise<boolean> {
+    return esNodoTerminal(this.tx, idNodo, idFlujo);
+  }
+
+  siguienteNodoImplicito(idNodo: string): Promise<string | null> {
+    return idSiguienteNodoPorOrden(this.tx, idNodo);
   }
 }

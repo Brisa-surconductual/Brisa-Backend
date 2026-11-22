@@ -51,15 +51,18 @@ export function construirReglaTransicion(
     return null;
   }
 
-  if (tipo === Tipo.TEXTO_LIBRE || tipo === Tipo.FECHA_HORA)
-    invalida(
-      'No se pueden crear transiciones desde un nodo de texto libre o de fecha u hora: su valor esperado no se puede elegir de opciones.',
-    );
-
   if (solicitud === undefined)
     return invalida('La transición debe definir su regla de validación.');
 
   const entrada = contenidoNodo.entrada as Entrada;
+  if (solicitud.operador === Op.SIEMPRE)
+    return construirReglaPorDefecto(contenidoNodo, solicitud.mensajeError);
+
+  if (tipo === Tipo.TEXTO_LIBRE || tipo === Tipo.FECHA_HORA)
+    invalida(
+      'Desde un nodo de texto libre o de fecha u hora solo se puede definir la transición para "cualquier otra respuesta".',
+    );
+
   const obligatorio = entrada.obligatorio !== false;
   const esperado = objeto(solicitud.valorEsperado);
   const regla = (
@@ -156,6 +159,47 @@ export function construirReglaTransicion(
     default:
       return invalida('Tipo de respuesta no soportado para transiciones.');
   }
+}
+
+export const MENSAJE_POR_DEFECTO =
+  'Tu respuesta no coincide con ninguna opción esperada. Inténtalo de nuevo.';
+
+/**
+ * RF-25: regla de la transición "cualquier otra respuesta" (operador SIEMPRE).
+ * Siempre coincide; el tipo de dato se deriva del nodo origen para que la
+ * validación del dato siga siendo la misma que en sus otras transiciones.
+ */
+export function construirReglaPorDefecto(
+  contenidoNodo: Record<string, unknown>,
+  mensajeError?: string,
+): ReglaValidacion {
+  const tipo = resolverTipoEntrada(contenidoNodo);
+  if (tipo === Tipo.CONTINUAR)
+    invalida(
+      'Un nodo sin respuesta esperada avanza solo: no lleva transición para "cualquier otra respuesta".',
+    );
+  const entrada = contenidoNodo.entrada as Entrada;
+  const [tipoDato, valoresPermitidos]: [Dato, string[]] =
+    tipo === Tipo.MULTISELECCION
+      ? [Dato.SELECCION, opcionesDelNodo(entrada)]
+      : tipo === Tipo.BOOLEANO
+        ? [Dato.SELECCION, ['true', 'false']]
+        : tipo === Tipo.ESCALA || tipo === Tipo.NUMERICO
+          ? [Dato.NUMERICO, []]
+          : tipo === Tipo.FECHA_HORA
+            ? [Dato.FECHA, []]
+            : [Dato.TEXTO, []];
+  return ReglaValidacion.crear(
+    tipoDato,
+    entrada.obligatorio !== false,
+    null,
+    null,
+    null,
+    valoresPermitidos,
+    mensajeError?.trim() ? mensajeError : MENSAJE_POR_DEFECTO,
+    Op.SIEMPRE,
+    {},
+  );
 }
 
 function objeto(valor: unknown): Record<string, unknown> {

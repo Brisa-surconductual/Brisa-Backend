@@ -12,8 +12,9 @@ export class RestriccionesEntradaRespuesta {
   comprobar(valor: ValorRespuesta, entrada: Record<string, unknown>): void {
     if (typeof valor === 'number') {
       this.rango(valor, entrada.min, entrada.max);
-      if (entrada.paso != null) {
-        const paso = entrada.paso;
+      // RF-25: la escala numérica avanza de 1 en 1; el paso solo aplica a NUMERICO.
+      const paso: unknown = entrada.tipo === 'ESCALA' ? 1 : entrada.paso;
+      if (paso != null) {
         if (typeof paso !== 'number' || !Number.isFinite(paso) || paso <= 0)
           configuracion('Paso de escala inválido.');
         const base = typeof entrada.min === 'number' ? entrada.min : 0;

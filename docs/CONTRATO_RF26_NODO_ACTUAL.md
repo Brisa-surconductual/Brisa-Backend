@@ -180,3 +180,9 @@ historial completo de migraciones ni una prueba visual de frontend.
   traducía los alias por su cuenta sigue funcionando.
 - **Verificación:** `presentacion-nodo-actual.services.spec.ts` y
   `nodo-actual.http.spec.ts`.
+
+### 2026-11-21 · Nodo final explícito (RF-25)
+
+- `nodo.esTerminal` es `true` cuando el nodo es el nodo final del flujo (`chat.nodos.es_nodo_final`). En flujos legado sin nodo final marcado se mantiene la regla anterior: terminal = sin transiciones de salida.
+- En `ESCALA`, `entrada.paso` se presenta siempre como `1`.
+- Detalle en [`CONTRATO_RF25_USABILIDAD_FLUJO.md`](CONTRATO_RF25_USABILIDAD_FLUJO.md).

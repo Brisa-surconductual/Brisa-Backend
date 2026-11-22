@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ArbolConversacional } from '../../../domain/entities/flujo/arbol-conversacional.entity';
-import { DimensionPerfilClinico } from '../../../domain/enums/perfil-clinico.enum';
 import { ModalidadConversacional } from '../../../domain/enums/modalidad-conversacional-enum';
 import {
   CoberturaTransicionesIncompletaException,
@@ -10,15 +8,13 @@ import {
   GrafoInvalidoException,
   NodoCapturaPerfilInvalidoException,
 } from '../../../domain/exceptions';
-import { extraerDimensionCapturaPerfil } from '../../../domain/policies/dimension-captura-perfil';
-import { opcionesDelNodo } from '../../../domain/policies/regla-por-tipo-entrada';
-import { valoresPermitidosCoincidenConDominio } from '../../../domain/policies/valores-permitidos-captura-perfil';
 import { ArbolConversacionalRepository } from '../../../domain/repositories/arbol-conversacional.repository';
 import { FlujoConversacionalDtoResponse } from '../../dto/arbol-conversacional.dto-response';
 import { ejecutarSeguro } from '../../support/ejecutar-seguro';
 
 /**
- * RF-25 / RF-25C: publica un borrador cuya estructura sea válida.
+ * RF-25 / RF-25C: publica un borrador cuya estructura sea válida (un nodo
+ * inicial, un nodo final, sin huérfanos, callejones ni ciclos).
  * En modalidad personalizada archiva automáticamente el publicado anterior de
  * la misma combinación de perfil; en grupal solo puede haber un publicado.
  */
@@ -45,7 +41,9 @@ export class PublicarFlujoUseCase {
       const diagnostico = arbol.diagnosticarEstructura();
       if (
         diagnostico.sin_nodo_inicial ||
+        diagnostico.sin_nodo_final ||
         diagnostico.nodos_huerfanos.length > 0 ||
+        diagnostico.nodos_sin_salida.length > 0 ||
         diagnostico.ciclos.length > 0
       ) {
         throw new GrafoInvalidoException(diagnostico);
@@ -71,49 +69,19 @@ export class PublicarFlujoUseCase {
         );
       } else {
         const diagnosticoPerfil = arbol.diagnosticarCapturaPerfil();
-        const dimensionesValoresInvalidos =
-          diagnosticoPerfil.dimensiones_ausentes.length === 0 &&
-          diagnosticoPerfil.dimensiones_duplicadas.length === 0
-            ? this.dimensionesConValoresInvalidos(arbol)
-            : [];
         if (
           diagnosticoPerfil.dimensiones_ausentes.length > 0 ||
           diagnosticoPerfil.dimensiones_duplicadas.length > 0 ||
-          dimensionesValoresInvalidos.length > 0
-        ) {
-          throw new NodoCapturaPerfilInvalidoException({
-            ...diagnosticoPerfil,
-            dimensiones_valores_invalidos: dimensionesValoresInvalidos,
-          });
-        }
+          diagnosticoPerfil.dimensiones_valores_invalidos.length > 0 ||
+          diagnosticoPerfil.dimensiones_valores_faltantes.length > 0
+        )
+          throw new NodoCapturaPerfilInvalidoException(diagnosticoPerfil);
         if ((await this.repository.buscarPublicadoGrupal()) !== null) {
           throw new FlujoGrupalPublicadoExistenteException();
         }
         await this.repository.guardarFlujo(publicado, idActor);
       }
       return FlujoConversacionalDtoResponse.crear(publicado);
-    });
-  }
-
-  /**
-   * RF-25: las opciones de cada nodo de captura deben ser exactamente el
-   * dominio clínico de su dimensión (las reglas de sus transiciones solo
-   * pueden elegir entre esas opciones, y la cobertura exige un camino por cada una).
-   */
-  private dimensionesConValoresInvalidos(
-    arbol: ArbolConversacional,
-  ): DimensionPerfilClinico[] {
-    return arbol.nodos.flatMap((nodo) => {
-      const dimension = extraerDimensionCapturaPerfil(nodo.contenido);
-      if (dimension === null) return [];
-      const entrada = nodo.contenido.entrada;
-      const opciones =
-        typeof entrada === 'object' && entrada !== null
-          ? opcionesDelNodo(entrada as Record<string, unknown>)
-          : [];
-      return valoresPermitidosCoincidenConDominio(dimension, opciones)
-        ? []
-        : [dimension];
     });
   }
 }

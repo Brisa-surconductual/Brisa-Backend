@@ -28,17 +28,17 @@ describe('ActualizarTransicionConversacionalUseCase (RF-25, regla propia)', () =
   it('conserva lo que no se envía, incluida su regla', async () => {
     const respuesta = await useCase.execute(
       ids.transicion,
-      { orden_evaluacion: 2 },
+      { orden_evaluacion: 3 },
       ids.actor,
     );
 
-    const [guardada, actor] = repository.guardarTransicion.mock.calls[0];
+    const [[guardada], actor] = repository.guardarTransiciones.mock.calls[0];
     expect(guardada).toMatchObject({
       idTransicion: ids.transicion,
       idFlujo: ids.flujo,
       idNodoOrigen: ids.nodoA,
       idNodoDestino: ids.nodoB,
-      ordenEvaluacion: 2,
+      ordenEvaluacion: 3,
     });
     expect(guardada.reglaValidacion).toBe(reglaTexto);
     expect(actor).toBe(ids.actor);
@@ -57,7 +57,8 @@ describe('ActualizarTransicionConversacionalUseCase (RF-25, regla propia)', () =
       ids.actor,
     );
 
-    const regla = repository.guardarTransicion.mock.calls[0][0].reglaValidacion;
+    const regla =
+      repository.guardarTransiciones.mock.calls[0][0][0].reglaValidacion;
     expect(regla).toMatchObject({
       operadorCondicion: OperadorCondicion.IGUALDAD,
       valorEsperado: { valor: 'no' },
@@ -80,7 +81,7 @@ describe('ActualizarTransicionConversacionalUseCase (RF-25, regla propia)', () =
         ids.actor,
       ),
     ).rejects.toBeInstanceOf(ReglaValidacionInvalidaException);
-    expect(repository.guardarTransicion).not.toHaveBeenCalled();
+    expect(repository.guardarTransiciones).not.toHaveBeenCalled();
   });
 
   it('rechaza una edición sin cambios', () => {

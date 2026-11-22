@@ -71,6 +71,32 @@ function nodoCaptura(
   );
 }
 
+/** RF-25: el nodo B de las fábricas pasa a ser el nodo final (sin respuesta). */
+function nodoFinal(base: NodoConversacional): NodoConversacional {
+  return new NodoConversacional(
+    base.idNodo,
+    base.idFlujo,
+    base.idTipoNodo,
+    base.nombreTipoNodo,
+    { texto: 'Has terminado.' },
+    false,
+    base.orden,
+    null,
+    base.creadoPor,
+    base.fechaCreacion,
+    base.fechaActualizacion,
+    true,
+  );
+}
+
+function conFinal(arbolBase: ArbolConversacional): ArbolConversacional {
+  return new ArbolConversacional(
+    arbolBase.flujo,
+    arbolBase.nodos.map((n) => (n.idNodo === ids.nodoB ? nodoFinal(n) : n)),
+    arbolBase.transiciones,
+  );
+}
+
 /** Una transición por valor esperado, todas hacia `destino`. */
 function salidas(
   origen: string,
@@ -113,7 +139,7 @@ function arbolGrupalConPerfil(
     );
   return new ArbolConversacional(
     flujoGrupal(),
-    [nodo(ids.nodoA), dependencia, craving, nodo(ids.nodoB)],
+    [nodo(ids.nodoA), dependencia, craving, nodoFinal(nodo(ids.nodoB))],
     [
       ...salidas(ids.nodoA, dependencia.idNodo, ['si', 'no']),
       ...salidas(dependencia.idNodo, craving.idNodo, valores(dependencia)),
@@ -160,7 +186,7 @@ describe('PublicarFlujoUseCase (RF-25 / RF-25C)', () => {
   });
 
   it('no publica un árbol grupal sin ningún nodo de captura de perfil clínico', async () => {
-    repository.obtenerArbol.mockResolvedValue(arbol());
+    repository.obtenerArbol.mockResolvedValue(conFinal(arbol()));
 
     const error = await useCase
       .execute(ids.flujo, ids.actor)
@@ -255,7 +281,9 @@ describe('PublicarFlujoUseCase (RF-25 / RF-25C)', () => {
   });
 
   it('archiva el publicado anterior del perfil y publica el nuevo en una sola operación', async () => {
-    repository.obtenerArbol.mockResolvedValue(arbol(flujoPersonalizado()));
+    repository.obtenerArbol.mockResolvedValue(
+      conFinal(arbol(flujoPersonalizado())),
+    );
     repository.buscarPublicadoPersonalizado.mockResolvedValue(
       flujoPersonalizado(EstadoFlujoConversacional.PUBLICADO, 1, ids.otroFlujo),
     );
@@ -341,5 +369,76 @@ describe('PublicarFlujoUseCase (RF-25 / RF-25C)', () => {
     await expect(useCase.execute(ids.flujo, ids.actor)).rejects.toBeInstanceOf(
       FlujoConversacionalNoEncontradoException,
     );
+  });
+
+  it('no publica sin nodo final (RF-25)', async () => {
+    repository.obtenerArbol.mockResolvedValue(arbol(flujoPersonalizado()));
+
+    const error = (await useCase
+      .execute(ids.flujo, ids.actor)
+      .catch((e: unknown) => e)) as GrafoInvalidoException;
+
+    expect(error).toBeInstanceOf(GrafoInvalidoException);
+    expect(error.detalles).toMatchObject({ sin_nodo_final: true });
+    expect(repository.guardarFlujos).not.toHaveBeenCalled();
+  });
+
+  it('publica capturando el perfil por ramas con valor fijo (RF-25 / RF-27B)', async () => {
+    const captura = (
+      id: string,
+      dimension: Dimension,
+      valor: string,
+      orden: number,
+    ) =>
+      new NodoConversacional(
+        id,
+        ids.flujo,
+        ids.tipo,
+        'MENSAJE',
+        { texto: valor, capturaPerfil: { dimension, valor } },
+        false,
+        orden,
+        null,
+        ids.actor,
+        fecha,
+        fecha,
+      );
+    const fin = nodoFinal(nodo(ids.nodoB));
+    const ramas = [
+      captura('d-abs', Dimension.TIPO_DEPENDENCIA, 'ABSTINENCIA_FISICA', 2),
+      captura('d-tol', Dimension.TIPO_DEPENDENCIA, 'TOLERANCIA', 3),
+      captura('c-pos', Dimension.TIPO_CRAVING, 'POSITIVO', 4),
+      captura('c-neg', Dimension.TIPO_CRAVING, 'NEGATIVO', 5),
+    ];
+    const sinRegla = (id: string, origen: string, destino: string, orden = 1) =>
+      new TransicionConversacional(
+        id,
+        ids.flujo,
+        origen,
+        destino,
+        orden,
+        null,
+        fecha,
+      );
+    repository.obtenerArbol.mockResolvedValue(
+      new ArbolConversacional(
+        flujoGrupal(),
+        [nodo(ids.nodoA), ...ramas, fin],
+        [
+          ...salidas(ids.nodoA, 'd-abs', ['si']),
+          ...salidas(ids.nodoA, 'd-tol', ['no']).map((t) =>
+            t.actualizar({ ordenEvaluacion: 2 }),
+          ),
+          sinRegla('t1', 'd-abs', 'c-pos'),
+          sinRegla('t2', 'd-tol', 'c-neg'),
+          sinRegla('t3', 'c-pos', ids.nodoB),
+          sinRegla('t4', 'c-neg', ids.nodoB),
+        ],
+      ),
+    );
+
+    await useCase.execute(ids.flujo, ids.actor);
+
+    expect(repository.guardarFlujo).toHaveBeenCalledTimes(1);
   });
 });

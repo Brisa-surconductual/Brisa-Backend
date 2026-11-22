@@ -31,7 +31,10 @@ export interface ContextoRespuestaTransaccion {
   ): Promise<SesionConversacional | null>;
   buscarNodo(idNodo: string): Promise<NodoConversacional | null>;
   buscarTransiciones(idNodo: string): Promise<TransicionConversacional[]>;
-  tieneSalidas(idNodo: string, idFlujo: string): Promise<boolean>;
+  /** RF-25: terminal = nodo final del flujo (legado: sin transiciones de salida). */
+  esTerminal(idNodo: string, idFlujo: string): Promise<boolean>;
+  /** RF-25: destino del avance implícito de un nodo sin respuesta, si aplica. */
+  siguienteNodoImplicito(idNodo: string): Promise<string | null>;
 }
 export interface RegistroRespuestaTransaccion {
   buscarResultado(idInteraccion: string): Promise<{

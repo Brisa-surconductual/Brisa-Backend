@@ -17,6 +17,9 @@ export class EvaluarTransicionRespuesta {
           ? valor.length === esperado.valor.length &&
               valor.every((v) => (esperado.valor as unknown[]).includes(v))
           : valor === esperado.valor;
+      case Op.SIEMPRE:
+        // RF-25: "cualquier otra respuesta"; queda última en el orden.
+        return true;
       case Op.RANGO:
         return (
           typeof valor === 'number' &&

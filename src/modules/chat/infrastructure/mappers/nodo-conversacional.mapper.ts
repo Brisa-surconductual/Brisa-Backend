@@ -7,7 +7,14 @@ export type NodoConTipoFila = Prisma.nodosGetPayload<{
 }>;
 
 export class NodoConversacionalMapper {
-  static toDomain(fila: NodoConTipoFila): NodoConversacional {
+  /**
+   * `esNodoFinal` llega aparte: la columna `es_nodo_final` aún no está en el
+   * cliente tipado (se lee con SQL hasta regenerar schema.prisma, RF-25).
+   */
+  static toDomain(
+    fila: NodoConTipoFila,
+    esNodoFinal = false,
+  ): NodoConversacional {
     return new NodoConversacional(
       fila.id_nodo,
       fila.id_flujo,
@@ -20,6 +27,7 @@ export class NodoConversacionalMapper {
       fila.creado_por,
       fila.fecha_creacion,
       fila.fecha_actualizacion,
+      esNodoFinal,
     );
   }
 

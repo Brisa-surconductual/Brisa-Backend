@@ -23,8 +23,8 @@ export class PresentarNodoActualService {
     sesion: SesionConversacional,
     nodo: NodoConversacional,
   ): Promise<PresentacionNodoActualDtoResponse> {
-    const [tieneSalidas, contenido] = await Promise.all([
-      this.lecturas.tieneSalidas(nodo.idNodo, nodo.idFlujo),
+    const [esTerminal, contenido] = await Promise.all([
+      this.lecturas.esTerminal(nodo.idNodo, nodo.idFlujo),
       this.presentarContenido(nodo),
     ]);
     return {
@@ -34,7 +34,7 @@ export class PresentarNodoActualService {
         idNodo: nodo.idNodo,
         tipoNodo: nodo.nombreTipoNodo,
         orden: nodo.orden,
-        esTerminal: !tieneSalidas,
+        esTerminal,
         bloques: contenido.bloques,
         entrada: contenido.entrada,
       },

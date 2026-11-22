@@ -4,17 +4,15 @@ import {
   PresentacionNodoActualPort,
   RecursoNodoActual,
 } from '../../application/ports/presentacion-nodo-actual.port';
+import { esNodoTerminal } from './consultas-nodo-final';
 
 /** Consultas y mapeo de filas; la preparación del contrato vive en aplicación. */
 @Injectable()
 export class PrismaPresentacionNodoActualRepository implements PresentacionNodoActualPort {
   constructor(private readonly prisma: PrismaService) {}
 
-  async tieneSalidas(idNodo: string, idFlujo: string): Promise<boolean> {
-    const salidas = await this.prisma.reglas_nodos.count({
-      where: { id_nodo_origen: idNodo, id_flujo: idFlujo },
-    });
-    return salidas > 0;
+  esTerminal(idNodo: string, idFlujo: string): Promise<boolean> {
+    return esNodoTerminal(this.prisma, idNodo, idFlujo);
   }
 
   async consultarRecursos(idContenido: string): Promise<RecursoNodoActual[]> {
