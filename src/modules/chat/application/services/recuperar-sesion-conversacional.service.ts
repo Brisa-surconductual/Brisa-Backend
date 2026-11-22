@@ -72,4 +72,45 @@ export class RecuperarSesionConversacionalService {
       return finalizar === undefined ? estado : finalizar(estado);
     });
   }
+
+  /**
+   * Lee una sesión COMPLETADA posicionada en su nodo final, con su historial
+   * reciente. No la reanuda ni modifica su estado. Devuelve null si la sesión
+   * no está completada.
+   */
+  consultarCompletada<T>(
+    idSesion: string,
+    idUsuario: string,
+    finalizar: (estado: EstadoSesionRecuperado) => Promise<T>,
+  ): Promise<T | null> {
+    return this.persistencia.ejecutar(async (tx) => {
+      const sesion = await tx.bloquearSesion(idSesion, idUsuario);
+      if (sesion === null) throw new EstadoSesionInconsistenteException();
+      if (!sesion.estaCompletada) return null;
+      if (
+        sesion.idFlujoConversacional === null ||
+        sesion.versionArbolUtilizada === null ||
+        sesion.idNodoActual === null
+      )
+        throw new EstadoSesionInconsistenteException();
+
+      const nodo = await tx.buscarNodo(sesion.idNodoActual);
+      if (nodo === null || nodo.idFlujo !== sesion.idFlujoConversacional)
+        throw new EstadoSesionInconsistenteException();
+
+      const historial = await tx.consultarHistorial({
+        idSesion,
+        antesDe: null,
+        limite: LIMITE_HISTORIAL_INTERACCIONES,
+      });
+      if (historial === null) throw new EstadoSesionInconsistenteException();
+
+      return finalizar({
+        sesion,
+        nodo,
+        historial,
+        recuperadaDesdeHistorial: false,
+      });
+    });
+  }
 }

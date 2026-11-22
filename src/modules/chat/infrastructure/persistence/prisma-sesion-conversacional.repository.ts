@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { SesionConversacional } from '../../domain/entities/sesion/sesion-conversacional.entity';
 import {
+  ArbolYaCompletadoException,
   EstadoSesionInconsistenteException,
   SesionActivaExistenteException,
 } from '../../domain/exceptions/sesion.exceptions';
@@ -16,6 +17,50 @@ const SESION_NO_COMPLETADA: Prisma.chat_sesionesWhereInput = {
     { estado_sesiones: { is: null } },
   ],
 };
+
+const SESION_COMPLETADA: Prisma.chat_sesionesWhereInput = {
+  estado_sesiones: { is: { estado_actual: 'COMPLETADA' } },
+};
+
+/**
+ * Sesión pendiente que no duplica un árbol ya completado por el mismo usuario.
+ * `id_flujo` es la clave del flujo, así que identifica también su versión.
+ */
+function sesionPendiente(idUsuario: string): Prisma.chat_sesionesWhereInput {
+  return {
+    id_usuario: idUsuario,
+    AND: [
+      SESION_NO_COMPLETADA,
+      {
+        OR: [
+          { id_flujo_conversacional: null },
+          {
+            flujo_conversacion: {
+              is: {
+                sesiones: {
+                  none: { id_usuario: idUsuario, ...SESION_COMPLETADA },
+                },
+              },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function sesionCompletadaDelArbol(
+  idUsuario: string,
+  idFlujo: string,
+  version: number,
+): Prisma.chat_sesionesWhereInput {
+  return {
+    id_usuario: idUsuario,
+    id_flujo_conversacional: idFlujo,
+    version_arbol_utilizada: version,
+    ...SESION_COMPLETADA,
+  };
+}
 
 @Injectable()
 export class PrismaSesionConversacionalRepository implements SesionConversacionalRepository {
@@ -37,7 +82,7 @@ export class PrismaSesionConversacionalRepository implements SesionConversaciona
     idUsuario: string,
   ): Promise<SesionConversacional | null> {
     const sesion = await this.prisma.chat_sesiones.findFirst({
-      where: { id_usuario: idUsuario, ...SESION_NO_COMPLETADA },
+      where: sesionPendiente(idUsuario),
       include: { estado_sesiones: true },
       orderBy: [
         { fecha_ultima_interaccion: 'desc' },
@@ -49,6 +94,24 @@ export class PrismaSesionConversacionalRepository implements SesionConversaciona
     if (sesion === null) return null;
     if (sesion.estado_sesiones === null)
       throw new EstadoSesionInconsistenteException();
+    return SesionConversacionalMapper.toDomain(sesion);
+  }
+
+  async buscarCompletadaDelArbol(
+    idUsuario: string,
+    idFlujo: string,
+    version: number,
+  ): Promise<SesionConversacional | null> {
+    const sesion = await this.prisma.chat_sesiones.findFirst({
+      where: sesionCompletadaDelArbol(idUsuario, idFlujo, version),
+      include: { estado_sesiones: true },
+      orderBy: [
+        { fecha_ultima_interaccion: 'desc' },
+        { fecha_inicio: 'desc' },
+        { id_sesion: 'desc' },
+      ],
+    });
+    if (sesion === null || sesion.estado_sesiones === null) return null;
     return SesionConversacionalMapper.toDomain(sesion);
   }
 
@@ -70,13 +133,27 @@ export class PrismaSesionConversacionalRepository implements SesionConversaciona
 
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${sesion.idUsuario}))`;
         const pendiente = await tx.chat_sesiones.findFirst({
-          where: { id_usuario: sesion.idUsuario, ...SESION_NO_COMPLETADA },
+          where: sesionPendiente(sesion.idUsuario),
           select: {
             id_sesion: true,
             estado_sesiones: { select: { estado_actual: true } },
           },
         });
         if (pendiente === null) {
+          if (
+            sesion.idFlujoConversacional !== null &&
+            sesion.versionArbolUtilizada !== null
+          ) {
+            const completada = await tx.chat_sesiones.findFirst({
+              where: sesionCompletadaDelArbol(
+                sesion.idUsuario,
+                sesion.idFlujoConversacional,
+                sesion.versionArbolUtilizada,
+              ),
+              select: { id_sesion: true },
+            });
+            if (completada !== null) throw new ArbolYaCompletadoException();
+          }
           await tx.chat_sesiones.create({
             data: SesionConversacionalMapper.toCreateData(sesion),
           });

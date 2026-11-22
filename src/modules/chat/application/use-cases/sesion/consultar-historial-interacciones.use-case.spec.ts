@@ -15,6 +15,7 @@ describe('ConsultarHistorialInteraccionesUseCase (RF-31 / RF-32)', () => {
   const sesiones = {
     buscarPorIdYUsuario: jest.fn(),
     buscarUltimaNoCompletada: jest.fn(),
+    buscarCompletadaDelArbol: jest.fn(),
     guardar: jest.fn(),
   };
   const arboles = { buscarNodosPorIds: jest.fn() };

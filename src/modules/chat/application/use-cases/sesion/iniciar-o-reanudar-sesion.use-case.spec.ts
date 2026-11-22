@@ -20,6 +20,7 @@ import {
 } from '../../services/recuperar-sesion-conversacional.service';
 import { presentadorNodoPrueba } from '../../support/testing/presentacion-nodo.fixture';
 import {
+  ArbolYaCompletadoException,
   PerfilClinicoIncompletoException,
   SesionActivaExistenteException,
 } from '../../../domain/exceptions';
@@ -38,6 +39,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
   const sesiones = {
     buscarPorIdYUsuario: jest.fn(),
     buscarUltimaNoCompletada: jest.fn(),
+    buscarCompletadaDelArbol: jest.fn(),
     guardar: jest.fn(),
   };
 
@@ -65,6 +67,10 @@ describe('IniciarOReanudarSesionUseCase', () => {
     Promise<EstadoSesionRecuperado | null>,
     [string, string]
   >();
+  const consultarCompletada = jest.fn<
+    Promise<EstadoSesionRecuperado | null>,
+    [string, string]
+  >();
   const presentador = presentadorNodoPrueba();
 
   const casoDeUso = new IniciarOReanudarSesionUseCase(
@@ -80,6 +86,14 @@ describe('IniciarOReanudarSesionUseCase', () => {
         finalizar: (estado: EstadoSesionRecuperado) => Promise<T>,
       ) {
         const estado = await recuperar(sesion, usuario);
+        return estado === null ? null : finalizar(estado);
+      },
+      async consultarCompletada<T>(
+        sesion: string,
+        usuario: string,
+        finalizar: (estado: EstadoSesionRecuperado) => Promise<T>,
+      ) {
+        const estado = await consultarCompletada(sesion, usuario);
         return estado === null ? null : finalizar(estado);
       },
     } as unknown as RecuperarSesionConversacionalService,
@@ -151,6 +165,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
     calcularUbicacion.execute.mockResolvedValue(ubicacion);
     arboles.buscarNodosPorIds.mockResolvedValue([nodo]);
     asignacionCronograma.existeAsignacion.mockResolvedValue(true);
+    sesiones.buscarCompletadaDelArbol.mockResolvedValue(null);
     recuperar.mockResolvedValue({
       sesion,
       nodo,
@@ -595,5 +610,321 @@ describe('IniciarOReanudarSesionUseCase', () => {
 
     expect(determinarContexto.execute).not.toHaveBeenCalled();
     expect(sesiones.guardar).not.toHaveBeenCalled();
+  });
+  describe('árbol ya completado (una terapia por árbol publicado)', () => {
+    const idSesionCompletada = '00000000-0000-4000-8000-000000000010';
+    const idFlujoNuevo = '00000000-0000-4000-8000-000000000020';
+    const idPersonalizado = '00000000-0000-4000-8000-000000000030';
+
+    const completada = new SesionConversacional(
+      idSesionCompletada,
+      ids.usuario,
+      ids.flujo,
+      1,
+      ModalidadConversacional.GRUPAL,
+      null,
+      null,
+      ids.nodo,
+      'COMPLETADA',
+      fecha,
+      fecha,
+    );
+
+    const historialCompletado = {
+      hayMas: false,
+      interacciones: [7, 8].map((secuencia) => ({
+        secuencia,
+        idInteraccion: String(secuencia),
+        timestampInteraccion: fecha,
+        idNodo: ids.nodo,
+        idNodoDestino: ids.nodo,
+        tipoEntrada: 'CONTINUAR',
+        valor: null,
+      })),
+    };
+
+    const flujoDe = (
+      idFlujo: string,
+      version: number,
+      modalidad = ModalidadConversacional.GRUPAL,
+      tipoDependencia?: TipoDependenciaClinica,
+      tipoCraving?: TipoCravingClinico,
+    ) =>
+      new FlujoConversacional(
+        idFlujo,
+        'Árbol',
+        modalidad,
+        EstadoFlujoConversacional.PUBLICADO,
+        version,
+        ids.usuario,
+        fecha,
+        fecha,
+        tipoDependencia,
+        tipoCraving,
+      );
+
+    const nodoDe = (idFlujo: string) =>
+      new NodoConversacional(
+        ids.nodo,
+        idFlujo,
+        ids.tipoNodo,
+        'MENSAJE',
+        { texto: 'Bienvenido' },
+        true,
+        1,
+        null,
+        ids.usuario,
+        fecha,
+        fecha,
+      );
+
+    /** Solo existe una sesión COMPLETADA para el árbol (flujo y versión) indicado. */
+    const completadaSoloPara = (idFlujo: string, version: number) =>
+      sesiones.buscarCompletadaDelArbol.mockImplementation(
+        (_usuario: string, flujoBuscado: string, versionBuscada: number) =>
+          Promise.resolve(
+            flujoBuscado === idFlujo && versionBuscada === version
+              ? completada
+              : null,
+          ),
+      );
+
+    const contextoGrupal = () =>
+      determinarContexto.execute.mockResolvedValue({
+        modalidad: ModalidadConversacional.GRUPAL,
+        perfil: null,
+      });
+
+    beforeEach(() => {
+      consultarCompletada.mockResolvedValue({
+        sesion: completada,
+        nodo,
+        historial: historialCompletado,
+        recuperadaDesdeHistorial: false,
+      });
+    });
+
+    it('volver a entrar devuelve la terapia COMPLETADA sin crear otra sesión', async () => {
+      sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
+      contextoGrupal();
+      arboles.buscarPublicadoGrupal.mockResolvedValue(flujo);
+      completadaSoloPara(ids.flujo, 1);
+
+      const resultado = await casoDeUso.execute(ids.usuario);
+
+      expect(resultado.reanudada).toBe(false);
+      expect(resultado.recuperada_desde_historial).toBe(false);
+      expect(resultado.sesion.id_sesion).toBe(idSesionCompletada);
+      expect(resultado.sesion.estado_actual).toBe('COMPLETADA');
+      expect(resultado.sesion.id_flujo_conversacional).toBe(ids.flujo);
+      expect(resultado.sesion.version_arbol_utilizada).toBe(1);
+      expect(resultado.nodo_actual.id_nodo).toBe(ids.nodo);
+      expect(resultado.nodo_actual.es_terminal).toBe(true);
+      expect(resultado.sesion.ultima_secuencia).toBe(8);
+      expect(
+        resultado.historial_reciente.items.map((item) => item.secuencia),
+      ).toEqual([7, 8]);
+
+      expect(sesiones.buscarCompletadaDelArbol).toHaveBeenCalledWith(
+        ids.usuario,
+        ids.flujo,
+        1,
+      );
+      expect(consultarCompletada).toHaveBeenCalledWith(
+        idSesionCompletada,
+        ids.usuario,
+      );
+      expect(recuperar).not.toHaveBeenCalled();
+      expect(arboles.obtenerArbol).not.toHaveBeenCalled();
+      expect(sesiones.guardar).not.toHaveBeenCalled();
+    });
+
+    it('una sesión ACTIVA duplicada del árbol completado no prevalece sobre la COMPLETADA', async () => {
+      // El repositorio descarta la ACTIVA duplicada (ver repository.spec):
+      // para el caso de uso no hay pendiente y sí una completada del árbol.
+      sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
+      contextoGrupal();
+      arboles.buscarPublicadoGrupal.mockResolvedValue(flujo);
+      completadaSoloPara(ids.flujo, 1);
+
+      const resultado = await casoDeUso.execute(ids.usuario);
+
+      expect(resultado.sesion.id_sesion).toBe(idSesionCompletada);
+      expect(resultado.sesion.estado_actual).toBe('COMPLETADA');
+      expect(recuperar).not.toHaveBeenCalled();
+      expect(sesiones.guardar).not.toHaveBeenCalled();
+    });
+
+    it('reanuda una sesión PAUSADA legítima sin consultar completadas', async () => {
+      sesiones.buscarUltimaNoCompletada.mockResolvedValue(
+        crearSesion('PAUSADA'),
+      );
+
+      const resultado = await casoDeUso.execute(ids.usuario);
+
+      expect(resultado.reanudada).toBe(true);
+      expect(resultado.sesion.estado_actual).toBe('ACTIVA');
+      expect(sesiones.buscarCompletadaDelArbol).not.toHaveBeenCalled();
+      expect(consultarCompletada).not.toHaveBeenCalled();
+    });
+
+    it('publicar un árbol distinto permite iniciar una conversación nueva', async () => {
+      const flujoNuevo = flujoDe(idFlujoNuevo, 2);
+      sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
+      contextoGrupal();
+      arboles.buscarPublicadoGrupal.mockResolvedValue(flujoNuevo);
+      arboles.obtenerArbol.mockResolvedValue(
+        new ArbolConversacional(flujoNuevo, [nodoDe(idFlujoNuevo)], []),
+      );
+      completadaSoloPara(ids.flujo, 1);
+
+      const resultado = await casoDeUso.execute(ids.usuario);
+
+      expect(resultado.reanudada).toBe(false);
+      expect(resultado.sesion.estado_actual).toBe('ACTIVA');
+      expect(resultado.sesion.id_flujo_conversacional).toBe(idFlujoNuevo);
+      expect(sesiones.buscarCompletadaDelArbol).toHaveBeenCalledWith(
+        ids.usuario,
+        idFlujoNuevo,
+        2,
+      );
+      expect(consultarCompletada).not.toHaveBeenCalled();
+      expect(sesiones.guardar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idFlujoConversacional: idFlujoNuevo,
+          versionArbolUtilizada: 2,
+          estadoActual: 'ACTIVA',
+        }),
+      );
+    });
+
+    it('una terapia GRUPAL completada no bloquea el árbol PERSONALIZADO del perfil', async () => {
+      const personalizado = flujoDe(
+        idPersonalizado,
+        1,
+        ModalidadConversacional.PERSONALIZADA,
+        TipoDependenciaClinica.TOLERANCIA,
+        TipoCravingClinico.NEGATIVO,
+      );
+      sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
+      determinarContexto.execute.mockResolvedValue({
+        modalidad: ModalidadConversacional.PERSONALIZADA,
+        perfil: {
+          tipo_dependencia: TipoDependenciaClinica.TOLERANCIA,
+          tipo_craving: TipoCravingClinico.NEGATIVO,
+        },
+      });
+      arboles.buscarPublicadoPersonalizado.mockResolvedValue(personalizado);
+      arboles.obtenerArbol.mockResolvedValue(
+        new ArbolConversacional(personalizado, [nodoDe(idPersonalizado)], []),
+      );
+      completadaSoloPara(ids.flujo, 1);
+
+      const resultado = await casoDeUso.execute(ids.usuario);
+
+      expect(arboles.buscarPublicadoGrupal).not.toHaveBeenCalled();
+      expect(arboles.buscarPublicadoPersonalizado).toHaveBeenCalledWith(
+        TipoDependenciaClinica.TOLERANCIA,
+        TipoCravingClinico.NEGATIVO,
+      );
+      expect(sesiones.buscarCompletadaDelArbol).toHaveBeenCalledWith(
+        ids.usuario,
+        idPersonalizado,
+        1,
+      );
+      expect(resultado.sesion.estado_actual).toBe('ACTIVA');
+      expect(resultado.sesion.modalidad_activa).toBe(
+        ModalidadConversacional.PERSONALIZADA,
+      );
+      expect(resultado.sesion.tipo_dependencia).toBe(
+        TipoDependenciaClinica.TOLERANCIA,
+      );
+      expect(sesiones.guardar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idFlujoConversacional: idPersonalizado,
+          modalidadActiva: ModalidadConversacional.PERSONALIZADA,
+          tipoDependencia: TipoDependenciaClinica.TOLERANCIA,
+          tipoCraving: TipoCravingClinico.NEGATIVO,
+        }),
+      );
+    });
+
+    it('devuelve la terapia PERSONALIZADA completada del árbol del perfil', async () => {
+      const personalizado = flujoDe(
+        idPersonalizado,
+        3,
+        ModalidadConversacional.PERSONALIZADA,
+        TipoDependenciaClinica.ABSTINENCIA_FISICA,
+        TipoCravingClinico.POSITIVO,
+      );
+      sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
+      determinarContexto.execute.mockResolvedValue({
+        modalidad: ModalidadConversacional.PERSONALIZADA,
+        perfil: {
+          tipo_dependencia: TipoDependenciaClinica.ABSTINENCIA_FISICA,
+          tipo_craving: TipoCravingClinico.POSITIVO,
+        },
+      });
+      arboles.buscarPublicadoPersonalizado.mockResolvedValue(personalizado);
+      completadaSoloPara(idPersonalizado, 3);
+
+      const resultado = await casoDeUso.execute(ids.usuario);
+
+      expect(resultado.sesion.estado_actual).toBe('COMPLETADA');
+      expect(sesiones.buscarCompletadaDelArbol).toHaveBeenCalledWith(
+        ids.usuario,
+        idPersonalizado,
+        3,
+      );
+      expect(sesiones.guardar).not.toHaveBeenCalled();
+    });
+
+    it('una solicitud concurrente que encuentra el árbol completado al guardar devuelve la COMPLETADA', async () => {
+      sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
+      contextoGrupal();
+      arboles.buscarPublicadoGrupal.mockResolvedValue(flujo);
+      arboles.obtenerArbol.mockResolvedValue(
+        new ArbolConversacional(flujo, [nodo], []),
+      );
+      sesiones.buscarCompletadaDelArbol
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(completada);
+      sesiones.guardar.mockRejectedValueOnce(new ArbolYaCompletadoException());
+
+      const resultado = await casoDeUso.execute(ids.usuario);
+
+      expect(resultado.reanudada).toBe(false);
+      expect(resultado.sesion.id_sesion).toBe(idSesionCompletada);
+      expect(resultado.sesion.estado_actual).toBe('COMPLETADA');
+      expect(sesiones.guardar).toHaveBeenCalledTimes(1);
+    });
+
+    it('una sesión que se completa durante la reanudación no crea otra del mismo árbol', async () => {
+      sesiones.buscarUltimaNoCompletada.mockResolvedValue(sesion);
+      recuperar.mockResolvedValue(null);
+      contextoGrupal();
+      arboles.buscarPublicadoGrupal.mockResolvedValue(flujo);
+      completadaSoloPara(ids.flujo, 1);
+
+      const resultado = await casoDeUso.execute(ids.usuario);
+
+      expect(resultado.sesion.estado_actual).toBe('COMPLETADA');
+      expect(sesiones.guardar).not.toHaveBeenCalled();
+    });
+
+    it('informa ESTADO_INCONSISTENTE si el guardado rechaza el árbol pero no se encuentra la completada', async () => {
+      sesiones.buscarUltimaNoCompletada.mockResolvedValue(null);
+      contextoGrupal();
+      arboles.buscarPublicadoGrupal.mockResolvedValue(flujo);
+      arboles.obtenerArbol.mockResolvedValue(
+        new ArbolConversacional(flujo, [nodo], []),
+      );
+      sesiones.buscarCompletadaDelArbol.mockResolvedValue(null);
+      sesiones.guardar.mockRejectedValueOnce(new ArbolYaCompletadoException());
+
+      await expect(casoDeUso.execute(ids.usuario)).rejects.toMatchObject({
+        codigo: 'ESTADO_INCONSISTENTE',
+      });
+    });
   });
 });

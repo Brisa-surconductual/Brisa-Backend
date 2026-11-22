@@ -18,7 +18,10 @@ import {
   PerfilClinicoIncompletoException,
   SesionActivaExistenteException,
 } from '../../../domain/exceptions';
-import { EstadoSesionInconsistenteException } from '../../../domain/exceptions/sesion.exceptions';
+import {
+  ArbolYaCompletadoException,
+  EstadoSesionInconsistenteException,
+} from '../../../domain/exceptions/sesion.exceptions';
 import { AsignacionCronogramaChatRepository } from '../../../domain/repositories/asignacion-cronograma-chat.repository';
 import {
   ContextoConversacionalDtoResponse,
@@ -85,6 +88,16 @@ export class IniciarOReanudarSesionUseCase {
       contexto.modalidad === ModalidadConversacional.GRUPAL
         ? await this.seleccionarArbolGrupal()
         : await this.seleccionarArbolPersonalizado(idUsuario, contexto);
+
+    // Un árbol se completa una sola vez: se presenta la sesión completada
+    // en lugar de crear otra.
+    const completada = await this.presentarCompletada(
+      idUsuario,
+      flujo,
+      ubicacion,
+    );
+    if (completada !== null) return completada;
+
     const arbol = await this.arboles.obtenerArbol(flujo.idFlujo);
     const nodoInicial = arbol?.nodos.find((nodo) => nodo.esNodoInicial);
     if (nodoInicial === undefined || nodoInicial.idFlujo !== flujo.idFlujo) {
@@ -121,6 +134,15 @@ export class IniciarOReanudarSesionUseCase {
     try {
       await this.sesiones.guardar(nueva);
     } catch (error: unknown) {
+      if (error instanceof ArbolYaCompletadoException) {
+        const respuesta = await this.presentarCompletada(
+          idUsuario,
+          flujo,
+          ubicacion,
+        );
+        if (respuesta === null) throw new EstadoSesionInconsistenteException();
+        return respuesta;
+      }
       if (!(error instanceof SesionActivaExistenteException)) throw error;
 
       const concurrente =
@@ -135,6 +157,28 @@ export class IniciarOReanudarSesionUseCase {
       return respuesta;
     }
     return respuestaNueva;
+  }
+
+  /**
+   * Sesión COMPLETADA del árbol publicado, presentada sin reanudarla:
+   * `reanudada: false` y `sesion.estado_actual: 'COMPLETADA'`.
+   */
+  private async presentarCompletada(
+    idUsuario: string,
+    flujo: FlujoConversacional,
+    ubicacion: UbicacionTemporalUsuarioDtoResponse,
+  ): Promise<InicioSesionConversacionalDtoResponse | null> {
+    const completada = await this.sesiones.buscarCompletadaDelArbol(
+      idUsuario,
+      flujo.idFlujo,
+      flujo.version,
+    );
+    if (completada === null) return null;
+    return this.recuperacion.consultarCompletada(
+      completada.idSesion,
+      idUsuario,
+      (estado) => this.construirRespuesta(estado, false, ubicacion),
+    );
   }
 
   private async seleccionarArbolGrupal(): Promise<FlujoConversacional> {

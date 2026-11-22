@@ -18,6 +18,7 @@ describe('ConsultarNodoActualUseCase (RF-26)', () => {
   const sesiones = {
     buscarPorIdYUsuario: jest.fn(),
     buscarUltimaNoCompletada: jest.fn(),
+    buscarCompletadaDelArbol: jest.fn(),
     guardar: jest.fn(),
   };
   const arboles = {

@@ -89,6 +89,18 @@ export class SesionConversacional {
     return this.estadoActual === 'ERROR_CONFIGURACION';
   }
 
+  get estaCompletada(): boolean {
+    return this.estadoActual === 'COMPLETADA';
+  }
+
+  /** Un árbol se identifica por su flujo y la versión publicada utilizada. */
+  correspondeAlArbol(idFlujo: string, version: number): boolean {
+    return (
+      this.idFlujoConversacional === idFlujo &&
+      this.versionArbolUtilizada === version
+    );
+  }
+
   esReanudable(): boolean {
     return this.estadoActual === 'ACTIVA' || this.estadoActual === 'PAUSADA';
   }
