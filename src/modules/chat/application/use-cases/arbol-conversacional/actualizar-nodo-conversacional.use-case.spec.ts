@@ -1,3 +1,4 @@
+import { variableNodoServicePrueba } from '../../support/testing/taxonomia-variables.fixture';
 import { ArbolConversacional } from '../../../domain/entities/flujo/arbol-conversacional.entity';
 import { EstadoFlujoConversacional } from '../../../domain/enums/estado-flujo-conversacional.enum';
 import {
@@ -25,7 +26,10 @@ import { ActualizarNodoConversacionalUseCase } from './actualizar-nodo-conversac
 
 describe('ActualizarNodoConversacionalUseCase (RF-25)', () => {
   const repository = repositorioSimulado();
-  const useCase = new ActualizarNodoConversacionalUseCase(repository);
+  const useCase = new ActualizarNodoConversacionalUseCase(
+    repository,
+    variableNodoServicePrueba(),
+  );
 
   beforeEach(() => {
     jest.resetAllMocks();

@@ -32,6 +32,12 @@ import { EstadoConversacionalService } from './services/estado-conversacional.se
 import { PresentarHistorialConversacionalService } from './services/presentar-historial-conversacional.service';
 import { RecuperarSesionConversacionalService } from './services/recuperar-sesion-conversacional.service';
 import { ReportarErrorConversacionalUseCase } from './use-cases/sesion/reportar-error-conversacional.use-case';
+import { VariableNodoService } from './services/variable-nodo.service';
+import { VariablesEtiquetadasService } from './services/variables-etiquetadas.service';
+import { VariablesEtiquetadasPort } from './ports/variables-etiquetadas.port';
+import { ConsultarTaxonomiaVariablesUseCase } from './use-cases/taxonomia/consultar-taxonomia-variables.use-case';
+import { CrearVariableTaxonomiaUseCase } from './use-cases/taxonomia/crear-variable-taxonomia.use-case';
+import { CambiarEstadoVariableTaxonomiaUseCase } from './use-cases/taxonomia/cambiar-estado-variable-taxonomia.use-case';
 
 export const ChatApplicationProviders = [
   ProcesarRespuestaUseCase,
@@ -68,4 +74,10 @@ export const ChatApplicationProviders = [
   ConsultarAuditoriaArbolUseCase,
   RechazarEliminacionArbolPersonalizadoUseCase,
   ConsultarMiContenidoVigenteUseCase,
+  // RF-30B: taxonomía de variables y etiquetado.
+  VariableNodoService,
+  ConsultarTaxonomiaVariablesUseCase,
+  CrearVariableTaxonomiaUseCase,
+  CambiarEstadoVariableTaxonomiaUseCase,
+  { provide: VariablesEtiquetadasPort, useClass: VariablesEtiquetadasService },
 ];

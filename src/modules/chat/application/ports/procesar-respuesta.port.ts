@@ -3,6 +3,11 @@ import { TransicionConversacional } from '../../domain/entities/flujo/transicion
 import { SesionConversacional } from '../../domain/entities/sesion/sesion-conversacional.entity';
 import { DecisionRespuesta } from '../../domain/policies/motor-respuesta-conversacional.policy';
 import { PerfilClinicoRepository } from '../../domain/repositories/perfil-clinico.repository';
+import { VariableTaxonomia } from '../../domain/entities/taxonomia/variable-taxonomia.entity';
+import {
+  SnapshotPerfilEtiquetado,
+  VariableEtiquetada,
+} from '../../domain/repositories/variables-etiquetadas.repository';
 import { ResultadoRespuesta } from '../dto/procesar-respuesta.dto-response';
 import { EstadoConectividadRespuesta } from '../dto/procesar-respuesta.dto-request';
 import { EstadoConversacionalTransaccion } from './estado-conversacional.port';
@@ -45,11 +50,19 @@ export interface RegistroRespuestaTransaccion {
   ultimaSecuencia(idSesion: string): Promise<number>;
   guardar(registro: RegistroDeRespuesta): Promise<void>;
 }
+/** RF-30B: taxonomía y etiquetado dentro de la transacción del POST. */
+export interface VariablesRespuestaTransaccion {
+  buscarVariable(codigo: string): Promise<VariableTaxonomia | null>;
+  versionActual(): Promise<string>;
+  snapshotPerfil(idUsuario: string): Promise<SnapshotPerfilEtiquetado>;
+  registrar(etiqueta: VariableEtiquetada): Promise<void>;
+}
 export interface TransaccionRespuesta {
   contexto: ContextoRespuestaTransaccion;
   registro: RegistroRespuestaTransaccion;
   perfil: PerfilClinicoRepository;
   estado: EstadoConversacionalTransaccion;
+  variables: VariablesRespuestaTransaccion;
 }
 
 /** Aplicación coordina el negocio; el adaptador asegura una única transacción. */

@@ -72,3 +72,9 @@ el almacenamiento local y la sincronización de lotes se tratan en RF-34/RF-35.
 
 - Responder un nodo cuyo contenido del cronograma aún no empieza para el estudiante → **409 `NODO_EN_ESPERA_CRONOGRAMA`** (`detalles.habilita_aprox`). No se registra la interacción.
 - Detalle en [`CONTRATO_RF24_RITMO_CRONOGRAMA.md`](CONTRATO_RF24_RITMO_CRONOGRAMA.md).
+
+### 2026-11-22 · Etiquetado de variables taxonómicas (RF-30B)
+
+- Si el nodo tiene `contenido.variable`, la respuesta se etiqueta en `chat.variables_etiquetadas` dentro de la misma transacción, después de la captura clínica y de guardar la interacción.
+- Nuevos 400 posibles: `TIPO_DATO_INVALIDO` (entero o booleano esperado por la variable) y `VALOR_NO_PERMITIDO` (categoría fuera de la taxonomía). Request y response no cambian.
+- Detalle en [`CONTRATO_RF30B_TAXONOMIA_VARIABLES.md`](CONTRATO_RF30B_TAXONOMIA_VARIABLES.md).

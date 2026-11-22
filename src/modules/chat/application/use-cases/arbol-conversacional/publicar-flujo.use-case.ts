@@ -11,6 +11,7 @@ import {
 import { ArbolConversacionalRepository } from '../../../domain/repositories/arbol-conversacional.repository';
 import { FlujoConversacionalDtoResponse } from '../../dto/arbol-conversacional.dto-response';
 import { ejecutarSeguro } from '../../support/ejecutar-seguro';
+import { VariableNodoService } from '../../services/variable-nodo.service';
 
 /**
  * RF-25 / RF-25C: publica un borrador cuya estructura sea válida (un nodo
@@ -20,7 +21,10 @@ import { ejecutarSeguro } from '../../support/ejecutar-seguro';
  */
 @Injectable()
 export class PublicarFlujoUseCase {
-  constructor(private readonly repository: ArbolConversacionalRepository) {}
+  constructor(
+    private readonly repository: ArbolConversacionalRepository,
+    private readonly variables: VariableNodoService,
+  ) {}
 
   execute(
     idFlujo: string,
@@ -48,6 +52,9 @@ export class PublicarFlujoUseCase {
       ) {
         throw new GrafoInvalidoException(diagnostico);
       }
+
+      // RF-30B: ningún nodo publicado captura una variable inexistente o deshabilitada.
+      await this.variables.validarTodos(arbol.nodos);
 
       const cobertura = arbol.diagnosticarCobertura();
       if (cobertura.nodos_sin_cobertura.length > 0) {

@@ -10,6 +10,7 @@ import { HistorialInteraccionesController } from './controllers/sesion/historial
 import { TransicionesConversacionalesController } from './controllers/transicion/transiciones-conversacionales.controller';
 import { RespuestasConversacionalesController } from './controllers/sesion/respuestas-conversacionales.controller';
 import { ErroresClienteChatController } from './controllers/sesion/errores-cliente-chat.controller';
+import { TaxonomiaVariablesController } from './controllers/taxonomia/taxonomia-variables.controller';
 
 export const ChatPresentationProviders = [
   RespuestasConversacionalesController,
@@ -24,4 +25,5 @@ export const ChatPresentationProviders = [
   TransicionesConversacionalesController,
   CatalogosChatController,
   ArbolesPersonalizadosController,
+  TaxonomiaVariablesController,
 ];

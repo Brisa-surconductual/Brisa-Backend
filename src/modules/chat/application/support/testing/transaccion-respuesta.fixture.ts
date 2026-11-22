@@ -1,6 +1,8 @@
 import { SesionConversacional } from '../../../domain/entities/sesion/sesion-conversacional.entity';
 import { ModalidadConversacional } from '../../../domain/enums/modalidad-conversacional-enum';
+import { VariableEtiquetada } from '../../../domain/repositories/variables-etiquetadas.repository';
 import { RegistroDeRespuesta } from '../../ports/procesar-respuesta.port';
+import { variablesSeed } from './taxonomia-variables.fixture';
 import {
   idsRespuesta as ids,
   nodoRespuesta,
@@ -58,6 +60,20 @@ export function transaccionRespuestaPrueba() {
         valorVigente: 'ABSTINENCIA_FISICA',
         perfilCompleto: false,
       }),
+    },
+    variables: {
+      buscarVariable: jest.fn((codigo: string) =>
+        Promise.resolve(
+          Object.values(variablesSeed).find((v) => v.codigo === codigo) ?? null,
+        ),
+      ),
+      versionActual: jest.fn().mockResolvedValue('1.0'),
+      snapshotPerfil: jest
+        .fn()
+        .mockResolvedValue({ tipoDependencia: null, tipoCraving: null }),
+      registrar: jest
+        .fn<Promise<void>, [VariableEtiquetada]>()
+        .mockResolvedValue(undefined),
     },
   };
 }

@@ -31,12 +31,24 @@ import { RecuperarSesionConversacionalPort } from '../application/ports/recupera
 import { PrismaRecuperarSesionConversacionalRepository } from './persistence/prisma-recuperar-sesion-conversacional.repository';
 import { RegistroErroresConversacionalesRepository } from '../domain/repositories/registro-errores-conversacionales.repository';
 import { PrismaRegistroErroresConversacionalesRepository } from './persistence/prisma-registro-errores-conversacionales.repository';
+import { TaxonomiaVariablesRepository } from '../domain/repositories/taxonomia-variables.repository';
+import { VariablesEtiquetadasRepository } from '../domain/repositories/variables-etiquetadas.repository';
+import { PrismaTaxonomiaVariablesRepository } from './persistence/prisma-taxonomia-variables.repository';
+import { PrismaVariablesEtiquetadasRepository } from './persistence/prisma-variables-etiquetadas.repository';
 import {
   FirmarRecursoNodoPort,
   PresentacionNodoActualPort,
 } from '../application/ports/presentacion-nodo-actual.port';
 
 export const ChatInfrastructureProviders = [
+  {
+    provide: TaxonomiaVariablesRepository,
+    useClass: PrismaTaxonomiaVariablesRepository,
+  },
+  {
+    provide: VariablesEtiquetadasRepository,
+    useClass: PrismaVariablesEtiquetadasRepository,
+  },
   PrismaEventosSeguimientoRepository,
   BullMqEventosSeguimientoWorker,
   {

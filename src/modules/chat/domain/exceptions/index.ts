@@ -8,3 +8,4 @@ export * from './contexto.exceptions';
 export * from './modalidad.exceptions';
 export * from './sesion.exceptions';
 export * from './respuesta.exceptions';
+export * from './taxonomia.exceptions';

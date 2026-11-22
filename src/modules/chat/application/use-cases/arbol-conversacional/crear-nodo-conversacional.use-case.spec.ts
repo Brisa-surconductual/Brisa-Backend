@@ -1,3 +1,4 @@
+import { variableNodoServicePrueba } from '../../support/testing/taxonomia-variables.fixture';
 import { ArbolConversacional } from '../../../domain/entities/flujo/arbol-conversacional.entity';
 import { TipoNodoConversacional } from '../../../domain/entities/catalogos/tipo-nodo.entity';
 import { EstadoFlujoConversacional } from '../../../domain/enums/estado-flujo-conversacional.enum';
@@ -20,7 +21,10 @@ import { CrearNodoConversacionalUseCase } from './crear-nodo-conversacional.use-
 
 describe('CrearNodoConversacionalUseCase (RF-25)', () => {
   const repository = repositorioSimulado();
-  const useCase = new CrearNodoConversacionalUseCase(repository);
+  const useCase = new CrearNodoConversacionalUseCase(
+    repository,
+    variableNodoServicePrueba(),
+  );
   const dto = {
     id_tipo_nodo: ids.tipo,
     contenido: { texto: 'Inicio' },
@@ -150,5 +154,64 @@ describe('CrearNodoConversacionalUseCase (RF-25)', () => {
       ),
     ).rejects.toBeInstanceOf(OrdenNodoDuplicadoException);
     expect(repository.guardarNodo).not.toHaveBeenCalled();
+  });
+
+  describe('RF-30B variable taxonómica del nodo', () => {
+    const conVariable = (entrada: unknown) => ({
+      ...dto,
+      contenido: {
+        texto: '¿Qué tanto deseo de vapear sientes?',
+        entrada,
+        variable: { codigo: 'NIVEL_CRAVING' },
+      },
+    });
+    beforeEach(() => {
+      repository.buscarTipoNodo.mockResolvedValue(
+        new TipoNodoConversacional(ids.tipo, 'PREGUNTA'),
+      );
+    });
+
+    it('guarda un nodo cuya entrada admite la variable', async () => {
+      const casoDeUso = new CrearNodoConversacionalUseCase(
+        repository,
+        variableNodoServicePrueba(),
+      );
+      await casoDeUso.execute(
+        ids.flujo,
+        conVariable({ tipo: 'ESCALA', min: 0, max: 10 }),
+        ids.actor,
+      );
+      expect(repository.guardarNodo.mock.calls).toHaveLength(1);
+    });
+
+    it('rechaza una entrada que la variable no admite, sin guardar', async () => {
+      const casoDeUso = new CrearNodoConversacionalUseCase(
+        repository,
+        variableNodoServicePrueba(),
+      );
+      await expect(
+        casoDeUso.execute(
+          ids.flujo,
+          conVariable({ tipo: 'OPCION_UNICA', opciones: ['A'] }),
+          ids.actor,
+        ),
+      ).rejects.toMatchObject({ codigo: 'TIPO_ENTRADA_INCOMPATIBLE' });
+      expect(repository.guardarNodo.mock.calls).toHaveLength(0);
+    });
+
+    it('rechaza una variable inexistente, sin guardar', async () => {
+      const casoDeUso = new CrearNodoConversacionalUseCase(
+        repository,
+        variableNodoServicePrueba([]),
+      );
+      await expect(
+        casoDeUso.execute(
+          ids.flujo,
+          conVariable({ tipo: 'ESCALA', min: 0, max: 10 }),
+          ids.actor,
+        ),
+      ).rejects.toMatchObject({ codigo: 'VARIABLE_NO_VALIDA' });
+      expect(repository.guardarNodo.mock.calls).toHaveLength(0);
+    });
   });
 });
