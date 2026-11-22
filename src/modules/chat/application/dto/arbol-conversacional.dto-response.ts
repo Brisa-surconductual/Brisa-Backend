@@ -62,7 +62,7 @@ export class NodoConversacionalDtoResponse {
   es_nodo_inicial!: boolean;
   es_nodo_final!: boolean;
   orden!: number | null;
-  id_contenido_cronograma!: string | null;
+  id_contenido!: string | null;
   creado_por!: string;
   fecha_creacion!: Date;
   fecha_actualizacion!: Date;
@@ -77,7 +77,7 @@ export class NodoConversacionalDtoResponse {
       es_nodo_inicial: nodo.esNodoInicial,
       es_nodo_final: nodo.esNodoFinal,
       orden: nodo.orden,
-      id_contenido_cronograma: nodo.idContenidoCronograma,
+      id_contenido: nodo.idContenido,
       creado_por: nodo.creadoPor,
       fecha_creacion: nodo.fechaCreacion,
       fecha_actualizacion: nodo.fechaActualizacion,

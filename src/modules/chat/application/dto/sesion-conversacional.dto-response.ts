@@ -50,6 +50,7 @@ export class NodoActualDtoResponse {
   id_nodo!: string;
   tipo_nodo!: string;
   es_terminal!: boolean;
+  disponibilidad!: { habilitado: boolean; habilita_aprox: string | null };
   bloques!: PresentacionNodoActualDtoResponse['nodo']['bloques'];
   entrada!: PresentacionNodoActualDtoResponse['nodo']['entrada'];
 
@@ -60,6 +61,10 @@ export class NodoActualDtoResponse {
       id_nodo: nodo.idNodo,
       tipo_nodo: nodo.tipoNodo,
       es_terminal: nodo.esTerminal,
+      disponibilidad: {
+        habilitado: nodo.disponibilidad.habilitado,
+        habilita_aprox: nodo.disponibilidad.habilitaAprox,
+      },
       bloques: nodo.bloques,
       entrada: nodo.entrada,
     };

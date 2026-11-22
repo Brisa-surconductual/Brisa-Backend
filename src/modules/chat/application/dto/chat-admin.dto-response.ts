@@ -1,3 +1,4 @@
+import { ContenidoConProgramaciones } from '../../domain/entities/catalogos/contenido-con-programaciones.entity';
 import { ContenidoCronogramaConversacional } from '../../domain/entities/catalogos/contenido-cronograma.entity';
 import { TipoEntradaConversacional } from '../../domain/entities/catalogos/tipo-entrada.entity';
 import { EstadoFlujoConversacional } from '../../domain/enums/estado-flujo-conversacional.enum';
@@ -100,10 +101,69 @@ export class ContenidoCronogramaDtoResponse {
   }
 }
 
+export class ProgramacionContenidoDtoResponse {
+  id_contenido_cronograma!: string;
+  cronograma!: {
+    id_cronograma: string;
+    nombre_cronograma: string;
+    estado: string;
+  };
+  unidad!: {
+    id_unidad_temporal: string;
+    orden_unidad: number;
+    nombre_unidad: string;
+    fecha_inicio: string;
+    fecha_fin: string;
+  };
+  fecha_inicio_disponibilidad!: string | null;
+  fecha_fin_disponibilidad!: string | null;
+}
+
+/** RF-25 / RF-24: contenido para ligar a un nodo, con dónde está programado. */
+export class ContenidoConProgramacionesDtoResponse {
+  id_contenido!: string;
+  nombre_contenido!: string;
+  tipo_contenido!: string;
+  programaciones!: ProgramacionContenidoDtoResponse[];
+
+  static crear(
+    item: ContenidoConProgramaciones,
+  ): ContenidoConProgramacionesDtoResponse {
+    const fecha = (valor: Date) => valor.toISOString().slice(0, 10);
+    return {
+      id_contenido: item.idContenido,
+      nombre_contenido: item.nombreContenido,
+      tipo_contenido: item.tipoContenido,
+      programaciones: item.programaciones.map((p) => ({
+        id_contenido_cronograma: p.idContenidoCronograma,
+        cronograma: {
+          id_cronograma: p.idCronograma,
+          nombre_cronograma: p.nombreCronograma,
+          estado: p.estadoCronograma,
+        },
+        unidad: {
+          id_unidad_temporal: p.idUnidadTemporal,
+          orden_unidad: p.ordenUnidad,
+          nombre_unidad: p.nombreUnidad,
+          // Fechas de la plantilla (tipo date): sin hora para no correr el día.
+          fecha_inicio: fecha(p.fechaInicioUnidad),
+          fecha_fin: fecha(p.fechaFinUnidad),
+        },
+        fecha_inicio_disponibilidad:
+          p.fechaInicioDisponibilidad?.toISOString() ?? null,
+        fecha_fin_disponibilidad:
+          p.fechaFinDisponibilidad?.toISOString() ?? null,
+      })),
+    };
+  }
+}
+
 export class CatalogosChatDtoResponse {
   tipos_nodo!: TipoNodoDtoResponse[];
   tipos_entrada!: TipoEntradaDtoResponse[];
   contenidos_cronograma!: ContenidoCronogramaDtoResponse[];
+  /** RF-25 / RF-24: reemplaza a `contenidos_cronograma` en el editor de nodos. */
+  contenidos!: ContenidoConProgramacionesDtoResponse[];
   enums!: {
     modalidad: ModalidadConversacional[];
     tipo_dependencia: TipoDependenciaClinica[];
@@ -117,6 +177,7 @@ export class CatalogosChatDtoResponse {
     tiposNodo: TipoNodoConversacional[],
     tiposEntrada: TipoEntradaConversacional[],
     contenidosCronograma: ContenidoCronogramaConversacional[],
+    contenidos: ContenidoConProgramaciones[] = [],
   ): CatalogosChatDtoResponse {
     return {
       tipos_nodo: tiposNodo.map((tipo) => TipoNodoDtoResponse.crear(tipo)),
@@ -125,6 +186,9 @@ export class CatalogosChatDtoResponse {
       ),
       contenidos_cronograma: contenidosCronograma.map((item) =>
         ContenidoCronogramaDtoResponse.crear(item),
+      ),
+      contenidos: contenidos.map((item) =>
+        ContenidoConProgramacionesDtoResponse.crear(item),
       ),
       enums: {
         modalidad: Object.values(ModalidadConversacional),

@@ -21,6 +21,12 @@ export interface EntradaNodoDtoResponse {
   maxCaracteres: number | null;
 }
 
+export interface DisponibilidadNodoDtoResponse {
+  habilitado: boolean;
+  /** Fecha real aproximada en que se habilita (ISO); null si ya lo está. */
+  habilitaAprox: string | null;
+}
+
 export class PresentacionNodoActualDtoResponse {
   idSesion!: string;
   estadoSesion!: string;
@@ -29,6 +35,8 @@ export class PresentacionNodoActualDtoResponse {
     tipoNodo: string;
     orden: number | null;
     esTerminal: boolean;
+    /** RF-24/RF-22: si el estudiante ya puede responder este nodo. */
+    disponibilidad: DisponibilidadNodoDtoResponse;
     bloques: BloqueNodoDtoResponse[];
     entrada: EntradaNodoDtoResponse | null;
   };

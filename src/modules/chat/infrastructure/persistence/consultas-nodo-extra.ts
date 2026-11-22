@@ -2,33 +2,54 @@ import { Prisma } from '@prisma/client';
 import { NodoConversacional } from '../../domain/entities/flujo/nodo-conversacional.entity';
 
 /**
- * RF-25: acceso a `chat.nodos.es_nodo_final` con SQL parametrizado.
+ * RF-25 / RF-24: acceso con SQL parametrizado a las columnas de `chat.nodos`
+ * que el cliente tipado aún no conoce (`es_nodo_final`, `id_contenido`).
  *
  * `schema.prisma` lo regenera el workflow `prisma-generate-schema` después del
- * merge, así que el cliente tipado del PR todavía no conoce la columna. Cuando
- * se regenere, estas consultas pueden reemplazarse por el cliente tipado.
+ * merge. Cuando se regenere, estas consultas pueden pasar al cliente tipado.
  */
 type Cliente = Pick<Prisma.TransactionClient, '$queryRaw' | '$executeRaw'>;
 
-export async function idsNodosFinales(
-  cliente: Cliente,
-  idsNodos: string[],
-): Promise<Set<string>> {
-  if (idsNodos.length === 0) return new Set();
-  const filas = await cliente.$queryRaw<{ id_nodo: string }[]>`
-    SELECT id_nodo::text AS id_nodo
-    FROM chat.nodos
-    WHERE id_nodo = ANY(${idsNodos}::uuid[]) AND es_nodo_final = true`;
-  return new Set(filas.map((fila) => fila.id_nodo));
+export interface ExtrasNodo {
+  readonly esNodoFinal: boolean;
+  readonly idContenido: string | null;
 }
 
-export async function guardarMarcaNodoFinal(
+export const SIN_EXTRAS: ExtrasNodo = Object.freeze({
+  esNodoFinal: false,
+  idContenido: null,
+});
+
+export async function extrasNodos(
   cliente: Cliente,
-  nodo: Pick<NodoConversacional, 'idNodo' | 'esNodoFinal'>,
+  idsNodos: string[],
+): Promise<Map<string, ExtrasNodo>> {
+  if (idsNodos.length === 0) return new Map();
+  const filas = await cliente.$queryRaw<
+    { id_nodo: string; es_nodo_final: boolean; id_contenido: string | null }[]
+  >`
+    SELECT id_nodo::text AS id_nodo, es_nodo_final, id_contenido::text AS id_contenido
+    FROM chat.nodos
+    WHERE id_nodo = ANY(${idsNodos}::uuid[])`;
+  return new Map(
+    filas.map((fila) => [
+      fila.id_nodo,
+      {
+        esNodoFinal: fila.es_nodo_final === true,
+        idContenido: fila.id_contenido,
+      },
+    ]),
+  );
+}
+
+export async function guardarExtrasNodo(
+  cliente: Cliente,
+  nodo: Pick<NodoConversacional, 'idNodo' | 'esNodoFinal' | 'idContenido'>,
 ): Promise<void> {
   await cliente.$executeRaw`
     UPDATE chat.nodos
-    SET es_nodo_final = ${nodo.esNodoFinal}
+    SET es_nodo_final = ${nodo.esNodoFinal},
+        id_contenido = ${nodo.idContenido}::uuid
     WHERE id_nodo = ${nodo.idNodo}::uuid`;
 }
 

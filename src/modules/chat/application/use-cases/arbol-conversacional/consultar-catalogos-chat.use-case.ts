@@ -14,17 +14,18 @@ export class ConsultarCatalogosChatUseCase {
 
   execute(): Promise<CatalogosChatDtoResponse> {
     return ejecutarSeguro(async () => {
-      const [tiposNodo, tiposEntrada, contenidosCronograma] = await Promise.all(
-        [
+      const [tiposNodo, tiposEntrada, contenidosCronograma, contenidos] =
+        await Promise.all([
           this.repository.listarTiposNodo(),
           this.repository.listarTiposEntrada(),
           this.repository.listarContenidosCronograma(),
-        ],
-      );
+          this.repository.listarContenidosConProgramaciones(),
+        ]);
       return CatalogosChatDtoResponse.crear(
         tiposNodo,
         tiposEntrada,
         contenidosCronograma,
+        contenidos,
       );
     });
   }

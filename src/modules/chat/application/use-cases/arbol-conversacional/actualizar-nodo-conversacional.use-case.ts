@@ -57,10 +57,8 @@ export class ActualizarNodoConversacionalUseCase {
           : await this.repository.buscarTipoNodo(dto.id_tipo_nodo);
       if (tipo === null) throw new TipoNodoNoEncontradoException();
 
-      if (typeof dto.id_contenido_cronograma === 'string') {
-        const existe = await this.repository.existeContenidoCronograma(
-          dto.id_contenido_cronograma,
-        );
+      if (typeof dto.id_contenido === 'string') {
+        const existe = await this.repository.existeContenido(dto.id_contenido);
         if (!existe) throw new ContenidoCronogramaNoEncontradoException();
       }
 
@@ -87,7 +85,7 @@ export class ActualizarNodoConversacionalUseCase {
           esNodoInicial: dto.es_nodo_inicial,
           esNodoFinal: dto.es_nodo_final,
           orden: dto.orden,
-          idContenidoCronograma: dto.id_contenido_cronograma,
+          idContenido: dto.id_contenido,
         },
         tipo,
       );

@@ -193,3 +193,7 @@ primera versión 1, siguientes versiones incrementales.
 ### 2026-11-21 · Usabilidad del editor de flujos (RF-25)
 
 Nodos con `es_nodo_final`, captura de perfil con valor, `eliminar_transiciones_afectadas`; transiciones con `orden_evaluacion` opcional, `id_nodo_destino_otro` y operador `SIEMPRE`; publicación que exige nodo final. Contrato completo en [`CONTRATO_RF25_USABILIDAD_FLUJO.md`](CONTRATO_RF25_USABILIDAD_FLUJO.md).
+
+### 2026-11-22 · Nodo ligado al contenido y catálogo `contenidos` (RF-25 / RF-24)
+
+`id_contenido` reemplaza a `id_contenido_cronograma` en crear, editar y consultar nodos. El catálogo agrega `contenidos`, con las programaciones de cada contenido: cronograma, unidad y fechas. Detalle en [`CONTRATO_RF24_RITMO_CRONOGRAMA.md`](CONTRATO_RF24_RITMO_CRONOGRAMA.md#cambios).

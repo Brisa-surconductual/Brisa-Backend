@@ -34,10 +34,8 @@ export class CrearNodoConversacionalUseCase {
       const tipo = await this.repository.buscarTipoNodo(dto.id_tipo_nodo);
       if (tipo === null) throw new TipoNodoNoEncontradoException();
 
-      if (dto.id_contenido_cronograma) {
-        const existe = await this.repository.existeContenidoCronograma(
-          dto.id_contenido_cronograma,
-        );
+      if (dto.id_contenido) {
+        const existe = await this.repository.existeContenido(dto.id_contenido);
         if (!existe) throw new ContenidoCronogramaNoEncontradoException();
       }
 
@@ -54,7 +52,7 @@ export class CrearNodoConversacionalUseCase {
         normalizarContenidoNodo(dto.contenido),
         dto.es_nodo_inicial,
         dto.orden,
-        dto.id_contenido_cronograma ?? null,
+        dto.id_contenido ?? null,
         idActor,
         dto.es_nodo_final ?? false,
       );

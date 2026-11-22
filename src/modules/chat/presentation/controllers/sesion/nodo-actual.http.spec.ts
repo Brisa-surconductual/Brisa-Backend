@@ -140,6 +140,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
           tipoNodo: 'MENSAJE',
           orden: 2,
           esTerminal: true,
+          disponibilidad: { habilitado: true, habilitaAprox: null },
           entrada: null,
           bloques: [
             { orden: 1, tipo: 'TEXTO', texto: contenido.texto },
@@ -349,6 +350,7 @@ describe('RF-26 GET /chat/sesiones/:id_sesion/nodo-actual (HTTP)', () => {
         tipoNodo: 'PREGUNTA',
         orden: 4,
         esTerminal: false,
+        disponibilidad: { habilitado: true, habilitaAprox: null },
         bloques: [
           { orden: 1, tipo: 'TEXTO', texto: 'Pregunta' },
           { orden: 2, tipo: 'INSTRUCCION', texto: 'Instrucción' },

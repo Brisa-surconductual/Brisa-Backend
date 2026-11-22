@@ -10,6 +10,7 @@ import { PresentacionNodoActualPort } from '../ports/presentacion-nodo-actual.po
 import { RecursoConversacionalNoDisponibleException } from '../exceptions/recurso-conversacional-no-disponible.exception';
 import { PresentarBloquesNodoActualService } from './presentar-bloques-nodo-actual.service';
 import { PrepararEntradaNodoActualService } from './preparar-entrada-nodo-actual.service';
+import { HabilitacionNodoService } from './habilitacion-nodo.service';
 
 @Injectable()
 export class PresentarNodoActualService {
@@ -17,16 +18,22 @@ export class PresentarNodoActualService {
     private readonly lecturas: PresentacionNodoActualPort,
     private readonly bloques: PresentarBloquesNodoActualService,
     private readonly entrada: PrepararEntradaNodoActualService,
+    private readonly habilitacion: HabilitacionNodoService,
   ) {}
 
   async preparar(
     sesion: SesionConversacional,
     nodo: NodoConversacional,
   ): Promise<PresentacionNodoActualDtoResponse> {
-    const [esTerminal, contenido] = await Promise.all([
+    const [esTerminal, disponibilidad] = await Promise.all([
       this.lecturas.esTerminal(nodo.idNodo, nodo.idFlujo),
-      this.presentarContenido(nodo),
+      this.habilitacion.evaluar(sesion.idUsuario, nodo),
     ]);
+    // RF-24/RF-22: un nodo en espera del cronograma no expone su contenido
+    // (ni URL firmadas) ni su formulario antes de tiempo.
+    const contenido = disponibilidad.habilitado
+      ? await this.presentarContenido(nodo)
+      : { bloques: [], entrada: null };
     return {
       idSesion: sesion.idSesion,
       estadoSesion: sesion.estadoActual,
@@ -35,6 +42,10 @@ export class PresentarNodoActualService {
         tipoNodo: nodo.nombreTipoNodo,
         orden: nodo.orden,
         esTerminal,
+        disponibilidad: {
+          habilitado: disponibilidad.habilitado,
+          habilitaAprox: disponibilidad.habilitaAprox?.toISOString() ?? null,
+        },
         bloques: contenido.bloques,
         entrada: contenido.entrada,
       },
@@ -50,13 +61,11 @@ export class PresentarNodoActualService {
     entrada: EntradaNodoDtoResponse | null;
   }> {
     const recursos =
-      nodo.idContenidoCronograma === null
+      nodo.idContenido === null
         ? []
-        : await this.lecturas
-            .consultarRecursos(nodo.idContenidoCronograma)
-            .catch(() => {
-              throw new RecursoConversacionalNoDisponibleException();
-            });
+        : await this.lecturas.consultarRecursos(nodo.idContenido).catch(() => {
+            throw new RecursoConversacionalNoDisponibleException();
+          });
     return {
       bloques: await this.bloques.preparar(nodo.contenido, recursos),
       entrada: this.entrada.preparar(nodo.contenido),

@@ -39,6 +39,8 @@ const MENSAJES: Readonly<Record<string, string>> = {
   SESION_NO_ACTIVA: 'Retoma la conversación antes de responder.',
   ERROR_PERSISTENCIA: 'No se pudo guardar tu respuesta. Inténtalo de nuevo.',
   CONTENIDO_NO_DISPONIBLE: 'El contenido del nodo no está disponible.',
+  NODO_EN_ESPERA_CRONOGRAMA:
+    'Esta parte de tu terapia aún no está habilitada. Vuelve en la fecha indicada.',
   RECURSO_NO_DISPONIBLE:
     'No fue posible cargar el contenido en este momento. Inténtalo de nuevo más tarde.',
   ERROR_CARGA_ARBOL:

@@ -165,6 +165,7 @@ describe('PrismaArbolConversacionalRepository', () => {
     tipo_nodo: { findUnique: jest.fn(), findMany: jest.fn() },
     tipo_entrada: { findMany: jest.fn() },
     contenidos_cronograma: { findUnique: jest.fn(), findMany: jest.fn() },
+    contenidos: { findUnique: jest.fn(), findMany: jest.fn() },
     auditoria_arboles: { create: jest.fn(), findMany: jest.fn() },
     // RF-25: `es_nodo_final` se lee y escribe con SQL parametrizado.
     $queryRaw: jest.fn(),
@@ -205,7 +206,13 @@ describe('PrismaArbolConversacionalRepository', () => {
 
   describe('nodo final (RF-25)', () => {
     it('marca como final los nodos que devuelve la consulta de la columna', async () => {
-      tx.$queryRaw.mockResolvedValue([{ id_nodo: ids.nodoA }]);
+      tx.$queryRaw.mockResolvedValue([
+        {
+          id_nodo: ids.nodoA,
+          es_nodo_final: true,
+          id_contenido: 'contenido-1',
+        },
+      ]);
 
       const arbol = await repo.obtenerArbol(ids.flujo);
 
@@ -232,8 +239,10 @@ describe('PrismaArbolConversacionalRepository', () => {
       await repo.guardarNodo(nodo, ids.actor);
 
       expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
-      const [, valor, idNodo] = tx.$executeRaw.mock.calls[0] as unknown[];
+      const [, valor, idContenido, idNodo] = tx.$executeRaw.mock
+        .calls[0] as unknown[];
       expect(valor).toBe(true);
+      expect(idContenido).toBeNull();
       expect(idNodo).toBe(ids.nodoA);
     });
 
@@ -528,19 +537,78 @@ describe('PrismaArbolConversacionalRepository', () => {
     });
   });
 
-  describe('existeContenidoCronograma', () => {
-    it('es true cuando la asociación existe', async () => {
-      tx.contenidos_cronograma.findUnique.mockResolvedValue({
-        id_contenido_cronograma: 'cc-1',
-      });
+  describe('existeContenido (RF-25)', () => {
+    it('es true cuando el contenido existe', async () => {
+      tx.contenidos.findUnique.mockResolvedValue({ id_contenido: 'c-1' });
 
-      await expect(repo.existeContenidoCronograma('cc-1')).resolves.toBe(true);
+      await expect(repo.existeContenido('c-1')).resolves.toBe(true);
     });
 
     it('es false cuando no existe', async () => {
-      tx.contenidos_cronograma.findUnique.mockResolvedValue(null);
+      tx.contenidos.findUnique.mockResolvedValue(null);
 
-      await expect(repo.existeContenidoCronograma('cc-1')).resolves.toBe(false);
+      await expect(repo.existeContenido('c-1')).resolves.toBe(false);
+    });
+  });
+
+  describe('listarContenidosConProgramaciones (RF-25 / RF-24)', () => {
+    const programacion = (
+      id: string,
+      cronograma: string,
+      orden: number,
+      inicio: string,
+    ) => ({
+      id_contenido_cronograma: id,
+      id_contenido: 'c-1',
+      id_unidad_temporal: `u-${id}`,
+      orden_contenido: 1,
+      fecha_inicio_disponibilidad: new Date(`${inicio}T05:00:00Z`),
+      fecha_fin_disponibilidad: null,
+      fecha_creacion: fecha,
+      fecha_actualizacion: fecha,
+      unidades_temporales: {
+        id_unidad_temporal: `u-${id}`,
+        id_cronograma: `cr-${cronograma}`,
+        nombre_unidad: `Unidad ${orden}`,
+        orden_unidad: orden,
+        fecha_inicio: new Date(`${inicio}T00:00:00Z`),
+        fecha_fin: new Date(`${inicio}T00:00:00Z`),
+        cronogramas: {
+          id_cronograma: `cr-${cronograma}`,
+          nombre_cronograma: `Cronograma ${cronograma}`,
+          estado: 'ACTIVO',
+        },
+      },
+    });
+
+    it('agrupa las programaciones por contenido, ordenadas por cronograma y unidad', async () => {
+      tx.contenidos.findMany.mockResolvedValue([
+        {
+          id_contenido: 'c-1',
+          nombre_contenido: 'Manejo del craving',
+          tipo_contenido: 'INFORMATIVO',
+        },
+        {
+          id_contenido: 'c-2',
+          nombre_contenido: 'Sin programar',
+          tipo_contenido: 'INFORMATIVO',
+        },
+      ]);
+      tx.contenidos_cronograma.findMany.mockResolvedValue([
+        programacion('p-b', 'B', 3, '2026-12-15'),
+        programacion('p-a', 'A', 2, '2026-12-01'),
+      ]);
+
+      const [craving, sinProgramar] =
+        await repo.listarContenidosConProgramaciones();
+
+      expect(
+        craving.programaciones.map((p) => [p.nombreCronograma, p.ordenUnidad]),
+      ).toEqual([
+        ['Cronograma A', 2],
+        ['Cronograma B', 3],
+      ]);
+      expect(sinProgramar.programaciones).toEqual([]);
     });
   });
 

@@ -231,6 +231,7 @@ describe('IniciarOReanudarSesionUseCase', () => {
       id_nodo: ids.nodo,
       tipo_nodo: 'MENSAJE',
       es_terminal: true,
+      disponibilidad: { habilitado: true, habilita_aprox: null },
       bloques: [{ orden: 1, tipo: 'TEXTO', texto: 'Bienvenido' }],
       entrada: null,
     });

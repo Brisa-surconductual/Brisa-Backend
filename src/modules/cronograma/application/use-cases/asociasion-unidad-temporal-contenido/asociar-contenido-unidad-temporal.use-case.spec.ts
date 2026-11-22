@@ -11,12 +11,13 @@ describe('Asociación y límites reales de disponibilidad', () => {
     new ValidarSolapamientoTemporalService(),
     {
       obtenerPorIdUnidadTemporal: jest.fn().mockResolvedValue({
+        id_cronograma: 'cronograma-a',
         fecha_inicio: new Date('2026-10-20T00:00:00Z'),
         fecha_fin: new Date('2026-10-23T00:00:00Z'),
       }),
     } as unknown as UnidadTemporalRepository,
     {
-      obtenerPorIdContenido,
+      obtenerPorIdContenidoEnCronograma: obtenerPorIdContenido,
       obtnerPorIdUnidadTemporal: jest.fn().mockResolvedValue([]),
       crearConReordenamiento: crear,
     } as unknown as ContenidoCronogramaRepository,
@@ -70,5 +71,12 @@ describe('Asociación y límites reales de disponibilidad', () => {
     });
     await expect(caso.execute(dto)).rejects.toMatchObject({ status: 409 });
     expect(crear).not.toHaveBeenCalled();
+  });
+  it('consulta la unicidad dentro del cronograma de la unidad (un contenido puede estar en varios cronogramas)', async () => {
+    await caso.execute(dto);
+    expect(obtenerPorIdContenido).toHaveBeenCalledWith(
+      'contenido',
+      'cronograma-a',
+    );
   });
 });

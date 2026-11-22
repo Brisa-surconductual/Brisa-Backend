@@ -7,6 +7,7 @@ import { DomainException } from '../../../domain/exceptions/domain.exception';
 import {
   ConflictoRespuestaConversacionalException,
   ConfiguracionRespuestaInvalida,
+  NodoEnEsperaCronogramaException,
   RespuestaConversacionalNoEncontradaException,
 } from '../../../domain/exceptions/respuesta.exceptions';
 import { MotorRespuestaConversacional } from '../../../domain/policies/motor-respuesta-conversacional.policy';
@@ -22,6 +23,7 @@ import {
 } from '../../ports/procesar-respuesta.port';
 import { huellaInteraccion } from '../../services/huella-interaccion';
 import { EstadoConversacionalService } from '../../services/estado-conversacional.service';
+import { HabilitacionNodoService } from '../../services/habilitacion-nodo.service';
 
 @Injectable()
 export class ProcesarRespuestaUseCase {
@@ -32,6 +34,7 @@ export class ProcesarRespuestaUseCase {
     private readonly persistencia: ProcesarRespuestaPort,
     private readonly formato: ComprobarFormatoRespuestaPort,
     private readonly estado: EstadoConversacionalService,
+    private readonly habilitacion: HabilitacionNodoService,
   ) {}
 
   async execute(
@@ -82,6 +85,13 @@ export class ProcesarRespuestaUseCase {
             'El nodo de la conversación no es válido.',
           );
         this.perfil.comprobarModalidad(nodo, sesion.modalidadActiva);
+        // RF-24/RF-22: el ritmo lo marca el cronograma; un nodo cuyo
+        // contenido aún no empieza para el estudiante no se puede responder.
+        const disponibilidad = await this.habilitacion.evaluar(idUsuario, nodo);
+        if (!disponibilidad.habilitado)
+          throw new NodoEnEsperaCronogramaException(
+            disponibilidad.habilitaAprox,
+          );
         const transiciones = await tx.contexto.buscarTransiciones(nodo.idNodo);
         const idDestinoImplicito =
           transiciones.length === 0

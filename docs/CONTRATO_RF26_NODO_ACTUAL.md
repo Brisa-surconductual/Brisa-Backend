@@ -186,3 +186,8 @@ historial completo de migraciones ni una prueba visual de frontend.
 - `nodo.esTerminal` es `true` cuando el nodo es el nodo final del flujo (`chat.nodos.es_nodo_final`). En flujos legado sin nodo final marcado se mantiene la regla anterior: terminal = sin transiciones de salida.
 - En `ESCALA`, `entrada.paso` se presenta siempre como `1`.
 - Detalle en [`CONTRATO_RF25_USABILIDAD_FLUJO.md`](CONTRATO_RF25_USABILIDAD_FLUJO.md).
+
+### 2026-11-22 · Disponibilidad según el cronograma (RF-24 / RF-22)
+
+- `nodo.disponibilidad = { habilitado, habilitaAprox }`. Con `habilitado: false` el nodo llega con `bloques: []` y `entrada: null`.
+- Detalle en [`CONTRATO_RF24_RITMO_CRONOGRAMA.md`](CONTRATO_RF24_RITMO_CRONOGRAMA.md).

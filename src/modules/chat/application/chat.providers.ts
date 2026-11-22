@@ -25,6 +25,7 @@ import { ProcesarRespuestaUseCase } from './use-cases/sesion/procesar-respuesta.
 import { ConsultarNodoActualUseCase } from './use-cases/sesion/consultar-nodo-actual.use-case';
 import { ConsultarHistorialInteraccionesUseCase } from './use-cases/sesion/consultar-historial-interacciones.use-case';
 import { PresentarNodoActualService } from './services/presentar-nodo-actual.service';
+import { HabilitacionNodoService } from './services/habilitacion-nodo.service';
 import { PresentarBloquesNodoActualService } from './services/presentar-bloques-nodo-actual.service';
 import { PrepararEntradaNodoActualService } from './services/preparar-entrada-nodo-actual.service';
 import { EstadoConversacionalService } from './services/estado-conversacional.service';
@@ -39,6 +40,7 @@ export const ChatApplicationProviders = [
   RecuperarSesionConversacionalService,
   ReportarErrorConversacionalUseCase,
   PresentarNodoActualService,
+  HabilitacionNodoService,
   PresentarBloquesNodoActualService,
   PrepararEntradaNodoActualService,
   ConsultarNodoActualUseCase,

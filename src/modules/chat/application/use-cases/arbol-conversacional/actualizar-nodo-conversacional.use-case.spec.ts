@@ -84,14 +84,10 @@ describe('ActualizarNodoConversacionalUseCase (RF-25)', () => {
   });
 
   it('rechaza un contenido de cronograma inexistente', async () => {
-    repository.existeContenidoCronograma.mockResolvedValue(false);
+    repository.existeContenido.mockResolvedValue(false);
 
     await expect(
-      useCase.execute(
-        ids.nodoB,
-        { id_contenido_cronograma: 'cc-inexistente' },
-        ids.actor,
-      ),
+      useCase.execute(ids.nodoB, { id_contenido: 'cc-inexistente' }, ids.actor),
     ).rejects.toBeInstanceOf(ContenidoCronogramaNoEncontradoException);
     expect(repository.guardarNodo).not.toHaveBeenCalled();
   });
@@ -99,13 +95,13 @@ describe('ActualizarNodoConversacionalUseCase (RF-25)', () => {
   it('permite limpiar el contenido asociado enviando null, sin validar', async () => {
     const respuesta = await useCase.execute(
       ids.nodoB,
-      { id_contenido_cronograma: null },
+      { id_contenido: null },
       ids.actor,
     );
 
-    expect(repository.existeContenidoCronograma).not.toHaveBeenCalled();
+    expect(repository.existeContenido).not.toHaveBeenCalled();
     const [guardado] = repository.guardarNodo.mock.calls[0];
-    expect(guardado).toMatchObject({ idContenidoCronograma: null });
+    expect(guardado).toMatchObject({ idContenido: null });
     expect(respuesta.id_nodo).toBe(ids.nodoB);
   });
 

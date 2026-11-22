@@ -31,9 +31,10 @@ export class CrearNodoConversacionalDtoRequest {
   @Min(1)
   orden!: number;
 
+  /** RF-25 / RF-24: contenido del nodo; cada estudiante lo recorre según su cronograma. */
   @IsOptional()
   @IsUUID()
-  id_contenido_cronograma?: string;
+  id_contenido?: string;
 
   /** RF-25: nodo de cierre del flujo (único; nunca también inicial). */
   @ValidateIf((_dto, value: unknown) => value !== undefined)
@@ -62,7 +63,7 @@ export class ActualizarNodoConversacionalDtoRequest {
 
   @IsOptional()
   @IsUUID()
-  id_contenido_cronograma?: string | null;
+  id_contenido?: string | null;
 
   @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsBoolean()

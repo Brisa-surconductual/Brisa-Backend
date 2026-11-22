@@ -25,20 +25,29 @@ export class PrismaCatalogoContenidoRepository extends CatalogoContenidoReposito
         },
       },
     });
-    return contenidos.map((item) => ({
-      contenido: ContenidoMapper.toDomain(item),
-      idAsociacion: item.contenidos_cronograma?.id_contenido_cronograma ?? null,
-      estadoCronograma:
-        item.contenidos_cronograma?.unidades_temporales.cronogramas.estado ??
-        null,
-      cantidadRecursos: item.recursos_contenido.length,
-      recursosListos:
-        item.recursos_contenido.length > 0 &&
-        item.recursos_contenido.every((recurso) =>
-          recurso.recursos_modulos_destino.some(
-            (destino) => destino.modulos_sistema.activo,
+    return contenidos.map((item) => {
+      // Un contenido puede estar en varios cronogramas: la relación es 1:1 en
+      // el cliente actual y será lista tras regenerar schema.prisma.
+      const [asociacion] = comoLista(item.contenidos_cronograma);
+      return {
+        contenido: ContenidoMapper.toDomain(item),
+        idAsociacion: asociacion?.id_contenido_cronograma ?? null,
+        estadoCronograma:
+          asociacion?.unidades_temporales.cronogramas.estado ?? null,
+        cantidadRecursos: item.recursos_contenido.length,
+        recursosListos:
+          item.recursos_contenido.length > 0 &&
+          item.recursos_contenido.every((recurso) =>
+            recurso.recursos_modulos_destino.some(
+              (destino) => destino.modulos_sistema.activo,
+            ),
           ),
-        ),
-    }));
+      };
+    });
   }
+}
+
+function comoLista<T>(valor: T | T[] | null | undefined): T[] {
+  if (valor === null || valor === undefined) return [];
+  return Array.isArray(valor) ? valor : [valor];
 }

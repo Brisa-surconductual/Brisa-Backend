@@ -10,7 +10,7 @@ export class NodoConversacional {
     readonly contenido: Record<string, unknown>,
     readonly esNodoInicial: boolean,
     readonly orden: number | null,
-    readonly idContenidoCronograma: string | null,
+    readonly idContenido: string | null,
     readonly creadoPor: string,
     readonly fechaCreacion: Date,
     readonly fechaActualizacion: Date,
@@ -24,7 +24,7 @@ export class NodoConversacional {
     contenido: Record<string, unknown>,
     esNodoInicial: boolean,
     orden: number | null,
-    idContenidoCronograma: string | null,
+    idContenido: string | null,
     creadoPor: string,
     esNodoFinal = false,
   ): NodoConversacional {
@@ -37,7 +37,7 @@ export class NodoConversacional {
       contenido,
       esNodoInicial,
       orden,
-      idContenidoCronograma,
+      idContenido,
       creadoPor,
       ahora,
       ahora,
@@ -50,11 +50,7 @@ export class NodoConversacional {
     cambios: Partial<
       Pick<
         NodoConversacional,
-        | 'contenido'
-        | 'esNodoInicial'
-        | 'esNodoFinal'
-        | 'orden'
-        | 'idContenidoCronograma'
+        'contenido' | 'esNodoInicial' | 'esNodoFinal' | 'orden' | 'idContenido'
       >
     >,
     tipo?: TipoNodoConversacional,
@@ -67,9 +63,9 @@ export class NodoConversacional {
       cambios.contenido ?? this.contenido,
       cambios.esNodoInicial ?? this.esNodoInicial,
       cambios.orden === undefined ? this.orden : cambios.orden,
-      cambios.idContenidoCronograma === undefined
-        ? this.idContenidoCronograma
-        : cambios.idContenidoCronograma,
+      cambios.idContenido === undefined
+        ? this.idContenido
+        : cambios.idContenido,
       this.creadoPor,
       this.fechaCreacion,
       new Date(),
@@ -87,7 +83,7 @@ export class NodoConversacional {
       this.contenido,
       this.esNodoInicial,
       this.orden,
-      this.idContenidoCronograma,
+      this.idContenido,
       creadoPor,
       ahora,
       ahora,

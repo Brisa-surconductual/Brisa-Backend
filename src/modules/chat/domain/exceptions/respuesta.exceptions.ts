@@ -8,6 +8,22 @@ export class ConflictoRespuestaConversacionalException extends DomainException {
   readonly tipo = 'CONFLICTO' as const;
 }
 
+/**
+ * RF-24 / RF-22: el nodo actual está ligado a un contenido del cronograma que
+ * aún no se habilita para el estudiante; no se puede responder todavía.
+ */
+export class NodoEnEsperaCronogramaException extends DomainException {
+  readonly tipo = 'CONFLICTO' as const;
+
+  constructor(habilitaAprox: Date | null) {
+    super(
+      'Esta parte de tu terapia aún no está habilitada.',
+      'NODO_EN_ESPERA_CRONOGRAMA',
+      { habilita_aprox: habilitaAprox?.toISOString() ?? null },
+    );
+  }
+}
+
 export class RespuestaUsuarioInvalida extends DomainException {
   readonly tipo = 'SOLICITUD_INVALIDA' as const;
 

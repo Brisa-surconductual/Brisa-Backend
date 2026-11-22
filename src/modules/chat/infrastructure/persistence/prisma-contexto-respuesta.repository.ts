@@ -3,8 +3,9 @@ import { ContextoRespuestaTransaccion } from '../../application/ports/procesar-r
 import { NodoConversacionalMapper } from '../mappers/nodo-conversacional.mapper';
 import {
   esNodoTerminal,
+  extrasNodos,
   idSiguienteNodoPorOrden,
-} from './consultas-nodo-final';
+} from './consultas-nodo-extra';
 import { SesionConversacionalMapper } from '../mappers/sesion-conversacional.mapper';
 import {
   INCLUIR_REGLA_DE_TRANSICION,
@@ -36,7 +37,10 @@ export class PrismaContextoRespuestaRepository implements ContextoRespuestaTrans
       where: { id_nodo: idNodo },
       include: { tipo_nodo: { select: { nombre: true } } },
     });
-    return fila === null ? null : NodoConversacionalMapper.toDomain(fila);
+    if (fila === null) return null;
+    // RF-24: el contenido del nodo decide su habilitación por cronograma.
+    const extras = await extrasNodos(this.tx, [fila.id_nodo]);
+    return NodoConversacionalMapper.toDomain(fila, extras.get(fila.id_nodo));
   }
 
   async buscarTransiciones(idNodo: string) {

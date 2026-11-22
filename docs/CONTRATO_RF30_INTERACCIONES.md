@@ -65,3 +65,10 @@ La [migración de etapa 3](../prisma/migrations/20261115110915_fix_etapa3_chat/m
 ya define secuencia única por sesión e inmutabilidad de las interacciones.
 El contrato acepta capturas hechas fuera de línea cuando llegan al servidor;
 el almacenamiento local y la sincronización de lotes se tratan en RF-34/RF-35.
+
+## Cambios
+
+### 2026-11-22 · Nodo en espera del cronograma (RF-24 / RF-22)
+
+- Responder un nodo cuyo contenido del cronograma aún no empieza para el estudiante → **409 `NODO_EN_ESPERA_CRONOGRAMA`** (`detalles.habilita_aprox`). No se registra la interacción.
+- Detalle en [`CONTRATO_RF24_RITMO_CRONOGRAMA.md`](CONTRATO_RF24_RITMO_CRONOGRAMA.md).

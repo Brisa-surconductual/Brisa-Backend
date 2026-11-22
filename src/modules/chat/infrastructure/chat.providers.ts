@@ -1,4 +1,6 @@
 import { ContenidoVigenteChatRepository } from '../domain/repositories/contenido-vigente-chat.repository';
+import { HabilitacionContenidoChatRepository } from '../domain/repositories/habilitacion-contenido-chat.repository';
+import { CronogramaHabilitacionContenidoChatRepository } from './persistence/cronograma-habilitacion-contenido-chat.repository';
 import { ArbolConversacionalRepository } from '../domain/repositories/arbol-conversacional.repository';
 import { ContextoConversacionalRepository } from '../domain/repositories/contexto-conversacional.repository';
 import { CronogramaContenidoVigenteChatRepository } from './persistence/cronograma-contenido-vigente-chat.repository';
@@ -11,7 +13,10 @@ import { PrismaSesionConversacionalRepository } from './persistence/prisma-sesio
 import { ModalidadProgramaRepository } from '../domain/repositories/modalidad-programa.repository';
 import { PrismaModalidadProgramaRepository } from './persistence/prisma-modalidad-programa.repository';
 import { InicializarModalidadRegistroListener } from './messaging/inicializar-modalidad-registro.listener';
-import { ComprobarFormatoRespuestaPort, ProcesarRespuestaPort,} from '../application/ports/procesar-respuesta.port';
+import {
+  ComprobarFormatoRespuestaPort,
+  ProcesarRespuestaPort,
+} from '../application/ports/procesar-respuesta.port';
 import { PrismaProcesarRespuestaRepository } from './persistence/prisma-procesar-respuesta.repository';
 import { FormatoRespuestaAdapter } from './validation/formato-respuesta.adapter';
 import { PrismaPresentacionNodoActualRepository } from './persistence/prisma-presentacion-nodo-actual.repository';
@@ -69,6 +74,10 @@ export const ChatInfrastructureProviders = [
   {
     provide: ContenidoVigenteChatRepository,
     useClass: CronogramaContenidoVigenteChatRepository,
+  },
+  {
+    provide: HabilitacionContenidoChatRepository,
+    useClass: CronogramaHabilitacionContenidoChatRepository,
   },
   {
     provide: ArbolConversacionalRepository,

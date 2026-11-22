@@ -10,6 +10,7 @@ import { AutorizarConsumoEventoContenidoService } from './application/service/au
 import { CalcularUbicacionTemporalUsuarioUseCase } from './application/use-cases/cronograma/calcular-ubicacion-temporal-usuario.use-case';
 import { ModuloInternoAuthGuard } from './presentation/guards/modulo-interno-auth.guard';
 import { ConsultaContenidoVigentePort } from './application/ports/consulta-contenido-vigente.port';
+import { ConsultaHabilitacionContenidoPort } from './application/ports/consulta-habilitacion-contenido.port';
 import { S3_CLIENT } from './infrastructure/storage/s3-client.provider';
 
 @Module({
@@ -29,6 +30,7 @@ import { S3_CLIENT } from './infrastructure/storage/s3-client.provider';
     AutorizarConsumoEventoContenidoService,
     CalcularUbicacionTemporalUsuarioUseCase,
     ConsultaContenidoVigentePort,
+    ConsultaHabilitacionContenidoPort,
   ],
 })
 export class CronogramaModule {}

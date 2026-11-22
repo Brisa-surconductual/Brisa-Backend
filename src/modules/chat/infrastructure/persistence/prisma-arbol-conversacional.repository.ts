@@ -2,6 +2,7 @@ import { HttpException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { AuditoriaArbolConversacional } from '../../domain/entities/catalogos/auditoria-arbol-conversacional.entity';
+import { ContenidoConProgramaciones } from '../../domain/entities/catalogos/contenido-con-programaciones.entity';
 import { ContenidoCronogramaConversacional } from '../../domain/entities/catalogos/contenido-cronograma.entity';
 import { TipoEntradaConversacional } from '../../domain/entities/catalogos/tipo-entrada.entity';
 import { TipoNodoConversacional } from '../../domain/entities/catalogos/tipo-nodo.entity';
@@ -41,7 +42,7 @@ import { CatalogosConversacionalesMapper } from '../mappers/catalogos-conversaci
 import { FlujoConversacionalMapper } from '../mappers/flujo-conversacional.mapper';
 import { NodoConversacionalMapper } from '../mappers/nodo-conversacional.mapper';
 import { ReglaValidacionMapper } from '../mappers/regla-validacion.mapper';
-import { guardarMarcaNodoFinal, idsNodosFinales } from './consultas-nodo-final';
+import { extrasNodos, guardarExtrasNodo } from './consultas-nodo-extra';
 import {
   INCLUIR_REGLA_DE_TRANSICION,
   TransicionConversacionalMapper,
@@ -70,8 +71,8 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       include: { tipo_nodo: { select: { nombre: true } } },
     });
     if (nodo === null) return null;
-    const finales = await idsNodosFinales(this.prisma, [nodo.id_nodo]);
-    return NodoConversacionalMapper.toDomain(nodo, finales.has(nodo.id_nodo));
+    const extras = await extrasNodos(this.prisma, [nodo.id_nodo]);
+    return NodoConversacionalMapper.toDomain(nodo, extras.get(nodo.id_nodo));
   }
 
   async buscarNodosPorIds(ids: string[]): Promise<NodoConversacional[]> {
@@ -79,12 +80,12 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       where: { id_nodo: { in: ids } },
       include: { tipo_nodo: { select: { nombre: true } } },
     });
-    const finales = await idsNodosFinales(
+    const extras = await extrasNodos(
       this.prisma,
       nodos.map((nodo) => nodo.id_nodo),
     );
     return nodos.map((nodo) =>
-      NodoConversacionalMapper.toDomain(nodo, finales.has(nodo.id_nodo)),
+      NodoConversacionalMapper.toDomain(nodo, extras.get(nodo.id_nodo)),
     );
   }
 
@@ -247,14 +248,39 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     );
   }
 
-  async existeContenidoCronograma(
-    idContenidoCronograma: string,
-  ): Promise<boolean> {
-    const fila = await this.prisma.contenidos_cronograma.findUnique({
-      where: { id_contenido_cronograma: idContenidoCronograma },
-      select: { id_contenido_cronograma: true },
+  async existeContenido(idContenido: string): Promise<boolean> {
+    const fila = await this.prisma.contenidos.findUnique({
+      where: { id_contenido: idContenido },
+      select: { id_contenido: true },
     });
     return fila !== null;
+  }
+
+  /**
+   * RF-25 / RF-24: contenidos con todas sus programaciones (cronograma, unidad
+   * y fechas). Se consulta desde las programaciones (relación ya en lista)
+   * y se completa con los contenidos aún no programados.
+   */
+  async listarContenidosConProgramaciones(): Promise<
+    ContenidoConProgramaciones[]
+  > {
+    const [contenidos, programaciones] = await Promise.all([
+      this.prisma.contenidos.findMany({
+        select: {
+          id_contenido: true,
+          nombre_contenido: true,
+          tipo_contenido: true,
+        },
+        orderBy: [{ nombre_contenido: 'asc' }, { id_contenido: 'asc' }],
+      }),
+      this.prisma.contenidos_cronograma.findMany({
+        include: { unidades_temporales: { include: { cronogramas: true } } },
+      }),
+    ]);
+    return CatalogosConversacionalesMapper.contenidosConProgramacionesToDomain(
+      contenidos,
+      programaciones,
+    );
   }
 
   // ── Persistencia ─────────────────────────────────────────────────────────
@@ -295,7 +321,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           await tx.nodos.create({
             data: NodoConversacionalMapper.toCreateData(nodo),
           });
-          if (nodo.esNodoFinal) await guardarMarcaNodoFinal(tx, nodo);
+          await guardarExtrasNodo(tx, nodo);
         }
         for (const transicion of arbol.transiciones) {
           await this.persistirRegla(tx, transicion.reglaValidacion);
@@ -334,7 +360,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
         // schema.prisma (RF-25). Se quita antes y se pone después del UPDATE
         // tipado para no violar `ck_nodos_inicial_no_final` en un intercambio.
         if (existente !== null && !nodo.esNodoFinal)
-          await guardarMarcaNodoFinal(tx, nodo);
+          await guardarExtrasNodo(tx, nodo);
         if (existente === null) {
           await tx.nodos.create({
             data: NodoConversacionalMapper.toCreateData(nodo),
@@ -346,7 +372,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
           });
         }
         if (existente === null || nodo.esNodoFinal)
-          await guardarMarcaNodoFinal(tx, nodo);
+          await guardarExtrasNodo(tx, nodo);
         await this.auditar(
           tx,
           nodo.idFlujo,
@@ -524,14 +550,14 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
       }),
     ]);
 
-    const finales = await idsNodosFinales(
+    const extras = await extrasNodos(
       cliente,
       nodos.map((nodo) => nodo.id_nodo),
     );
     return new ArbolConversacional(
       FlujoConversacionalMapper.toDomain(flujo),
       nodos.map((nodo) =>
-        NodoConversacionalMapper.toDomain(nodo, finales.has(nodo.id_nodo)),
+        NodoConversacionalMapper.toDomain(nodo, extras.get(nodo.id_nodo)),
       ),
       transiciones.map((transicion) =>
         TransicionConversacionalMapper.toDomain(transicion),
@@ -603,8 +629,8 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
         throw new TipoNodoNoEncontradoException();
       }
       if (
-        detalle.includes('fk_nodo_contenido_cronograma') ||
-        detalle.includes('id_contenido_cronograma')
+        detalle.includes('fk_nodo_contenido') ||
+        detalle.includes('id_contenido')
       ) {
         throw new ContenidoCronogramaNoEncontradoException();
       }

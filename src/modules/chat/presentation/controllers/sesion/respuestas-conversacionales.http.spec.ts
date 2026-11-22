@@ -17,6 +17,8 @@ import {
 } from '../../../application/ports/procesar-respuesta.port';
 import { huellaInteraccion } from '../../../application/services/huella-interaccion';
 import { EstadoConversacionalService } from '../../../application/services/estado-conversacional.service';
+import { HabilitacionNodoService } from '../../../application/services/habilitacion-nodo.service';
+import { HabilitacionContenidoChatRepository } from '../../../domain/repositories/habilitacion-contenido-chat.repository';
 import { ProcesarRespuestaUseCase } from '../../../application/use-cases/sesion/procesar-respuesta.use-case';
 import {
   idsRespuesta as ids,
@@ -63,6 +65,8 @@ describe('RF-30 POST respuestas (HTTP)', () => {
     };
     return true;
   };
+  // RF-24/RF-22: cronograma simulado; por defecto todo está habilitado.
+  const cronograma = { consultar: jest.fn() };
   const ruta = '/chat/sesiones/' + ids.sesion + '/respuestas';
   const body = () => ({
     id_interaccion: ids.interaccion,
@@ -98,6 +102,8 @@ describe('RF-30 POST respuestas (HTTP)', () => {
       providers: [
         ProcesarRespuestaUseCase,
         EstadoConversacionalService,
+        HabilitacionNodoService,
+        { provide: HabilitacionContenidoChatRepository, useValue: cronograma },
         RolesGuard,
         { provide: ProcesarRespuestaPort, useValue: persistencia },
         {
@@ -306,6 +312,30 @@ describe('RF-30 POST respuestas (HTTP)', () => {
     },
   );
 
+  it('nodo en espera del cronograma responde 409 y no escribe (RF-24/RF-22)', async () => {
+    const conContenido = nodoRespuesta({
+      tipo_entrada: 'NUMERICO',
+      min: 0,
+      max: 10,
+    }).actualizar({ idContenido: 'contenido-craving' });
+    tx.contexto.buscarNodo.mockResolvedValue(conContenido);
+    cronograma.consultar.mockResolvedValueOnce({
+      habilitado: false,
+      fechaHabilitacion: new Date('2026-12-01T12:00:00.000Z'),
+    });
+
+    const r = await post(body()).expect(409);
+
+    expect(r.body as unknown).toHaveProperty(
+      'codigo',
+      'NODO_EN_ESPERA_CRONOGRAMA',
+    );
+    expect(cronograma.consultar).toHaveBeenCalledWith(
+      ids.usuario,
+      'contenido-craving',
+    );
+    expect(tx.registro.guardar).not.toHaveBeenCalled();
+  });
   it('nodo terminal no escribe una nueva respuesta', async () => {
     tx.contexto.buscarTransiciones.mockResolvedValue([]);
     const r = await post(body()).expect(409);

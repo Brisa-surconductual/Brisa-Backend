@@ -55,7 +55,7 @@ export class ContenidoCronogramaNoEncontradoException extends DomainException {
   readonly tipo = 'NO_ENCONTRADO';
 
   constructor() {
-    super('El contenido de cronograma asociado no existe.');
+    super('El contenido asociado no existe.');
   }
 }
 

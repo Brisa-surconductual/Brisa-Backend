@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { NodoConversacional } from '../../domain/entities/flujo/nodo-conversacional.entity';
+import { ExtrasNodo, SIN_EXTRAS } from '../persistence/consultas-nodo-extra';
 
 /** Fila de nodos junto con el nombre de su tipo. */
 export type NodoConTipoFila = Prisma.nodosGetPayload<{
@@ -8,12 +9,12 @@ export type NodoConTipoFila = Prisma.nodosGetPayload<{
 
 export class NodoConversacionalMapper {
   /**
-   * `esNodoFinal` llega aparte: la columna `es_nodo_final` aún no está en el
-   * cliente tipado (se lee con SQL hasta regenerar schema.prisma, RF-25).
+   * `es_nodo_final` e `id_contenido` llegan aparte: el cliente tipado aún no
+   * conoce esas columnas (se leen con SQL hasta regenerar schema.prisma).
    */
   static toDomain(
     fila: NodoConTipoFila,
-    esNodoFinal = false,
+    extras: ExtrasNodo = SIN_EXTRAS,
   ): NodoConversacional {
     return new NodoConversacional(
       fila.id_nodo,
@@ -23,11 +24,11 @@ export class NodoConversacionalMapper {
       fila.contenido as Record<string, unknown>,
       fila.es_nodo_inicial,
       fila.orden,
-      fila.id_contenido_cronograma,
+      extras.idContenido,
       fila.creado_por,
       fila.fecha_creacion,
       fila.fecha_actualizacion,
-      esNodoFinal,
+      extras.esNodoFinal,
     );
   }
 
@@ -41,7 +42,8 @@ export class NodoConversacionalMapper {
       contenido: nodo.contenido as Prisma.InputJsonValue,
       es_nodo_inicial: nodo.esNodoInicial,
       orden: nodo.orden,
-      id_contenido_cronograma: nodo.idContenidoCronograma,
+      // OBSOLETO (RF-24): el contenido viaja en `id_contenido` (SQL aparte).
+      id_contenido_cronograma: null,
       creado_por: nodo.creadoPor,
       fecha_creacion: nodo.fechaCreacion,
       fecha_actualizacion: nodo.fechaActualizacion,
@@ -56,7 +58,6 @@ export class NodoConversacionalMapper {
       contenido: nodo.contenido as Prisma.InputJsonValue,
       es_nodo_inicial: nodo.esNodoInicial,
       orden: nodo.orden,
-      id_contenido_cronograma: nodo.idContenidoCronograma,
       fecha_actualizacion: nodo.fechaActualizacion,
     };
   }

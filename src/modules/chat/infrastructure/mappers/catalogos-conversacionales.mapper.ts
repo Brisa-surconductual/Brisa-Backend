@@ -5,6 +5,10 @@ import type {
   tipo_nodo,
 } from '@prisma/client';
 import { AuditoriaArbolConversacional } from '../../domain/entities/catalogos/auditoria-arbol-conversacional.entity';
+import {
+  ContenidoConProgramaciones,
+  ProgramacionContenido,
+} from '../../domain/entities/catalogos/contenido-con-programaciones.entity';
 import { ContenidoCronogramaConversacional } from '../../domain/entities/catalogos/contenido-cronograma.entity';
 import { TipoEntradaConversacional } from '../../domain/entities/catalogos/tipo-entrada.entity';
 import { TipoNodoConversacional } from '../../domain/entities/catalogos/tipo-nodo.entity';
@@ -19,7 +23,56 @@ export type ContenidoCronogramaFila = Prisma.contenidos_cronogramaGetPayload<{
   };
 }>;
 
+/** Programación con su unidad temporal y su cronograma. */
+export type ProgramacionContenidoFila = Prisma.contenidos_cronogramaGetPayload<{
+  include: { unidades_temporales: { include: { cronogramas: true } } };
+}>;
+
+export interface ContenidoCatalogoFila {
+  id_contenido: string;
+  nombre_contenido: string;
+  tipo_contenido: string;
+}
+
 export class CatalogosConversacionalesMapper {
+  static contenidosConProgramacionesToDomain(
+    contenidos: ContenidoCatalogoFila[],
+    programaciones: ProgramacionContenidoFila[],
+  ): ContenidoConProgramaciones[] {
+    const porContenido = new Map<string, ProgramacionContenido[]>();
+    for (const fila of programaciones) {
+      const unidad = fila.unidades_temporales;
+      const lista = porContenido.get(fila.id_contenido) ?? [];
+      lista.push({
+        idContenidoCronograma: fila.id_contenido_cronograma,
+        idCronograma: unidad.id_cronograma,
+        nombreCronograma: unidad.cronogramas.nombre_cronograma,
+        estadoCronograma: unidad.cronogramas.estado,
+        idUnidadTemporal: unidad.id_unidad_temporal,
+        ordenUnidad: unidad.orden_unidad,
+        nombreUnidad: unidad.nombre_unidad,
+        fechaInicioUnidad: unidad.fecha_inicio,
+        fechaFinUnidad: unidad.fecha_fin,
+        fechaInicioDisponibilidad: fila.fecha_inicio_disponibilidad,
+        fechaFinDisponibilidad: fila.fecha_fin_disponibilidad,
+      });
+      porContenido.set(fila.id_contenido, lista);
+    }
+    return contenidos.map(
+      (contenido) =>
+        new ContenidoConProgramaciones(
+          contenido.id_contenido,
+          contenido.nombre_contenido,
+          contenido.tipo_contenido,
+          (porContenido.get(contenido.id_contenido) ?? []).sort(
+            (a, b) =>
+              a.nombreCronograma.localeCompare(b.nombreCronograma, 'es') ||
+              a.ordenUnidad - b.ordenUnidad,
+          ),
+        ),
+    );
+  }
+
   static tipoNodoToDomain(fila: tipo_nodo): TipoNodoConversacional {
     return new TipoNodoConversacional(fila.id_tipo_nodo, fila.nombre);
   }

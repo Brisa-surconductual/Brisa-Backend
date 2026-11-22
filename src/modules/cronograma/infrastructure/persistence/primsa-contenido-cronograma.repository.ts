@@ -90,23 +90,48 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
   obtenerPorIdContenido(
     id_contenido: string,
   ): Promise<ContenidoCronograma | null> {
+    // Un contenido puede estar programado en varios cronogramas (uno por
+    // cronograma): se devuelve la programación más antigua.
     return this.prisma.contenidos_cronograma
-      .findUnique({
+      .findFirst({
         where: { id_contenido },
+        orderBy: [
+          { fecha_creacion: 'asc' },
+          { id_contenido_cronograma: 'asc' },
+        ],
       })
-      .then((contenido) => {
-        if (!contenido) {
-          return null;
-        }
-        return ContenidoCronogramaMapper.toDomain({
-          ...contenido,
-          orden_contenido: contenido.orden_contenido ?? 0,
-          fecha_inicio_disponibilidad:
-            contenido.fecha_inicio_disponibilidad ?? new Date(),
-          fecha_fin_disponibilidad:
-            contenido.fecha_fin_disponibilidad ?? new Date(),
-        });
-      });
+      .then((contenido) => (contenido ? this.aDominio(contenido) : null));
+  }
+
+  obtenerPorIdContenidoEnCronograma(
+    id_contenido: string,
+    id_cronograma: string,
+  ): Promise<ContenidoCronograma | null> {
+    return this.prisma.contenidos_cronograma
+      .findFirst({
+        where: { id_contenido, unidades_temporales: { id_cronograma } },
+      })
+      .then((contenido) => (contenido ? this.aDominio(contenido) : null));
+  }
+
+  private aDominio(contenido: {
+    id_contenido_cronograma: string;
+    id_contenido: string;
+    id_unidad_temporal: string;
+    orden_contenido: number | null;
+    fecha_inicio_disponibilidad: Date | null;
+    fecha_fin_disponibilidad: Date | null;
+    fecha_creacion: Date;
+    fecha_actualizacion: Date;
+  }): ContenidoCronograma {
+    return ContenidoCronogramaMapper.toDomain({
+      ...contenido,
+      orden_contenido: contenido.orden_contenido ?? 0,
+      fecha_inicio_disponibilidad:
+        contenido.fecha_inicio_disponibilidad ?? new Date(),
+      fecha_fin_disponibilidad:
+        contenido.fecha_fin_disponibilidad ?? new Date(),
+    });
   }
 
   obtenerPorIdContenidoCronograma(

@@ -1,4 +1,5 @@
 import { AuditoriaArbolConversacional } from '../entities/catalogos/auditoria-arbol-conversacional.entity';
+import { ContenidoConProgramaciones } from '../entities/catalogos/contenido-con-programaciones.entity';
 import { ContenidoCronogramaConversacional } from '../entities/catalogos/contenido-cronograma.entity';
 import { TipoEntradaConversacional } from '../entities/catalogos/tipo-entrada.entity';
 import { TipoNodoConversacional } from '../entities/catalogos/tipo-nodo.entity';
@@ -77,9 +78,13 @@ export abstract class ArbolConversacionalRepository {
   >;
 
   /** Existe la asociación contenido-cronograma (y por tanto el contenido está programado). */
-  abstract existeContenidoCronograma(
-    idContenidoCronograma: string,
-  ): Promise<boolean>;
+  /** RF-25: el contenido existe (puede o no estar programado en algún cronograma). */
+  abstract existeContenido(idContenido: string): Promise<boolean>;
+
+  /** RF-25 / RF-24: contenidos con sus programaciones (cronograma, unidad y fechas). */
+  abstract listarContenidosConProgramaciones(): Promise<
+    ContenidoConProgramaciones[]
+  >;
 
   // ── Persistencia ─────────────────────────────────────────────────────────
 

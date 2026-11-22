@@ -4,7 +4,7 @@ import {
   PresentacionNodoActualPort,
   RecursoNodoActual,
 } from '../../application/ports/presentacion-nodo-actual.port';
-import { esNodoTerminal } from './consultas-nodo-final';
+import { esNodoTerminal } from './consultas-nodo-extra';
 
 /** Consultas y mapeo de filas; la preparación del contrato vive en aplicación. */
 @Injectable()

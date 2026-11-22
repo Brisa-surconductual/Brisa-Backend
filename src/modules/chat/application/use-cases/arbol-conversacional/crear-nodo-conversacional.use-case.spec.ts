@@ -47,7 +47,7 @@ describe('CrearNodoConversacionalUseCase (RF-25)', () => {
       idTipoNodo: ids.tipo,
       esNodoInicial: true,
       orden: 1,
-      idContenidoCronograma: null,
+      idContenido: null,
       creadoPor: ids.actor,
     });
     expect(actor).toBe(ids.actor);
@@ -89,12 +89,12 @@ describe('CrearNodoConversacionalUseCase (RF-25)', () => {
   });
 
   it('rechaza un contenido de cronograma inexistente', async () => {
-    repository.existeContenidoCronograma.mockResolvedValue(false);
+    repository.existeContenido.mockResolvedValue(false);
 
     await expect(
       useCase.execute(
         ids.flujo,
-        { ...dto, id_contenido_cronograma: 'cc-inexistente' },
+        { ...dto, id_contenido: 'cc-inexistente' },
         ids.actor,
       ),
     ).rejects.toBeInstanceOf(ContenidoCronogramaNoEncontradoException);
@@ -102,17 +102,17 @@ describe('CrearNodoConversacionalUseCase (RF-25)', () => {
   });
 
   it('acepta un contenido de cronograma existente', async () => {
-    repository.existeContenidoCronograma.mockResolvedValue(true);
+    repository.existeContenido.mockResolvedValue(true);
 
     await useCase.execute(
       ids.flujo,
-      { ...dto, id_contenido_cronograma: 'cc-1' },
+      { ...dto, id_contenido: 'cc-1' },
       ids.actor,
     );
 
-    expect(repository.existeContenidoCronograma).toHaveBeenCalledWith('cc-1');
+    expect(repository.existeContenido).toHaveBeenCalledWith('cc-1');
     const [guardado] = repository.guardarNodo.mock.calls[0];
-    expect(guardado).toMatchObject({ idContenidoCronograma: 'cc-1' });
+    expect(guardado).toMatchObject({ idContenido: 'cc-1' });
   });
 
   it('rechaza el nodo inicial si su orden no es 1', async () => {
