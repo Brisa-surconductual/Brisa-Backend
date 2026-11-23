@@ -7,6 +7,7 @@ import {
   TipoCravingClinico,
   TipoDependenciaClinica,
 } from '../../domain/enums/perfil-clinico.enum';
+import { modalidadPrisma } from './modalidad-prisma';
 
 export class FlujoConversacionalMapper {
   static toDomain(fila: flujo_conversacion): FlujoConversacional {
@@ -31,7 +32,7 @@ export class FlujoConversacionalMapper {
     return {
       id_flujo: flujo.idFlujo,
       nombre: flujo.nombre,
-      modalidad: flujo.modalidad,
+      modalidad: modalidadPrisma(flujo.modalidad),
       tipo_dependencia: flujo.tipoDependencia,
       tipo_craving: flujo.tipoCraving,
       estado: flujo.estado,

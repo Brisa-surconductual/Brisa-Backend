@@ -14,7 +14,7 @@ import {
 import { TipoDatoValidacion } from '../../domain/enums/tipo-dato-validacion-enum';
 import {
   ContenidoCronogramaNoEncontradoException,
-  FlujoGrupalPublicadoExistenteException,
+  FlujoPublicadoUnicoExistenteException,
   FlujoPersonalizadoPublicadoExistenteException,
   NodoFinalDuplicadoException,
   NodoInicialDuplicadoException,
@@ -428,7 +428,7 @@ describe('PrismaArbolConversacionalRepository', () => {
       [
         'publicado grupal',
         'Unique constraint failed uq_flujo_publicado_grupal',
-        FlujoGrupalPublicadoExistenteException,
+        FlujoPublicadoUnicoExistenteException,
       ],
       [
         'publicado personalizado',

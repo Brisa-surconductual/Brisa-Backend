@@ -37,6 +37,7 @@ import { ModalidadConversacional } from '../../../domain/enums/modalidad-convers
 import { FormatoRespuestaAdapter } from '../../../infrastructure/validation/formato-respuesta.adapter';
 import { instalarFiltroConversacionalPrueba } from '../../support/testing/filtro-error-conversacional.fixture';
 import { RespuestasConversacionalesController } from './respuestas-conversacionales.controller';
+import { SesionConversacional } from '../../../domain/entities/sesion/sesion-conversacional.entity';
 
 describe('RF-30 POST respuestas (HTTP)', () => {
   let app: INestApplication<App>;
@@ -646,6 +647,68 @@ describe('RF-30 POST respuestas (HTTP)', () => {
       });
       await post(body()).expect(200);
       expect(tx.variables.registrar).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('sesión SOS (RF-43)', () => {
+    const sesionSos = () =>
+      new SesionConversacional(
+        ids.sesion,
+        ids.usuario,
+        ids.flujo,
+        1,
+        ModalidadConversacional.SOS,
+        null,
+        null,
+        ids.nodo,
+        'ACTIVA',
+        new Date(),
+        new Date(),
+      );
+
+    beforeEach(() => {
+      tx.contexto.bloquearSesion.mockResolvedValue(sesionSos());
+    });
+
+    it('dentro de los 60 s del servidor se responde como cualquier sesión', async () => {
+      tx.contexto.estadoIntervencionSos.mockResolvedValue({
+        enCurso: true,
+        vencida: false,
+      });
+
+      await post(body()).expect(201);
+
+      expect(tx.contexto.estadoIntervencionSos).toHaveBeenCalledWith(
+        ids.sesion,
+      );
+      expect(tx.registro.guardar).toHaveBeenCalledTimes(1);
+    });
+
+    it('después de fin_maximo_servidor responde 409 TIEMPO_AGOTADO y no escribe', async () => {
+      tx.contexto.estadoIntervencionSos.mockResolvedValue({
+        enCurso: true,
+        vencida: true,
+      });
+
+      const r = await post(body()).expect(409);
+
+      expect(r.body as unknown).toHaveProperty('codigo', 'TIEMPO_AGOTADO');
+      expect(tx.registro.guardar).not.toHaveBeenCalled();
+    });
+
+    it('con la intervención ya finalizada responde 409 INTERVENCION_FINALIZADA', async () => {
+      tx.contexto.estadoIntervencionSos.mockResolvedValue({
+        enCurso: false,
+        vencida: false,
+      });
+
+      const r = await post(body()).expect(409);
+
+      expect(r.body as unknown).toHaveProperty(
+        'codigo',
+        'INTERVENCION_FINALIZADA',
+      );
+      expect(tx.registro.guardar).not.toHaveBeenCalled();
     });
   });
 });

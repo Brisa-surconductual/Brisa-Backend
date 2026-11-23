@@ -7,7 +7,10 @@ import { ContenidoCronogramaConversacional } from '../../domain/entities/catalog
 import { TipoEntradaConversacional } from '../../domain/entities/catalogos/tipo-entrada.entity';
 import { TipoNodoConversacional } from '../../domain/entities/catalogos/tipo-nodo.entity';
 import { ArbolConversacional } from '../../domain/entities/flujo/arbol-conversacional.entity';
-import { FlujoConversacional } from '../../domain/entities/flujo/flujo-conversacional.entity';
+import {
+  FlujoConversacional,
+  ModalidadSinPerfil,
+} from '../../domain/entities/flujo/flujo-conversacional.entity';
 import { NodoConversacional } from '../../domain/entities/flujo/nodo-conversacional.entity';
 import { TransicionConversacional } from '../../domain/entities/flujo/transicion-conversacional.entity';
 import { ReglaValidacion } from '../../domain/entities/reglas-validacion/reglas-validacion.entity';
@@ -22,7 +25,8 @@ import {
   ContenidoCronogramaNoEncontradoException,
   DomainException,
   FlujoConversacionalNoEncontradoException,
-  FlujoGrupalPublicadoExistenteException,
+  FlujoPublicadoUnicoExistenteException,
+  VersionSosDuplicadaException,
   FlujoPersonalizadoPublicadoExistenteException,
   NodoConversacionalDuplicadoException,
   NodoConversacionalNoEncontradoException,
@@ -47,6 +51,7 @@ import {
   INCLUIR_REGLA_DE_TRANSICION,
   TransicionConversacionalMapper,
 } from '../mappers/transicion-conversacional.mapper';
+import { modalidadPrisma } from '../mappers/modalidad-prisma';
 
 @Injectable()
 export class PrismaArbolConversacionalRepository implements ArbolConversacionalRepository {
@@ -123,7 +128,10 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     pageSize: number,
   ): Promise<{ items: FlujoConversacional[]; total: number }> {
     const where: Prisma.flujo_conversacionWhereInput = {
-      modalidad: filtro.modalidad,
+      modalidad:
+        filtro.modalidad === undefined
+          ? undefined
+          : modalidadPrisma(filtro.modalidad),
       tipo_dependencia: filtro.tipoDependencia,
       tipo_craving: filtro.tipoCraving,
       estado: filtro.estado,
@@ -157,14 +165,31 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
     return flujos.map((flujo) => FlujoConversacionalMapper.toDomain(flujo));
   }
 
-  async buscarPublicadoGrupal(): Promise<FlujoConversacional | null> {
+  buscarPublicadoGrupal(): Promise<FlujoConversacional | null> {
+    return this.buscarPublicadoUnico(ModalidadConversacional.GRUPAL);
+  }
+
+  async buscarPublicadoUnico(
+    modalidad: ModalidadSinPerfil,
+  ): Promise<FlujoConversacional | null> {
     const flujo = await this.prisma.flujo_conversacion.findFirst({
       where: {
-        modalidad: ModalidadConversacional.GRUPAL,
+        modalidad: modalidadPrisma(modalidad),
         estado: EstadoFlujoConversacional.PUBLICADO,
       },
     });
     return flujo === null ? null : FlujoConversacionalMapper.toDomain(flujo);
+  }
+
+  async obtenerUltimaVersionSinPerfil(
+    modalidad: ModalidadSinPerfil,
+  ): Promise<number> {
+    const ultima = await this.prisma.flujo_conversacion.findFirst({
+      where: { modalidad: modalidadPrisma(modalidad) },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    });
+    return ultima?.version ?? 0;
   }
 
   async buscarPublicadoPersonalizado(
@@ -303,7 +328,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
         }
       });
     } catch (error: unknown) {
-      this.traducirErrorFlujo(error);
+      this.traducirErrorFlujo(error, flujos.at(-1)?.modalidad);
     }
   }
 
@@ -338,7 +363,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
         );
       });
     } catch (error: unknown) {
-      this.traducirErrorFlujo(error);
+      this.traducirErrorFlujo(error, arbol.flujo.modalidad);
     }
   }
 
@@ -584,11 +609,25 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
 
   // ── Traducción de errores de base de datos ───────────────────────────────
 
-  private traducirErrorFlujo(error: unknown): never {
+  private traducirErrorFlujo(
+    error: unknown,
+    modalidad?: ModalidadConversacional,
+  ): never {
     if (error instanceof HttpException || error instanceof DomainException)
       throw error;
     if (this.esErrorPrisma(error, 'P2002')) {
       const detalle = this.obtenerDetalle(error);
+      // RF-43: índices parciales del flujo SOS (versión y único publicado).
+      if (modalidad === ModalidadConversacional.SOS) {
+        if (detalle.includes('uq_flujo_publicado_sos'))
+          throw new FlujoPublicadoUnicoExistenteException('SOS');
+        if (
+          detalle.includes('uq_flujo_version_sos') ||
+          detalle.includes('version')
+        )
+          throw new VersionSosDuplicadaException();
+        throw new FlujoPublicadoUnicoExistenteException('SOS');
+      }
       if (detalle.includes('uq_flujo_version_personalizada')) {
         throw new VersionPersonalizadaDuplicadaException();
       }
@@ -596,7 +635,7 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
         detalle.includes('uq_flujo_publicado_grupal') ||
         (detalle.includes('modalidad') && !detalle.includes('tipo_dependencia'))
       ) {
-        throw new FlujoGrupalPublicadoExistenteException();
+        throw new FlujoPublicadoUnicoExistenteException();
       }
       throw new FlujoPersonalizadoPublicadoExistenteException();
     }

@@ -31,6 +31,8 @@ import { ArchivarFlujoUseCase } from '../../../application/use-cases/arbol-conve
 import { ClonarVersionFlujoUseCase } from '../../../application/use-cases/arbol-conversacional/clonar-version-flujo.use-case';
 import { ConsultarArbolConversacionalUseCase } from '../../../application/use-cases/arbol-conversacional/consultar-arbol-conversacional.use-case';
 import { CrearFlujoConversacionalUseCase } from '../../../application/use-cases/arbol-conversacional/crear-flujo-conversacional.use-case';
+import { CrearFlujoSosUseCase } from '../../../application/use-cases/arbol-conversacional/crear-flujo-sos.use-case';
+import { CrearFlujoSosDtoRequest } from '../../../application/dto/sos/crear-flujo-sos.dto-request';
 import { ListarFlujosUseCase } from '../../../application/use-cases/arbol-conversacional/listar-flujos.use-case';
 import { PublicarFlujoUseCase } from '../../../application/use-cases/arbol-conversacional/publicar-flujo.use-case';
 import { ValidarArbolConversacionalUseCase } from '../../../application/use-cases/arbol-conversacional/validar-arbol-conversacional.use-case';
@@ -44,6 +46,7 @@ import { RespuestaHttp } from '../../interceptors/respuesta-http.interceptor';
 export class FlujosConversacionalesController {
   constructor(
     private readonly crearFlujo: CrearFlujoConversacionalUseCase,
+    private readonly crearFlujoSos: CrearFlujoSosUseCase,
     private readonly listarFlujos: ListarFlujosUseCase,
     private readonly consultarArbol: ConsultarArbolConversacionalUseCase,
     private readonly validarArbol: ValidarArbolConversacionalUseCase,
@@ -68,6 +71,20 @@ export class FlujosConversacionalesController {
     @IdUsuarioSesion() idUsuario: string,
   ): Promise<FlujoConversacionalDtoResponse> {
     return this.crearFlujo.execute(dto, idUsuario);
+  }
+
+  /**
+   * RF-43: borrador del flujo SOS (siguiente versión). Nodos, transiciones,
+   * publicación, clonación y archivado usan las rutas generales.
+   */
+  @Post('/admin/flujos-sos')
+  @UseGuards(CsrfSessionGuard)
+  @RespuestaHttp({ envolver: true })
+  crearSos(
+    @Body() dto: CrearFlujoSosDtoRequest,
+    @IdUsuarioSesion() idUsuario: string,
+  ): Promise<FlujoConversacionalDtoResponse> {
+    return this.crearFlujoSos.execute(dto, idUsuario);
   }
 
   @Get('/admin/flujos/:id_flujo')

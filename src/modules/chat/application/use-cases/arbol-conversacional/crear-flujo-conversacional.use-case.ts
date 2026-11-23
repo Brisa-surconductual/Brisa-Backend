@@ -5,14 +5,20 @@ import { ArbolConversacionalRepository } from '../../../domain/repositories/arbo
 import { FlujoConversacionalDtoResponse } from '../../dto/arbol-conversacional.dto-response';
 import { CrearFlujoConversacionalDtoRequest } from '../../dto/chat-admin.dto-request';
 import { ejecutarSeguro } from '../../support/ejecutar-seguro';
+import { CrearFlujoSinPerfilService } from '../../services/crear-flujo-sin-perfil.service';
+import { ModalidadSosRutaPropiaException } from '../../../domain/exceptions';
 
 /**
  * RF-25 / RF-25C: crea un flujo en borrador. El grupal nace en versión 1; el
  * personalizado recibe la siguiente versión de su combinación de perfil clínico.
+ * El SOS (RF-43) se crea con CrearFlujoSosUseCase.
  */
 @Injectable()
 export class CrearFlujoConversacionalUseCase {
-  constructor(private readonly repository: ArbolConversacionalRepository) {}
+  constructor(
+    private readonly repository: ArbolConversacionalRepository,
+    private readonly sinPerfil: CrearFlujoSinPerfilService,
+  ) {}
 
   execute(
     dto: CrearFlujoConversacionalDtoRequest,
@@ -21,15 +27,22 @@ export class CrearFlujoConversacionalUseCase {
     return ejecutarSeguro(async () => {
       const nombre = dto.nombre.trim();
 
+      // RF-43: el flujo SOS tiene su propia ruta (POST /chat/admin/flujos-sos).
+      if (dto.modalidad === ModalidadConversacional.SOS)
+        throw new ModalidadSosRutaPropiaException();
+
       if (dto.modalidad === ModalidadConversacional.GRUPAL) {
         if (dto.tipo_dependencia != null || dto.tipo_craving != null) {
           throw new BadRequestException(
             'El perfil clínico solo aplica a la modalidad PERSONALIZADA.',
           );
         }
-        const grupal = FlujoConversacional.crearGrupal(nombre, 1, idActor);
-        await this.repository.guardarFlujo(grupal, idActor);
-        return FlujoConversacionalDtoResponse.crear(grupal);
+        return this.sinPerfil.crear(
+          ModalidadConversacional.GRUPAL,
+          nombre,
+          1,
+          idActor,
+        );
       }
 
       FlujoConversacional.validarPerfil(dto.tipo_dependencia, dto.tipo_craving);

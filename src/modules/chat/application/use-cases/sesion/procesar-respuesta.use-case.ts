@@ -4,6 +4,10 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { DomainException } from '../../../domain/exceptions/domain.exception';
+import {
+  IntervencionSosFinalizadaException,
+  TiempoSosAgotadoException,
+} from '../../../domain/exceptions/sos.exceptions';
 import { NodoConversacional } from '../../../domain/entities/flujo/nodo-conversacional.entity';
 import {
   ElementoEtiquetado,
@@ -72,6 +76,14 @@ export class ProcesarRespuestaUseCase {
               'ID_INTERACCION_REUTILIZADA',
             );
           return recuperarResultadoRespuesta(anterior.resultado, idInteraccion);
+        }
+        // RF-43: la sesión SOS solo se responde dentro de los 60 s de su
+        // intervención, medidos por el reloj del servidor.
+        if (sesion.esSos) {
+          const sos = await tx.contexto.estadoIntervencionSos(idSesion);
+          if (sos === null || !sos.enCurso)
+            throw new IntervencionSosFinalizadaException();
+          if (sos.vencida) throw new TiempoSosAgotadoException();
         }
         if (sesion.estadoActual !== 'ACTIVA')
           throw new ConflictoRespuestaConversacionalException(

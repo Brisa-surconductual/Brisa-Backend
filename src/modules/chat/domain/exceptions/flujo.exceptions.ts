@@ -1,4 +1,5 @@
 import type { DiagnosticoCapturaPerfil } from '../results/diagnostico-captura-perfil';
+import type { DiagnosticoRestriccionesSos } from '../results/diagnostico-restricciones-sos';
 import type { DimensionPerfilClinico } from '../enums/perfil-clinico.enum';
 import { DomainException } from './domain.exception';
 
@@ -86,6 +87,15 @@ export class VersionPersonalizadaDuplicadaException extends DomainException {
   }
 }
 
+/** RF-43: versión SOS ocupada (índice `uq_flujo_version_sos`). */
+export class VersionSosDuplicadaException extends DomainException {
+  readonly tipo = 'CONFLICTO';
+
+  constructor() {
+    super('Ya existe esa versión del flujo SOS.');
+  }
+}
+
 export class FlujoPersonalizadoPublicadoExistenteException extends DomainException {
   readonly tipo = 'CONFLICTO';
 
@@ -106,11 +116,47 @@ export class EliminacionArbolPersonalizadoProhibidaException extends DomainExcep
   }
 }
 
-export class FlujoGrupalPublicadoExistenteException extends DomainException {
+/**
+ * GRUPAL y SOS admiten un único flujo publicado (RF-25 / RF-43). Para GRUPAL
+ * conserva el mensaje histórico.
+ */
+export class FlujoPublicadoUnicoExistenteException extends DomainException {
   readonly tipo = 'CONFLICTO';
 
+  constructor(modalidad: 'GRUPAL' | 'SOS' = 'GRUPAL') {
+    super(
+      modalidad === 'SOS'
+        ? 'Ya existe un flujo conversacional SOS publicado.'
+        : 'Ya existe un flujo conversacional grupal publicado.',
+    );
+  }
+}
+
+/**
+ * RF-43: el flujo SOS es de nodos fijos e independiente del cronograma y del
+ * perfil clínico.
+ */
+export class FlujoSosInvalidoException extends DomainException {
+  readonly tipo = 'NO_PROCESABLE';
+
+  constructor(readonly detalles: DiagnosticoRestriccionesSos) {
+    super(
+      'El flujo SOS no puede capturar perfil clínico ni ligar nodos a contenido del cronograma.',
+      'FLUJO_SOS_INVALIDO',
+      detalles,
+    );
+  }
+}
+
+/** RF-43: la creación genérica no admite SOS; tiene su propia ruta. */
+export class ModalidadSosRutaPropiaException extends DomainException {
+  readonly tipo = 'SOLICITUD_INVALIDA';
+
   constructor() {
-    super('Ya existe un flujo conversacional grupal publicado.');
+    super(
+      'Los flujos SOS se crean con POST /chat/admin/flujos-sos.',
+      'MODALIDAD_SOS_RUTA_PROPIA',
+    );
   }
 }
 

@@ -33,6 +33,18 @@ export class SesionNoReanudableException extends DomainException {
   }
 }
 
+/** RF-31 / RF-43: solo una sesión ACTIVA puede pasar a PAUSADA. */
+export class SesionNoPausableException extends DomainException {
+  readonly tipo = 'CONFLICTO';
+
+  constructor() {
+    super(
+      'La sesión conversacional no se puede pausar en su estado actual.',
+      'SESION_NO_PAUSABLE',
+    );
+  }
+}
+
 export class EstadoSesionInconsistenteException extends DomainException {
   readonly tipo = 'CONFLICTO';
 

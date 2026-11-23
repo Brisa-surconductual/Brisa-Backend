@@ -26,6 +26,7 @@ export function transaccionRespuestaPrueba() {
   return {
     contexto: {
       bloquearSesion: jest.fn().mockResolvedValue(sesion),
+      estadoIntervencionSos: jest.fn().mockResolvedValue(null),
       buscarNodo: jest.fn().mockImplementation((id: string) =>
         Promise.resolve(
           nodoRespuesta(

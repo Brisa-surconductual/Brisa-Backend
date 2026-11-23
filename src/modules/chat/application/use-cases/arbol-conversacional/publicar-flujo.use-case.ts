@@ -3,11 +3,14 @@ import { ModalidadConversacional } from '../../../domain/enums/modalidad-convers
 import {
   CoberturaTransicionesIncompletaException,
   FlujoConversacionalNoEncontradoException,
-  FlujoGrupalPublicadoExistenteException,
   FlujoPersonalizadoArchivadoException,
+  FlujoPublicadoUnicoExistenteException,
+  FlujoSosInvalidoException,
   GrafoInvalidoException,
   NodoCapturaPerfilInvalidoException,
 } from '../../../domain/exceptions';
+import { ArbolConversacional } from '../../../domain/entities/flujo/arbol-conversacional.entity';
+import { ModalidadSinPerfil } from '../../../domain/entities/flujo/flujo-conversacional.entity';
 import { ArbolConversacionalRepository } from '../../../domain/repositories/arbol-conversacional.repository';
 import { FlujoConversacionalDtoResponse } from '../../dto/arbol-conversacional.dto-response';
 import { ejecutarSeguro } from '../../support/ejecutar-seguro';
@@ -17,7 +20,8 @@ import { VariableNodoService } from '../../services/variable-nodo.service';
  * RF-25 / RF-25C: publica un borrador cuya estructura sea válida (un nodo
  * inicial, un nodo final, sin huérfanos, callejones ni ciclos).
  * En modalidad personalizada archiva automáticamente el publicado anterior de
- * la misma combinación de perfil; en grupal solo puede haber un publicado.
+ * la misma combinación de perfil; en grupal y SOS (RF-43) solo puede haber
+ * un publicado por modalidad.
  */
 @Injectable()
 export class PublicarFlujoUseCase {
@@ -75,20 +79,41 @@ export class PublicarFlujoUseCase {
           idActor,
         );
       } else {
-        const diagnosticoPerfil = arbol.diagnosticarCapturaPerfil();
-        if (
-          diagnosticoPerfil.dimensiones_ausentes.length > 0 ||
-          diagnosticoPerfil.dimensiones_duplicadas.length > 0 ||
-          diagnosticoPerfil.dimensiones_valores_invalidos.length > 0 ||
-          diagnosticoPerfil.dimensiones_valores_faltantes.length > 0
-        )
-          throw new NodoCapturaPerfilInvalidoException(diagnosticoPerfil);
-        if ((await this.repository.buscarPublicadoGrupal()) !== null) {
-          throw new FlujoGrupalPublicadoExistenteException();
+        // GRUPAL y SOS: sin perfil clínico y con un único publicado.
+        const modalidad = publicado.modalidad as ModalidadSinPerfil;
+        if (modalidad === ModalidadConversacional.SOS) {
+          this.validarRestriccionesSos(arbol);
+        } else {
+          this.validarCapturaPerfil(arbol);
+        }
+        if ((await this.repository.buscarPublicadoUnico(modalidad)) !== null) {
+          throw new FlujoPublicadoUnicoExistenteException(modalidad);
         }
         await this.repository.guardarFlujo(publicado, idActor);
       }
       return FlujoConversacionalDtoResponse.crear(publicado);
     });
+  }
+
+  /** RF-25 / RF-27B: el árbol grupal captura cada dimensión del perfil. */
+  private validarCapturaPerfil(arbol: ArbolConversacional): void {
+    const diagnostico = arbol.diagnosticarCapturaPerfil();
+    if (
+      diagnostico.dimensiones_ausentes.length > 0 ||
+      diagnostico.dimensiones_duplicadas.length > 0 ||
+      diagnostico.dimensiones_valores_invalidos.length > 0 ||
+      diagnostico.dimensiones_valores_faltantes.length > 0
+    )
+      throw new NodoCapturaPerfilInvalidoException(diagnostico);
+  }
+
+  /** RF-43: nodos fijos, sin captura de perfil ni contenido del cronograma. */
+  private validarRestriccionesSos(arbol: ArbolConversacional): void {
+    const diagnostico = arbol.diagnosticarRestriccionesSos();
+    if (
+      diagnostico.nodos_con_captura_perfil.length > 0 ||
+      diagnostico.nodos_con_contenido_cronograma.length > 0
+    )
+      throw new FlujoSosInvalidoException(diagnostico);
   }
 }

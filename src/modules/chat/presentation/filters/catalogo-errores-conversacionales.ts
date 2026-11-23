@@ -55,6 +55,14 @@ const MENSAJES: Readonly<Record<string, string>> = {
   SIN_CRONOGRAMA: 'Necesitas un cronograma asignado para entrar al chat.',
   LIMITE_REPORTES:
     'Has enviado varios reportes en poco tiempo. Espera un momento para volver a intentarlo.',
+  // RF-43: protocolo SOS. Tono calmado, sin alarmar.
+  SIN_FLUJO_SOS:
+    'En este momento no podemos mostrarte el ejercicio. Si lo necesitas, comunícate con una línea de ayuda.',
+  INTERVENCION_EN_CURSO: 'Ya estás en un ejercicio de calma. Continuemos.',
+  INTERVENCION_NO_ENCONTRADA: 'No encontramos este ejercicio de calma.',
+  INTERVENCION_FINALIZADA: 'Este ejercicio de calma ya terminó.',
+  TIEMPO_AGOTADO:
+    'El ejercicio de calma terminó. Puedes revisar las líneas de ayuda o volver a lo que estabas haciendo.',
 };
 
 const MENSAJES_HTTP: Readonly<Partial<Record<number, string>>> = {

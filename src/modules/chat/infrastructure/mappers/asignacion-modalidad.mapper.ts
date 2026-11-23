@@ -4,6 +4,7 @@ import { Rol } from '../../../usuarios/domain/enums/rol.enum';
 import { AsignacionModalidad } from '../../domain/entities/modalidad/asignacion-modalidad.entity';
 import { AsignacionModalidadVigente } from '../../domain/entities/modalidad/asignacion-modalidad-vigente';
 import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
+import { modalidadPrisma } from './modalidad-prisma';
 
 /** Columnas que se leen de cada asignación vigente, con los datos de su usuario. */
 export const ASIGNACION_VIGENTE_SELECT = {
@@ -50,7 +51,7 @@ export class AsignacionModalidadMapper {
     return {
       id_tipo_terapia: asignacion.idAsignacion,
       id_usuario: asignacion.idUsuario,
-      modalidad: asignacion.modalidad,
+      modalidad: modalidadPrisma(asignacion.modalidad),
       fecha_vigencia_desde: asignacion.fechaVigenciaDesde,
       administrador_responsable: asignacion.administradorResponsable,
     };

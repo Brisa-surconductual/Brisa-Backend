@@ -8,11 +8,15 @@ import {
 import { PerfilClinicoArbolInvalidoException } from '../../../domain/exceptions';
 import { PersistenciaArbolConversacionalException } from '../../exceptions/persistencia-arbol-conversacional.exception';
 import { ids, repositorioSimulado } from '../../support/testing/arbol-fixtures';
+import { CrearFlujoSinPerfilService } from '../../services/crear-flujo-sin-perfil.service';
 import { CrearFlujoConversacionalUseCase } from './crear-flujo-conversacional.use-case';
 
 describe('CrearFlujoConversacionalUseCase (RF-25 / RF-25C)', () => {
   const repository = repositorioSimulado();
-  const useCase = new CrearFlujoConversacionalUseCase(repository);
+  const useCase = new CrearFlujoConversacionalUseCase(
+    repository,
+    new CrearFlujoSinPerfilService(repository),
+  );
 
   beforeEach(() => jest.resetAllMocks());
 
