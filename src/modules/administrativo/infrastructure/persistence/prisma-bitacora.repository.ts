@@ -28,12 +28,13 @@ export class PrismaBitacoraRepository implements BitacoraRepository {
     await tx.$executeRaw`
       INSERT INTO administrativo.bitacora_auditoria (
         id_auditoria, id_usuario_administrativo, id_sesion, accion, recurso_afectado,
-        id_recurso, direccion_ip, marca_temporal, estado_accion, registrado_diferido
+        id_recurso, direccion_ip, marca_temporal, estado_accion, registrado_diferido, detalle
       ) VALUES (
         ${registro.id_auditoria}::uuid, ${registro.idUsuario}::uuid, ${registro.idSesion}::uuid,
         ${registro.accion}::administrativo.accion_admin_enum, ${registro.recurso_afectado},
         ${registro.id_recurso}::uuid, ${registro.direccionIp}, ${registro.marca_temporal}::timestamptz,
-        ${registro.estado_accion}::administrativo.estado_accion_enum, ${diferido}
+        ${registro.estado_accion}::administrativo.estado_accion_enum, ${diferido},
+        ${JSON.stringify(registro.detalle ?? {})}::jsonb
       ) ${conflicto}
     `;
   }

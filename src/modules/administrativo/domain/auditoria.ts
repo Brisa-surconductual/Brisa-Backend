@@ -2,7 +2,8 @@ export type AccionAdministrativa =
   | 'ACCESO_MODULO'
   | 'CONSULTA_PARTICIPANTE'
   | 'EXPORTACION_DATOS'
-  | 'CONFIGURACION_UMBRALES';
+  | 'CONFIGURACION_UMBRALES'
+  | 'INTENTO_ESCRITURA_BLOQUEADO';
 
 export type EstadoAccion = 'EXITOSA' | 'FALLIDA' | 'DENEGADA';
 
@@ -12,10 +13,16 @@ export interface ContextoAuditoria {
   direccionIp: string;
 }
 
+interface DetalleAuditoria {
+  metodo: string;
+  uri: string;
+}
+
 export interface AccionAuditable {
   accion: AccionAdministrativa;
   recurso: string;
   idRecurso?: string | null;
+  detalle?: DetalleAuditoria;
 }
 
 export interface EventoAuditoria extends AccionAuditable {
@@ -30,6 +37,7 @@ export interface RegistroAuditoria extends ContextoAuditoria {
   id_recurso: string | null;
   marca_temporal: string;
   estado_accion: EstadoAccion;
+  detalle?: DetalleAuditoria;
 }
 
 export interface EntradaBitacora {
