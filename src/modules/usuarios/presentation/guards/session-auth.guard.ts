@@ -12,6 +12,7 @@ import { SessionCookieConfig } from '../../application/ports/session-cookie-conf
 import { SessionTokenHasher } from '../../application/ports/session-token-hasher';
 import { EstadoCuenta } from '../../domain/enums/estado-cuenta';
 import { AuthenticatedSessionRequest } from '../http/authenticated-session-request';
+import type { Request } from 'express';
 
 @Injectable()
 export class SessionAuthGuard implements CanActivate {
@@ -27,6 +28,28 @@ export class SessionAuthGuard implements CanActivate {
     const request = context
       .switchToHttp()
       .getRequest<AuthenticatedSessionRequest>();
+    const { sesion, usuario, ahora } = await this.validarSesion(request, true);
+    const actualizada = await this.sesionRepository.registrarActividad(
+      sesion.id_sesion,
+      ahora,
+      sesion.estado_aplicacion,
+    );
+    if (!actualizada) {
+      throw new SesionNoActivaException();
+    }
+
+    request.autenticacion = { sesion, usuario };
+    return true;
+  }
+
+  async verificarSinRegistrarActividad(
+    request: Request,
+  ): Promise<AuthenticatedSessionRequest['autenticacion']> {
+    const { sesion, usuario } = await this.validarSesion(request, false);
+    return { sesion, usuario };
+  }
+
+  private async validarSesion(request: Request, cerrarSiExpirada: boolean) {
     const token = this.obtenerToken(request);
     const tokenHash = await this.sessionTokenHasher.hash(token);
     const sesion =
@@ -43,16 +66,18 @@ export class SessionAuthGuard implements CanActivate {
     );
 
     if (motivoExpiracion !== null) {
-      await this.sesionRepository.cerrarActiva(
-        sesion.id_sesion,
-        ahora,
-        motivoExpiracion,
-      );
+      if (cerrarSiExpirada) {
+        await this.sesionRepository.cerrarActiva(
+          sesion.id_sesion,
+          ahora,
+          motivoExpiracion,
+        );
+      }
       throw new SesionNoActivaException();
     }
 
     const usuario = await this.usuarioRepository.buscarPorId(sesion.id_usuario);
-    if (!usuario || String(usuario.estadoCuenta) !== EstadoCuenta.ACTIVA) {
+    if (!usuario || usuario.estadoCuenta !== EstadoCuenta.ACTIVA) {
       throw new SesionNoActivaException();
     }
 
@@ -63,20 +88,10 @@ export class SessionAuthGuard implements CanActivate {
       );
     }
 
-    const actualizada = await this.sesionRepository.registrarActividad(
-      sesion.id_sesion,
-      ahora,
-      sesion.estado_aplicacion,
-    );
-    if (!actualizada) {
-      throw new SesionNoActivaException();
-    }
-
-    request.autenticacion = { sesion, usuario };
-    return true;
+    return { sesion, usuario, ahora };
   }
 
-  private obtenerToken(request: AuthenticatedSessionRequest): string {
+  private obtenerToken(request: Request): string {
     const nombreCookie = this.cookieConfig.obtenerNombreCookie();
     const token = request.cookies?.[nombreCookie] as unknown;
 

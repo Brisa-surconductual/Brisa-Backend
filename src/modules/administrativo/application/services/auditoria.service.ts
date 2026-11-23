@@ -51,6 +51,7 @@ export class AuditoriaService {
       id_recurso: evento.idRecurso ?? null,
       marca_temporal: new Date().toISOString(),
       estado_accion: evento.estado,
+      ...(evento.detalle && { detalle: evento.detalle }),
     };
 
     try {
