@@ -6,8 +6,29 @@ import {
   HistorialInteraccionesRepository,
   InteraccionRegistrada,
   PaginaHistorialInteracciones,
+  RegistroTrazabilidad,
 } from '../../domain/repositories/historial-interacciones.repository';
 import { validarHistorialSesion } from './prisma-validar-historial-sesion';
+
+const SELECCION_INTERACCION = {
+  id_interaccion: true,
+  secuencia: true,
+  timestamp_interaccion: true,
+  id_nodo: true,
+  historial_nodos: { select: { id_nodo_destino: true } },
+  respuestas: {
+    where: { es_valida: true },
+    take: 1,
+    select: {
+      valor_respuesta: true,
+      tipo_entrada: { select: { nombre: true } },
+    },
+  },
+} satisfies Prisma.interaccionesSelect;
+
+type FilaInteraccion = Prisma.interaccionesGetPayload<{
+  select: typeof SELECCION_INTERACCION;
+}>;
 
 /**
  * RF-31 / RF-32: lee `chat.interacciones` con su respuesta válida. Usa la clave
@@ -39,39 +60,75 @@ export class PrismaHistorialInteraccionesRepository implements HistorialInteracc
       orderBy: { secuencia: 'desc' },
       // Una fila extra indica si quedan interacciones más antiguas.
       take: limite + 1,
-      select: {
-        id_interaccion: true,
-        secuencia: true,
-        timestamp_interaccion: true,
-        id_nodo: true,
-        historial_nodos: { select: { id_nodo_destino: true } },
-        respuestas: {
-          where: { es_valida: true },
-          take: 1,
-          select: {
-            valor_respuesta: true,
-            tipo_entrada: { select: { nombre: true } },
-          },
-        },
-      },
+      select: SELECCION_INTERACCION,
     });
 
     const pagina = filas.slice(0, limite).reverse();
-    const sinVinculo = pagina
+    const registros = await this.mapear(tx, pagina, false);
+    if (registros === null) return null;
+    const interacciones: InteraccionRegistrada[] = [];
+    for (const registro of registros) {
+      // RF-31: cada paso del historial del estudiante tiene destino comprobable.
+      if (registro.idNodoDestino === null) return null;
+      interacciones.push({
+        ...registro,
+        idNodoDestino: registro.idNodoDestino,
+      });
+    }
+    return { hayMas: filas.length > limite, interacciones };
+  }
+
+  /**
+   * Trazabilidad: la secuencia completa en orden ascendente, en una lectura
+   * consistente. Una fila de historial con destino NULL es el fin del flujo.
+   */
+  consultarCompleta(idSesion: string): Promise<RegistroTrazabilidad[] | null> {
+    return this.prisma.$transaction(
+      async (tx) => {
+        if (!(await validarHistorialSesion(tx, idSesion))) return null;
+        const filas = await tx.interacciones.findMany({
+          where: { id_sesion: idSesion },
+          orderBy: { secuencia: 'asc' },
+          select: SELECCION_INTERACCION,
+        });
+        return this.mapear(tx, filas, true);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
+
+  /**
+   * Une cada interacción con su respuesta válida y su destino. Devuelve null
+   * si a una le falta la respuesta o un destino comprobable. Con
+   * `finSinDestino`, una fila de historial con destino NULL vale como fin.
+   */
+  private async mapear(
+    tx: Prisma.TransactionClient,
+    filas: FilaInteraccion[],
+    finSinDestino: boolean,
+  ): Promise<RegistroTrazabilidad[] | null> {
+    const sinVinculo = filas
       .filter((fila) => fila.historial_nodos === null)
       .map((fila) => fila.id_interaccion);
     const destinosHistoricos = await this.buscarDestinosSinVinculo(
       tx,
       sinVinculo,
     );
-    const interacciones: InteraccionRegistrada[] = [];
-    for (const fila of pagina) {
+    const registros: RegistroTrazabilidad[] = [];
+    for (const fila of filas) {
       const respuesta = fila.respuestas[0];
-      const idNodoDestino =
-        fila.historial_nodos?.id_nodo_destino ??
-        destinosHistoricos.get(fila.id_interaccion);
-      if (respuesta === undefined || idNodoDestino === undefined) return null;
-      interacciones.push({
+      if (respuesta === undefined) return null;
+      const vinculado = fila.historial_nodos;
+      let idNodoDestino: string | null | undefined;
+      if (vinculado === null) {
+        idNodoDestino = destinosHistoricos.get(fila.id_interaccion);
+      } else if (vinculado.id_nodo_destino !== null) {
+        idNodoDestino = vinculado.id_nodo_destino;
+      } else {
+        idNodoDestino = finSinDestino ? null : undefined;
+      }
+      if (idNodoDestino === undefined) return null;
+      registros.push({
         idInteraccion: fila.id_interaccion,
         secuencia: fila.secuencia,
         timestampInteraccion: fila.timestamp_interaccion,
@@ -81,7 +138,7 @@ export class PrismaHistorialInteraccionesRepository implements HistorialInteracc
         valor: respuesta.valor_respuesta,
       });
     }
-    return { hayMas: filas.length > limite, interacciones };
+    return registros;
   }
 
   /** Los pasos previos al vínculo solo se recuperan con una coincidencia exacta y única. */

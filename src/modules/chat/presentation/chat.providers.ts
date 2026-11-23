@@ -12,6 +12,7 @@ import { RespuestasConversacionalesController } from './controllers/sesion/respu
 import { ErroresClienteChatController } from './controllers/sesion/errores-cliente-chat.controller';
 import { TaxonomiaVariablesController } from './controllers/taxonomia/taxonomia-variables.controller';
 import { SosController } from './controllers/sos/sos.controller';
+import { TrazabilidadSesionController } from './controllers/sesion/trazabilidad-sesion.controller';
 
 export const ChatPresentationProviders = [
   RespuestasConversacionalesController,
@@ -28,4 +29,5 @@ export const ChatPresentationProviders = [
   ArbolesPersonalizadosController,
   TaxonomiaVariablesController,
   SosController,
+  TrazabilidadSesionController,
 ];

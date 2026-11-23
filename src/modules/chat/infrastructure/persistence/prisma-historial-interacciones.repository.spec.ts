@@ -96,4 +96,56 @@ describe('PrismaHistorialInteraccionesRepository (RF-31 / RF-32)', () => {
       repositorio.consultar({ idSesion: 's', antesDe: null, limite: 20 }),
     ).resolves.toBeNull();
   });
+
+  describe('consultarCompleta (trazabilidad)', () => {
+    it('lee toda la sesión en orden ascendente, en lectura consistente', async () => {
+      findMany.mockResolvedValue([fila(1), fila(2), fila(3)]);
+
+      const r = await repositorio.consultarCompleta('s');
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id_sesion: 's' },
+          orderBy: { secuencia: 'asc' },
+        }),
+      );
+      expect((findMany.mock.calls[0] as unknown[])[0]).not.toHaveProperty(
+        'take',
+      );
+      expect($transaction).toHaveBeenCalledWith(expect.any(Function), {
+        isolationLevel: 'RepeatableRead',
+      });
+      expect(r?.map((i) => i.secuencia)).toEqual([1, 2, 3]);
+    });
+
+    it('un registro de historial sin destino es el fin del flujo', async () => {
+      findMany.mockResolvedValue([
+        fila(1),
+        { ...fila(2), historial_nodos: { id_nodo_destino: null } },
+      ]);
+
+      const r = await repositorio.consultarCompleta('s');
+
+      expect(r?.[1].idNodoDestino).toBeNull();
+    });
+
+    it('el historial del estudiante sigue tratando ese caso como inconsistente', async () => {
+      findMany.mockResolvedValue([
+        { ...fila(2), historial_nodos: { id_nodo_destino: null } },
+      ]);
+
+      await expect(
+        repositorio.consultar({ idSesion: 's', antesDe: null, limite: 20 }),
+      ).resolves.toBeNull();
+    });
+
+    it('devuelve null si la integridad falla o falta una respuesta', async () => {
+      $queryRaw.mockResolvedValueOnce([{ valido: false }]);
+      await expect(repositorio.consultarCompleta('s')).resolves.toBeNull();
+      expect(findMany).not.toHaveBeenCalled();
+
+      findMany.mockResolvedValue([{ ...fila(1), respuestas: [] }]);
+      await expect(repositorio.consultarCompleta('s')).resolves.toBeNull();
+    });
+  });
 });
