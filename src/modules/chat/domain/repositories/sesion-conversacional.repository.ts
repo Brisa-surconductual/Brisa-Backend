@@ -1,6 +1,51 @@
-import { SesionConversacional } from '../entities/sesion/sesion-conversacional.entity';
+import {
+  EstadoSesionConversacional,
+  SesionConversacional,
+} from '../entities/sesion/sesion-conversacional.entity';
+import { ModalidadConversacional } from '../enums/modalidad-conversacional-enum';
+
+/** RF-38 (M-8): resumen de una sesión para el listado administrativo. */
+export interface ResumenSesionConversacional {
+  idSesion: string;
+  /** Dueño de la sesión: solo para comprobar el aislamiento, nunca se expone. */
+  idUsuario: string;
+  modalidad: ModalidadConversacional;
+  estado: EstadoSesionConversacional;
+  fechaInicio: Date;
+  fechaUltimaInteraccion: Date;
+  /**
+   * `fecha_ultima_interaccion` con la precisión de la BD (microsegundos,
+   * ISO 8601 UTC): la usa el cursor para no perder ni repetir sesiones que
+   * comparten el mismo milisegundo.
+   */
+  marcaOrden: string;
+}
+
+/** Posición tras la cual continúa el listado (orden descendente). */
+export interface CursorSesionesParticipante {
+  fechaUltimaInteraccion: string;
+  idSesion: string;
+}
+
+export interface PaginaSesionesParticipante {
+  sesiones: ResumenSesionConversacional[];
+  /** Total de sesiones del participante, sin paginar. */
+  total: number;
+  hayMas: boolean;
+}
 
 export abstract class SesionConversacionalRepository {
+  /**
+   * RF-38 (M-8): sesiones de un usuario, de la última interacción más reciente
+   * a la más antigua; a igualdad de fecha, por `id_sesion` descendente. Solo
+   * lectura.
+   */
+  abstract listarPorUsuario(
+    idUsuario: string,
+    limite: number,
+    despuesDe: CursorSesionesParticipante | null,
+  ): Promise<PaginaSesionesParticipante>;
+
   /** Lectura administrativa (auditoría): cualquier sesión, sin filtrar dueño. */
   abstract buscarPorId(idSesion: string): Promise<SesionConversacional | null>;
 

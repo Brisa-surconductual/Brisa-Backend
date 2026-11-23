@@ -66,6 +66,8 @@ function contratoConversacional(
     if (/^\/chat\/sesiones\/[^/]+\/historial$/u.test(ruta)) return 'historial';
     if (/^\/chat\/admin\/sesiones\/[^/]+\/trazabilidad$/u.test(ruta))
       return 'trazabilidad';
+    if (/^\/chat\/admin\/participantes\/[^/]+\/sesiones$/u.test(ruta))
+      return 'trazabilidad';
   }
   return null;
 }

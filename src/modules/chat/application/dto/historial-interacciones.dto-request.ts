@@ -4,7 +4,7 @@ import { IsInt, Max, Min, ValidateIf } from 'class-validator';
 /** RF-32: «las últimas 20 interacciones», paginadas hacia atrás. */
 export const LIMITE_HISTORIAL_INTERACCIONES = 20;
 
-function enteroConsulta({ value }: { value: unknown }): unknown {
+export function enteroConsulta({ value }: { value: unknown }): unknown {
   if (typeof value !== 'string' || !/^\d+$/.test(value)) return value;
   const numero = Number(value);
   return Number.isSafeInteger(numero) ? numero : value;

@@ -1,3 +1,5 @@
+import { AuditoriaAdministrativaPort } from '../../../shared/application/ports/auditoria-administrativa.port';
+import { PrismaAuditoriaAdministrativaAdapter } from '../../../shared/infrastructure/persistence/prisma-auditoria-administrativa.adapter';
 import { SeudonimoParticipantePort } from '../application/ports/seudonimo-participante.port';
 import { PrismaSeudonimoParticipanteAdapter } from './persistence/prisma-seudonimo-participante.adapter';
 import { IntervencionSosPort } from '../application/ports/intervencion-sos.port';
@@ -60,6 +62,11 @@ export const ChatInfrastructureProviders = [
   {
     provide: SeudonimoParticipantePort,
     useClass: PrismaSeudonimoParticipanteAdapter,
+  },
+  // RF-123: bitácora administrativa (función existente, sin cambios de esquema).
+  {
+    provide: AuditoriaAdministrativaPort,
+    useClass: PrismaAuditoriaAdministrativaAdapter,
   },
   ExpirarIntervencionesSosCron,
   {
