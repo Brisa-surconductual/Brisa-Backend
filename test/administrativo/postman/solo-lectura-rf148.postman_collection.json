@@ -1,0 +1,384 @@
+{
+  "info": {
+    "name": "RF-148 · Solo lectura de datos de participantes",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Bloqueos",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403 y ErrorApi RF-148', () => {",
+              "  pm.response.to.have.status(403);",
+              "  const error = pm.response.json();",
+              "  pm.expect(error.status).to.eql(403);",
+              "  pm.expect(error.codigo).to.eql('ESCRITURA_NO_PERMITIDA');",
+              "  pm.expect(error.mensaje).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "Diario",
+          "item": [
+            {
+              "name": "POST",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/diario/entradas"
+              }
+            },
+            {
+              "name": "PUT",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/diario/entradas"
+              }
+            },
+            {
+              "name": "PATCH",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/diario/entradas"
+              }
+            },
+            {
+              "name": "DELETE",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/diario/entradas"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chat",
+          "item": [
+            {
+              "name": "POST",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/chat/sesiones/{{recursoChat}}/respuestas"
+              }
+            },
+            {
+              "name": "PUT",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/chat/sesiones/{{recursoChat}}/respuestas"
+              }
+            },
+            {
+              "name": "PATCH",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/chat/sesiones/{{recursoChat}}/respuestas"
+              }
+            },
+            {
+              "name": "DELETE",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/chat/sesiones/{{recursoChat}}/respuestas"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seguimiento",
+          "item": [
+            {
+              "name": "POST",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/seguimiento/participantes"
+              }
+            },
+            {
+              "name": "PUT",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/seguimiento/participantes"
+              }
+            },
+            {
+              "name": "PATCH",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/seguimiento/participantes"
+              }
+            },
+            {
+              "name": "DELETE",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/seguimiento/participantes"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gamificación",
+          "item": [
+            {
+              "name": "POST",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/gamificacion/progreso"
+              }
+            },
+            {
+              "name": "PUT",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/gamificacion/progreso"
+              }
+            },
+            {
+              "name": "PATCH",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/gamificacion/progreso"
+              }
+            },
+            {
+              "name": "DELETE",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/gamificacion/progreso"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notificaciones",
+          "item": [
+            {
+              "name": "POST",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/notificaciones/preferencias"
+              }
+            },
+            {
+              "name": "PUT",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/notificaciones/preferencias"
+              }
+            },
+            {
+              "name": "PATCH",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/notificaciones/preferencias"
+              }
+            },
+            {
+              "name": "DELETE",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+                "url": "{{baseUrl}}/notificaciones/preferencias"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Consultas inválidas",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400 para un GET con datos de escritura', () => {",
+              "  pm.response.to.have.status(400);",
+              "  pm.expect(pm.response.json()).to.include({ status: 400, codigo: 'PARAMETRO_INVALIDO' });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "GET con parámetro override",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+            "url": "{{baseUrl}}/chat/admin/sesiones/{{recursoChat}}/trazabilidad?override=true"
+          }
+        },
+        {
+          "name": "GET con cuerpo",
+          "protocolProfileBehavior": { "disableBodyPruning": true },
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/chat/admin/sesiones/{{recursoChat}}/trazabilidad",
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Regresiones",
+      "item": [
+        {
+          "name": "El administrador consulta la trazabilidad de la sesión de Chat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+            "url": "{{baseUrl}}/chat/admin/sesiones/{{recursoChat}}/trazabilidad"
+          }
+        },
+        {
+          "name": "La configuración de Chat conserva su guarda CSRF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Se conserva el control de acceso original', () => pm.expect(pm.response.json().codigo).not.to.eql('ESCRITURA_NO_PERMITIDA'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" }],
+            "url": "{{baseUrl}}/chat/admin/flujos"
+          }
+        },
+        {
+          "name": "El administrador puede crear un borrador de configuración con CSRF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 201', () => pm.expect(pm.response.code, pm.response.text()).to.eql(201));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Cookie", "value": "{{nombreCookie}}={{tokenAdmin}}" },
+              { "key": "X-CSRF-Token", "value": "{{csrfAdmin}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/chat/admin/flujos",
+            "body": { "mode": "raw", "raw": "{\"nombre\":\"RF-148 {{recursoChat}}\",\"modalidad\":\"GRUPAL\"}" }
+          }
+        },
+        {
+          "name": "La petición sin cookie conserva el 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Se conserva el control de acceso original', () => pm.expect(pm.response.json().codigo).not.to.eql('ESCRITURA_NO_PERMITIDA'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/chat/sesiones/iniciar"
+          }
+        },
+        {
+          "name": "El estudiante llega a la validación del controlador aunque envíe X-Role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422 al validar la respuesta incompleta', () => {",
+                  "  pm.response.to.have.status(422);",
+                  "  pm.expect(pm.response.json().codigo).to.eql('INTERACCION_INCOMPLETA');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "{{nombreCookie}}={{tokenEstudiante}}"
+              },
+              {
+                "key": "X-Role",
+                "value": "ADMINISTRATIVO"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfEstudiante}}"
+              }
+            ],
+            "url": "{{baseUrl}}/chat/sesiones/{{recursoChat}}/respuestas",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
