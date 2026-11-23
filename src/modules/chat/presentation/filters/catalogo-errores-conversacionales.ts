@@ -6,6 +6,7 @@ export const MENSAJE_RECUPERACION =
 
 const MENSAJES: Readonly<Record<string, string>> = {
   NO_AUTENTICADO: 'Inicia sesión para continuar con la conversación.',
+  NO_AUTORIZADO: 'Tu cuenta no tiene permiso para consultar esta información.',
   CSRF_INVALIDO: 'Actualiza la página e inténtalo de nuevo.',
   PARAMETRO_INVALIDO: 'Revisa los datos de la solicitud e inténtalo de nuevo.',
   INTERACCION_INCOMPLETA:

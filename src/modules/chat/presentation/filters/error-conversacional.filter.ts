@@ -30,7 +30,8 @@ type Contrato =
   | 'nodo-actual'
   | 'historial'
   | 'errores-cliente'
-  | 'sos';
+  | 'sos'
+  | 'trazabilidad';
 
 const CAMPOS_RESPUESTA = new Set([
   'valor',
@@ -63,6 +64,8 @@ function contratoConversacional(
     if (/^\/chat\/sesiones\/[^/]+\/nodo-actual$/u.test(ruta))
       return 'nodo-actual';
     if (/^\/chat\/sesiones\/[^/]+\/historial$/u.test(ruta)) return 'historial';
+    if (/^\/chat\/admin\/sesiones\/[^/]+\/trazabilidad$/u.test(ruta))
+      return 'trazabilidad';
   }
   return null;
 }
@@ -146,6 +149,18 @@ export class ErrorConversacionalFilter implements ExceptionFilter {
 
     let codigo = esCodigoConversacional(codigoInterno) ? codigoInterno : null;
     if (error instanceof CsrfTokenInvalidoException) codigo = 'CSRF_INVALIDO';
+    else if (
+      codigo === null &&
+      statusCode === 403 &&
+      contrato === 'trazabilidad'
+    )
+      codigo = 'NO_AUTORIZADO';
+    else if (
+      codigo === null &&
+      statusCode === 401 &&
+      contrato === 'trazabilidad'
+    )
+      codigo = 'NO_AUTENTICADO';
     else if (codigo === null && statusCode === 401 && contrato === 'respuestas')
       codigo = 'NO_AUTENTICADO';
     else if (
@@ -153,7 +168,8 @@ export class ErrorConversacionalFilter implements ExceptionFilter {
       statusCode === 400 &&
       (contrato === 'historial' ||
         contrato === 'errores-cliente' ||
-        contrato === 'sos')
+        contrato === 'sos' ||
+        contrato === 'trazabilidad')
     )
       codigo = 'PARAMETRO_INVALIDO';
     else if (

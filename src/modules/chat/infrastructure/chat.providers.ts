@@ -1,3 +1,5 @@
+import { SeudonimoParticipantePort } from '../application/ports/seudonimo-participante.port';
+import { PrismaSeudonimoParticipanteAdapter } from './persistence/prisma-seudonimo-participante.adapter';
 import { IntervencionSosPort } from '../application/ports/intervencion-sos.port';
 import { ExpirarIntervencionesSosCron } from './cron/expirar-intervenciones-sos.cron';
 import { PrismaIntervencionSosRepository } from './persistence/prisma-intervencion-sos.repository';
@@ -55,6 +57,10 @@ export const ChatInfrastructureProviders = [
   PrismaEventosSeguimientoRepository,
   BullMqEventosSeguimientoWorker,
   { provide: IntervencionSosPort, useClass: PrismaIntervencionSosRepository },
+  {
+    provide: SeudonimoParticipantePort,
+    useClass: PrismaSeudonimoParticipanteAdapter,
+  },
   ExpirarIntervencionesSosCron,
   {
     provide: PerfilClinicoVigentePort,

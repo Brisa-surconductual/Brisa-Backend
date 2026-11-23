@@ -1,6 +1,9 @@
 import { SesionConversacional } from '../entities/sesion/sesion-conversacional.entity';
 
 export abstract class SesionConversacionalRepository {
+  /** Lectura administrativa (auditoría): cualquier sesión, sin filtrar dueño. */
+  abstract buscarPorId(idSesion: string): Promise<SesionConversacional | null>;
+
   /** Lectura de una sesión concreta, limitada a su propietario. No reanuda. */
   abstract buscarPorIdYUsuario(
     idSesion: string,

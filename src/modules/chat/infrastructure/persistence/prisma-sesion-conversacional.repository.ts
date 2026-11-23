@@ -77,6 +77,15 @@ function sesionCompletadaDelArbol(
 export class PrismaSesionConversacionalRepository implements SesionConversacionalRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async buscarPorId(idSesion: string): Promise<SesionConversacional | null> {
+    const sesion = await this.prisma.chat_sesiones.findUnique({
+      where: { id_sesion: idSesion },
+      include: { estado_sesiones: true },
+    });
+    if (sesion === null || sesion.estado_sesiones === null) return null;
+    return SesionConversacionalMapper.toDomain(sesion);
+  }
+
   async buscarPorIdYUsuario(
     idSesion: string,
     idUsuario: string,

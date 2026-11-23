@@ -9,6 +9,14 @@ export interface InteraccionRegistrada {
   valor: unknown;
 }
 
+/** Trazabilidad: igual que una interacción, pero el fin del flujo no tiene destino. */
+export interface RegistroTrazabilidad extends Omit<
+  InteraccionRegistrada,
+  'idNodoDestino'
+> {
+  idNodoDestino: string | null;
+}
+
 export interface PaginaHistorialInteracciones {
   hayMas: boolean;
   /** Orden ascendente de secuencia. */
@@ -30,4 +38,12 @@ export abstract class HistorialInteraccionesRepository {
   abstract consultar(
     consulta: ConsultaHistorialInteracciones,
   ): Promise<PaginaHistorialInteracciones | null>;
+
+  /**
+   * Secuencia completa de la sesión, sin paginar, para auditoría. Devuelve
+   * null cuando el historial no supera la verificación de integridad.
+   */
+  abstract consultarCompleta(
+    idSesion: string,
+  ): Promise<RegistroTrazabilidad[] | null>;
 }

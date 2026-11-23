@@ -1,3 +1,5 @@
+import { ConsultarTrazabilidadSesionUseCase } from './use-cases/sesion/consultar-trazabilidad-sesion.use-case';
+import { TrazabilidadPort } from './ports/trazabilidad-sesion.port';
 import { ActualizarNodoConversacionalUseCase } from './use-cases/arbol-conversacional/actualizar-nodo-conversacional.use-case';
 import { ActualizarTransicionConversacionalUseCase } from './use-cases/arbol-conversacional/actualizar-transicion-conversacional.use-case';
 import { ArchivarFlujoUseCase } from './use-cases/arbol-conversacional/archivar-flujo.use-case';
@@ -44,6 +46,11 @@ import { CrearVariableTaxonomiaUseCase } from './use-cases/taxonomia/crear-varia
 import { CambiarEstadoVariableTaxonomiaUseCase } from './use-cases/taxonomia/cambiar-estado-variable-taxonomia.use-case';
 
 export const ChatApplicationProviders = [
+  ConsultarTrazabilidadSesionUseCase,
+  {
+    provide: TrazabilidadPort,
+    useExisting: ConsultarTrazabilidadSesionUseCase,
+  },
   ProcesarRespuestaUseCase,
   EstadoConversacionalService,
   PresentarHistorialConversacionalService,

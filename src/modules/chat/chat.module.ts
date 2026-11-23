@@ -7,6 +7,7 @@ import { CronogramaModule } from '../cronograma/cronograma.module';
 import { ChatApplicationProviders } from './application/chat.providers';
 import { PerfilClinicoVigentePort } from './application/ports/perfil-clinico-vigente.port';
 import { VariablesEtiquetadasPort } from './application/ports/variables-etiquetadas.port';
+import { TrazabilidadPort } from './application/ports/trazabilidad-sesion.port';
 import { ChatInfrastructureProviders } from './infrastructure/chat.providers';
 import { ChatPresentationProviders } from './presentation/chat.providers';
 import { ErrorConversacionalFilter } from './presentation/filters/error-conversacional.filter';
@@ -25,6 +26,7 @@ import { ConsultarPublicadoPersonalizadoUseCase } from './application/use-cases/
     ConsultarPublicadoPersonalizadoUseCase,
     PerfilClinicoVigentePort,
     VariablesEtiquetadasPort,
+    TrazabilidadPort,
   ],
 })
 export class ChatModule {}
