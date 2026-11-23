@@ -293,6 +293,7 @@ No todas las secciones aplican a toda spec (p. ej. una regla de negocio interna 
 | [`CONTRATO_RF43_SOS_CRAVING.md`](CONTRATO_RF43_SOS_CRAVING.md) | RF-43 (con RF-25, RF-31, RF-32, RF-39) | M-3 (Chat) → M-5 (Seguimiento) | BORRADOR (`feat/chat-sos-craving-rf43`) | Botón SOS: flujo `SOS` propio, pausa de la sesión, intervención de 60 s con reloj del servidor y evento `CHAT_SOS_ACTIVADO` por el outbox de RF-39 |
 | [`CONTRATO_HU_TRAZABILIDAD_SESION.md`](CONTRATO_HU_TRAZABILIDAD_SESION.md) | HU por asignar (con RF-31, RF-38, A7) | M-3 (Chat) → M-8 (Administrativo) | BORRADOR (`feat/chat-trazabilidad-sesion`) | Auditoría de solo lectura: `TrazabilidadPort` y `GET /chat/admin/sesiones/{id}/trazabilidad`, con seudónimo del participante |
 | [`CONTRATO_RF148_SOLO_LECTURA_PARTICIPANTES.md`](CONTRATO_RF148_SOLO_LECTURA_PARTICIPANTES.md) | RF-148 (con RF-123) | M-8 (Administrativo) | APROBADA (`feat/administrativo-solo-lectura-rf148`) | Bloqueo de escrituras sobre datos de participantes por el rol administrativo |
+| [`CONTRATO_RF124_GESTION_COHORTES.md`](CONTRATO_RF124_GESTION_COHORTES.md) | RF-124 (con RF-19, RF-122 y RF-123) | M-8 (Administrativo) | APROBADA (`feat/administrativo-gestion-cohortes-rf124`) | Alta, edición y cambios de estado de cohortes con auditoría |
 | [`RF25B_DECISIONES_TECNICAS.md`](RF25B_DECISIONES_TECNICAS.md) | RF-25B | Por confirmar | N/A (decisión técnica) | No es contrato de comportamiento |
 
 > Esta tabla se mantiene al día en esta misma sesión y en las siguientes: cada spec nueva o cambio de estado se refleja aquí.

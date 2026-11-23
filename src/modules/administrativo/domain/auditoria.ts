@@ -1,9 +1,12 @@
+import type { OperacionCohorte } from './cohorte';
+
 export type AccionAdministrativa =
   | 'ACCESO_MODULO'
   | 'CONSULTA_PARTICIPANTE'
   | 'EXPORTACION_DATOS'
   | 'CONFIGURACION_UMBRALES'
-  | 'INTENTO_ESCRITURA_BLOQUEADO';
+  | 'INTENTO_ESCRITURA_BLOQUEADO'
+  | 'GESTION_COHORTE';
 
 export type EstadoAccion = 'EXITOSA' | 'FALLIDA' | 'DENEGADA';
 
@@ -13,10 +16,8 @@ export interface ContextoAuditoria {
   direccionIp: string;
 }
 
-interface DetalleAuditoria {
-  metodo: string;
-  uri: string;
-}
+type DetalleAuditoria =
+  { metodo: string; uri: string } | { operacion: OperacionCohorte };
 
 export interface AccionAuditable {
   accion: AccionAdministrativa;
