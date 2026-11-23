@@ -120,6 +120,7 @@ model usuarios {
   exportaciones                                                                     exportaciones[]
   flujo_conversacion                                                                flujo_conversacion[]
   historial_nodos                                                                   historial_nodos[]
+  intervenciones_sos                                                                intervenciones_sos?
   nodos                                                                             nodos[]
   perfil_clinico                                                                    perfil_clinico?
   punto_control                                                                     punto_control[]
@@ -404,7 +405,7 @@ model flujo_conversacion {
   tipo_dependencia                                                                      tipo_dependencia_enum?
   tipo_craving                                                                          tipo_craving_enum?
   estado                                                                                estado_flujo_enum      @default(BORRADOR)
-  version                                                                               Int                    @default(1)
+  version                                                                               Int                    @unique(map: "uq_flujo_version_sos", where: raw("(modalidad = 'SOS'::chat.modalidad_enum)")) @default(1)
   creado_por                                                                            String                 @db.Uuid
   fecha_creacion                                                                        DateTime               @default(now()) @db.Timestamptz(6)
   fecha_publicacion                                                                     DateTime?              @db.Timestamptz(6)
@@ -617,6 +618,8 @@ model chat_sesiones {
   eventos_sincronizacion                                                                          eventos_sincronizacion[]
   historial_nodos                                                                                 historial_nodos[]
   interacciones                                                                                   interacciones[]
+  intervenciones_sos_intervenciones_sos_id_sesion_pausadaTosesiones                               intervenciones_sos[]     @relation("intervenciones_sos_id_sesion_pausadaTosesiones")
+  intervenciones_sos_intervenciones_sos_id_sesion_sosTosesiones                                   intervenciones_sos?      @relation("intervenciones_sos_id_sesion_sosTosesiones")
   registro_errores                                                                                registro_errores[]
   flujo_conversacion                                                                              flujo_conversacion?      @relation(fields: [id_flujo_conversacional], references: [id_flujo], onUpdate: NoAction, map: "fk_sesion_flujo")
   flujo_conversacion_sesiones_id_flujo_conversacional_version_arbol_utilizadaToflujo_conversacion flujo_conversacion?      @relation("sesiones_id_flujo_conversacional_version_arbol_utilizadaToflujo_conversacion", fields: [id_flujo_conversacional, version_arbol_utilizada], references: [id_flujo, version], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_flujo_version")
@@ -736,18 +739,21 @@ model registro_errores {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model eventos_seguimiento {
-  id_evento        String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  id_sesion        String                         @db.Uuid
-  id_usuario       String                         @db.Uuid
-  modalidad        modalidad_enum
-  tipo_dependencia tipo_dependencia_enum?
-  tipo_craving     tipo_craving_enum?
-  origen_evento    origen_evento_seguimiento_enum
-  estado           estado_evento_seguimiento_enum @default(ENCOLADO)
-  timestamp        DateTime                       @db.Timestamptz(6)
-  proximo_envio_en DateTime                       @default(now()) @db.Timestamptz(6)
-  entregado_en     DateTime?                      @db.Timestamptz(6)
-  sesiones         chat_sesiones                  @relation(fields: [id_sesion], references: [id_sesion], onDelete: Cascade, onUpdate: NoAction)
+  id_evento           String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_sesion           String                         @db.Uuid
+  id_usuario          String                         @db.Uuid
+  modalidad           modalidad_enum
+  tipo_dependencia    tipo_dependencia_enum?
+  tipo_craving        tipo_craving_enum?
+  origen_evento       origen_evento_seguimiento_enum
+  estado              estado_evento_seguimiento_enum @default(ENCOLADO)
+  timestamp           DateTime                       @db.Timestamptz(6)
+  proximo_envio_en    DateTime                       @default(now()) @db.Timestamptz(6)
+  entregado_en        DateTime?                      @db.Timestamptz(6)
+  tipo_evento         tipo_evento_seguimiento_enum   @default(CHAT_SESION_FINALIZADA)
+  id_intervencion_sos String?                        @db.Uuid
+  intervenciones_sos  intervenciones_sos?            @relation(fields: [id_intervencion_sos], references: [id_intervencion], onDelete: Cascade, onUpdate: NoAction)
+  sesiones            chat_sesiones                  @relation(fields: [id_sesion], references: [id_sesion], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([id_sesion, origen_evento], map: "uq_eventos_seguimiento_sesion_origen")
   @@index([proximo_envio_en, id_evento], map: "ix_eventos_seguimiento_pendientes", where: raw("(estado <> 'ENTREGADO'::chat.estado_evento_seguimiento_enum)"))
@@ -819,6 +825,47 @@ model variables_etiquetadas {
 
   @@index([id_sesion, secuencia], map: "ix_variables_etiquetadas_sesion")
   @@index([id_usuario, codigo_variable, timestamp_interaccion], map: "ix_variables_etiquetadas_usuario_codigo")
+  @@schema("chat")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model intervenciones_sos {
+  id_intervencion                                         String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_usuario                                              String                          @unique(map: "uq_intervenciones_sos_en_curso", where: raw("(estado = 'EN_CURSO'::chat.estado_intervencion_sos_enum)")) @db.Uuid
+  id_sesion_sos                                           String                          @unique(map: "uq_intervenciones_sos_sesion") @db.Uuid
+  id_sesion_pausada                                       String?                         @db.Uuid
+  estado_sesion_anterior                                  estado_sesion_anterior_sos_enum
+  nivel_craving                                           Int                             @default(5) @db.SmallInt
+  tipo_craving                                            tipo_craving_enum?
+  estado                                                  estado_intervencion_sos_enum    @default(EN_CURSO)
+  contexto_origen                                         Json?
+  fecha_activacion                                        DateTime                        @default(dbgenerated("statement_timestamp()")) @db.Timestamptz(6)
+  fecha_limite                                            DateTime                        @default(dbgenerated("(statement_timestamp() + '00:01:00'::interval)")) @db.Timestamptz(6)
+  fecha_cierre                                            DateTime?                       @db.Timestamptz(6)
+  duracion_segundos                                       Int?                            @default(dbgenerated("(floor(EXTRACT(epoch FROM (fecha_cierre - fecha_activacion))))::integer"))
+  eventos_seguimiento                                     eventos_seguimiento[]
+  sesiones_intervenciones_sos_id_sesion_pausadaTosesiones chat_sesiones?                  @relation("intervenciones_sos_id_sesion_pausadaTosesiones", fields: [id_sesion_pausada], references: [id_sesion], onUpdate: NoAction)
+  sesiones_intervenciones_sos_id_sesion_sosTosesiones     chat_sesiones                   @relation("intervenciones_sos_id_sesion_sosTosesiones", fields: [id_sesion_sos], references: [id_sesion], onDelete: Cascade, onUpdate: NoAction)
+  usuarios                                                usuarios                        @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([fecha_cierre], map: "ix_intervenciones_sos_contexto", where: raw("(contexto_origen IS NOT NULL)"))
+  @@index([id_usuario, fecha_activacion(sort: Desc)], map: "ix_intervenciones_sos_usuario")
+  @@index([fecha_limite], map: "ix_intervenciones_sos_vencimiento", where: raw("(estado = 'EN_CURSO'::chat.estado_intervencion_sos_enum)"))
+  @@schema("chat")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model recursos_apoyo {
+  id_recurso_apoyo String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre           String                  @unique(map: "uq_recursos_apoyo_nombre") @db.VarChar(120)
+  tipo             tipo_recurso_apoyo_enum
+  telefono         String                  @db.VarChar(30)
+  descripcion      String?                 @db.VarChar(500)
+  orden            Int
+  activo           Boolean                 @default(true)
+  fecha_creacion   DateTime                @default(now()) @db.Timestamptz(6)
+
+  @@index([orden, nombre], map: "ix_recursos_apoyo_activos", where: raw("activo"))
   @@schema("chat")
 }
 
@@ -993,6 +1040,7 @@ enum estado_sincronizacion_enum {
 enum modalidad_enum {
   GRUPAL
   PERSONALIZADA
+  SOS
 
   @@schema("chat")
 }
@@ -1048,6 +1096,7 @@ enum estado_evento_seguimiento_enum {
 enum origen_evento_seguimiento_enum {
   CIERRE_SESION
   SINCRONIZACION_OFFLINE
+  SOS
 
   @@schema("chat")
 }
@@ -1063,6 +1112,37 @@ enum tipo_valor_variable_enum {
   ENTERO
   CATEGORIA
   BOOLEANO
+
+  @@schema("chat")
+}
+
+enum estado_intervencion_sos_enum {
+  EN_CURSO
+  COMPLETA
+  INCOMPLETA
+  EXPIRADA
+
+  @@schema("chat")
+}
+
+enum estado_sesion_anterior_sos_enum {
+  ACTIVA
+  PAUSADA
+  NINGUNA
+
+  @@schema("chat")
+}
+
+enum tipo_evento_seguimiento_enum {
+  CHAT_SESION_FINALIZADA
+  CHAT_SOS_ACTIVADO
+
+  @@schema("chat")
+}
+
+enum tipo_recurso_apoyo_enum {
+  LINEA_CRISIS
+  CONTACTO_INSTITUCIONAL
 
   @@schema("chat")
 }
