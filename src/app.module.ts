@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { CronogramaModule } from './modules/cronograma/cronograma.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ChatModule } from './modules/chat/chat.module';
+import { AdministrativoModule } from './modules/administrativo/administrativo.module';
 import { HealthController } from './shared/presentation/controllers/health.controller';
 
 @Module({
@@ -16,6 +17,7 @@ import { HealthController } from './shared/presentation/controllers/health.contr
     EventEmitterModule.forRoot({ global: true }),
     CronogramaModule,
     ChatModule,
+    AdministrativoModule,
   ],
 })
 export class AppModule {}
