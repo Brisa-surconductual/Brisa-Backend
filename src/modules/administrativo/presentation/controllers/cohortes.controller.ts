@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Header,
   Param,
   ParseUUIDPipe,
@@ -19,17 +20,37 @@ import { SessionAuthGuard } from '../../../usuarios/presentation/guards/session-
 import { SessionScopeGuard } from '../../../usuarios/presentation/guards/session-scope.guard';
 import type { AuthenticatedSessionRequest } from '../../../usuarios/presentation/http/authenticated-session-request';
 import { GestionarCohortesUseCase } from '../../application/use-cases/gestionar-cohortes.use-case';
+import { ConsultarCohortesUseCase } from '../../application/use-cases/consultar-cohortes.use-case';
 import { ActualizarCohorteDto, CrearCohorteDto } from '../dto/cohorte.dto';
 import { contextoAuditoria } from '../http/contexto-auditoria';
 
 @Controller('admin/cohortes')
 @Roles(Rol.ADMINISTRATIVO)
 @AlcancesSesion(AlcanceSesion.COMPLETA)
-@UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
+@UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
 export class CohortesController {
-  constructor(private readonly gestionar: GestionarCohortesUseCase) {}
+  constructor(
+    private readonly gestionar: GestionarCohortesUseCase,
+    private readonly consultar: ConsultarCohortesUseCase,
+  ) {}
+
+  @Get()
+  @Header('Cache-Control', 'no-store')
+  listar(@Req() request: AuthenticatedSessionRequest) {
+    return this.consultar.listar(contextoAuditoria(request));
+  }
+
+  @Get(':id_cohorte')
+  @Header('Cache-Control', 'no-store')
+  obtener(
+    @Param('id_cohorte', new ParseUUIDPipe()) id: string,
+    @Req() request: AuthenticatedSessionRequest,
+  ) {
+    return this.consultar.obtener(contextoAuditoria(request), id);
+  }
 
   @Post()
+  @UseGuards(CsrfSessionGuard)
   @Header('Cache-Control', 'no-store')
   crear(
     @Body() dto: CrearCohorteDto,
@@ -39,6 +60,7 @@ export class CohortesController {
   }
 
   @Patch(':id_cohorte')
+  @UseGuards(CsrfSessionGuard)
   @Header('Cache-Control', 'no-store')
   actualizar(
     @Param('id_cohorte', new ParseUUIDPipe()) id: string,

@@ -15,6 +15,7 @@ import {
 import { AuditoriaService } from './application/services/auditoria.service';
 import { CohortesRepository } from './application/ports/cohortes.repository';
 import { ConsultarBitacoraUseCase } from './application/use-cases/consultar-bitacora.use-case';
+import { ConsultarCohortesUseCase } from './application/use-cases/consultar-cohortes.use-case';
 import { GestionarCohortesUseCase } from './application/use-cases/gestionar-cohortes.use-case';
 import { BullMqAuditoriaAdapter } from './infrastructure/messaging/bullmq-auditoria.adapter';
 import { PrismaBitacoraRepository } from './infrastructure/persistence/prisma-bitacora.repository';
@@ -30,6 +31,7 @@ import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/so
   providers: [
     AuditoriaService,
     ConsultarBitacoraUseCase,
+    ConsultarCohortesUseCase,
     GestionarCohortesUseCase,
     AccesoBitacoraGuard,
     RolesGuard,

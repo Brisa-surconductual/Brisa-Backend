@@ -16,3 +16,7 @@ export interface Cohorte extends DatosCohorte {
   estado: EstadoCohorte;
   fecha_actualizacion: string;
 }
+
+export interface CohorteConsultada extends Cohorte {
+  nombre_cronograma: string;
+}
