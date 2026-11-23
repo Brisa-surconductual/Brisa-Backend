@@ -192,6 +192,26 @@ END;
 $$;
 
 -- ---------------------------------------------------------------------
+-- 5b. Coherencia modalidad/perfil en flujos y sesiones
+-- ---------------------------------------------------------------------
+-- Supabase tiene estas dos restricciones aunque ninguna migración las crea
+-- (deriva previa). Solo aceptan GRUPAL y PERSONALIZADA: se reemplazan para
+-- admitir SOS y quedan definidas aquí. SOS no lleva tipo de dependencia; la
+-- sesión SOS puede llevar el tipo de craving del perfil vigente.
+ALTER TABLE chat.flujo_conversacion DROP CONSTRAINT IF EXISTS ck_flujo_combinacion_coherente;
+ALTER TABLE chat.flujo_conversacion ADD CONSTRAINT ck_flujo_combinacion_coherente CHECK (
+    (modalidad IN ('GRUPAL', 'SOS') AND tipo_dependencia IS NULL AND tipo_craving IS NULL)
+    OR (modalidad = 'PERSONALIZADA' AND tipo_dependencia IS NOT NULL AND tipo_craving IS NOT NULL)
+);
+
+ALTER TABLE chat.sesiones DROP CONSTRAINT IF EXISTS ck_sesion_perfil_coherente;
+ALTER TABLE chat.sesiones ADD CONSTRAINT ck_sesion_perfil_coherente CHECK (
+    modalidad_activa = 'GRUPAL'
+    OR (modalidad_activa = 'PERSONALIZADA' AND tipo_dependencia IS NOT NULL AND tipo_craving IS NOT NULL)
+    OR (modalidad_activa = 'SOS' AND tipo_dependencia IS NULL)
+);
+
+-- ---------------------------------------------------------------------
 -- 6. Flujo SOS: un único publicado y versiones únicas (como el grupal)
 -- ---------------------------------------------------------------------
 CREATE UNIQUE INDEX uq_flujo_publicado_sos

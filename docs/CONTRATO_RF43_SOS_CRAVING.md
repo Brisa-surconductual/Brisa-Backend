@@ -66,5 +66,6 @@ Front, FA-2 offline (RF-35), FA-3 crisis severa, bloqueo de push (M07), panel de
 
 - RF-43 (con RF-25, RF-31, RF-32, RF-39). Módulos M-3 → M-5.
 - Migraciones: `20261122150000_chat_sos_enums_rf43`, `20261122150100_chat_intervenciones_sos_rf43`. El seed del flujo v1 (contenido provisional) solo corre si existen un usuario ADMINISTRATIVO y el tipo de nodo `MENSAJE`.
+- Cambio 2026-11-22: el primer despliegue falló porque Supabase tenía `ck_flujo_combinacion_coherente` (flujos) y `ck_sesion_perfil_coherente` (sesiones), que ninguna migración creaba y que solo admitían GRUPAL y PERSONALIZADA. La migración 2/2 ahora las reemplaza admitiendo SOS.
 - Las tablas nuevas se usan con SQL parametrizado hasta que `prisma-generate-schema` regenere `schema.prisma` tras el merge. Hasta regenerar el cliente, Prisma no puede leer filas con `modalidad = SOS`.
 - Pruebas: unitarias (`activar-sos`, `finalizar-intervencion-sos`, `crear-flujo-sos`, rama SOS de `publicar-flujo`, `pausar()`, ruteo del worker, 409 SOS en `respuestas`) y e2e `test/chat/sos-craving-rf43.e2e-spec.ts` con `RF43_TEST_DATABASE_URL` (base local `brisa_rf43_*`, migrada y con el cliente Prisma regenerado desde ella).
