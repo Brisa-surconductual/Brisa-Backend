@@ -34,6 +34,10 @@ const ERRORES = {
     409,
     'La cohorte ya no está en un estado que permita esta acción.',
   ],
+  PARTICIPANTE_EN_OTRA_COHORTE_ACTIVA: [
+    409,
+    'No se puede activar la cohorte porque uno o más participantes pertenecen a otra cohorte activa.',
+  ],
   ROL_INVALIDO: [403, 'No tiene permisos para gestionar cohortes.'],
   ERROR_PERSISTENCIA_COHORTE: [
     500,
