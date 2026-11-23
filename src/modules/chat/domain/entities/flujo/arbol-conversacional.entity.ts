@@ -30,6 +30,7 @@ import {
   NodoDiagnostico,
 } from '../../results/diagnostico-arbol';
 import { DiagnosticoCapturaPerfil } from '../../results/diagnostico-captura-perfil';
+import { DiagnosticoRestriccionesSos } from '../../results/diagnostico-restricciones-sos';
 import { ResultadoValidacionArbol } from '../../results/resultado-validacion-arbol';
 import { FlujoConversacional } from './flujo-conversacional.entity';
 import { NodoConversacional } from './nodo-conversacional.entity';
@@ -200,6 +201,25 @@ export class ArbolConversacional {
       dimensiones_duplicadas: duplicadas,
       dimensiones_valores_invalidos: valoresInvalidos,
       dimensiones_valores_faltantes: valoresFaltantes,
+    };
+  }
+
+  /**
+   * RF-43: el flujo SOS no captura perfil clínico ni liga nodos a contenido
+   * del cronograma, para que sus nodos sean fijos y siempre estén habilitados.
+   */
+  diagnosticarRestriccionesSos(): DiagnosticoRestriccionesSos {
+    return {
+      nodos_con_captura_perfil: this.nodos
+        .filter(
+          (nodo) =>
+            nodo.contenido.capturaPerfil != null ||
+            nodo.contenido.captura_perfil != null,
+        )
+        .map((nodo) => nodo.idNodo),
+      nodos_con_contenido_cronograma: this.nodos
+        .filter((nodo) => nodo.idContenido !== null)
+        .map((nodo) => nodo.idNodo),
     };
   }
 

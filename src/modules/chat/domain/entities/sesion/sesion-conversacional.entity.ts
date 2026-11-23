@@ -1,4 +1,7 @@
-import { SesionNoReanudableException } from '../../exceptions/sesion.exceptions';
+import {
+  SesionNoPausableException,
+  SesionNoReanudableException,
+} from '../../exceptions/sesion.exceptions';
 import { ModalidadConversacional } from '../../enums/modalidad-conversacional-enum';
 import {
   TipoCravingClinico,
@@ -98,6 +101,32 @@ export class SesionConversacional {
     return (
       this.idFlujoConversacional === idFlujo &&
       this.versionArbolUtilizada === version
+    );
+  }
+
+  /** RF-43: sesión que ejecuta el sub-árbol TCC de craving. */
+  get esSos(): boolean {
+    return this.modalidadActiva === ModalidadConversacional.SOS;
+  }
+
+  /**
+   * RF-31 / RF-43: solo una sesión ACTIVA se pausa. Conserva el nodo actual
+   * y la última interacción, para que RF-32 la reanude en el mismo punto.
+   */
+  pausar(): SesionConversacional {
+    if (this.estadoActual !== 'ACTIVA') throw new SesionNoPausableException();
+    return new SesionConversacional(
+      this.idSesion,
+      this.idUsuario,
+      this.idFlujoConversacional,
+      this.versionArbolUtilizada,
+      this.modalidadActiva,
+      this.tipoDependencia,
+      this.tipoCraving,
+      this.idNodoActual,
+      'PAUSADA',
+      this.fechaInicio,
+      this.fechaUltimaInteraccion,
     );
   }
 

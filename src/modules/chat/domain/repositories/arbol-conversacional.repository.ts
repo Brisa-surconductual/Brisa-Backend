@@ -4,7 +4,10 @@ import { ContenidoCronogramaConversacional } from '../entities/catalogos/conteni
 import { TipoEntradaConversacional } from '../entities/catalogos/tipo-entrada.entity';
 import { TipoNodoConversacional } from '../entities/catalogos/tipo-nodo.entity';
 import { ArbolConversacional } from '../entities/flujo/arbol-conversacional.entity';
-import { FlujoConversacional } from '../entities/flujo/flujo-conversacional.entity';
+import {
+  FlujoConversacional,
+  ModalidadSinPerfil,
+} from '../entities/flujo/flujo-conversacional.entity';
 import { NodoConversacional } from '../entities/flujo/nodo-conversacional.entity';
 import { TransicionConversacional } from '../entities/flujo/transicion-conversacional.entity';
 import {
@@ -51,7 +54,18 @@ export abstract class ArbolConversacionalRepository {
 
   abstract listarFlujosPersonalizados(): Promise<FlujoConversacional[]>;
 
+  /** Único flujo publicado de una modalidad sin perfil clínico (GRUPAL o SOS). */
+  abstract buscarPublicadoUnico(
+    modalidad: ModalidadSinPerfil,
+  ): Promise<FlujoConversacional | null>;
+
+  /** Atajo histórico (RF-24): el flujo grupal publicado. */
   abstract buscarPublicadoGrupal(): Promise<FlujoConversacional | null>;
+
+  /** Última versión registrada de una modalidad sin perfil, o 0 si no hay ninguna. */
+  abstract obtenerUltimaVersionSinPerfil(
+    modalidad: ModalidadSinPerfil,
+  ): Promise<number>;
 
   abstract buscarPublicadoPersonalizado(
     tipoDependencia: TipoDependenciaClinica,

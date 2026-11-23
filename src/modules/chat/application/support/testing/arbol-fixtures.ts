@@ -168,6 +168,8 @@ export function repositorioSimulado(): jest.Mocked<ArbolConversacionalRepository
     'listarFlujos',
     'listarFlujosPersonalizados',
     'buscarPublicadoGrupal',
+    'buscarPublicadoUnico',
+    'obtenerUltimaVersionSinPerfil',
     'buscarPublicadoPersonalizado',
     'obtenerUltimaVersionPersonalizada',
     'listarAuditoriaArbol',

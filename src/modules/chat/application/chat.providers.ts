@@ -5,6 +5,10 @@ import { ClonarVersionFlujoUseCase } from './use-cases/arbol-conversacional/clon
 import { ConsultarArbolConversacionalUseCase } from './use-cases/arbol-conversacional/consultar-arbol-conversacional.use-case';
 import { ConsultarCatalogosChatUseCase } from './use-cases/arbol-conversacional/consultar-catalogos-chat.use-case';
 import { CrearFlujoConversacionalUseCase } from './use-cases/arbol-conversacional/crear-flujo-conversacional.use-case';
+import { CrearFlujoSosUseCase } from './use-cases/arbol-conversacional/crear-flujo-sos.use-case';
+import { CrearFlujoSinPerfilService } from './services/crear-flujo-sin-perfil.service';
+import { ActivarSosUseCase } from './use-cases/sos/activar-sos.use-case';
+import { FinalizarIntervencionSosUseCase } from './use-cases/sos/finalizar-intervencion-sos.use-case';
 import { CrearNodoConversacionalUseCase } from './use-cases/arbol-conversacional/crear-nodo-conversacional.use-case';
 import { CrearTransicionConversacionalUseCase } from './use-cases/arbol-conversacional/crear-transicion-conversacional.use-case';
 import { ListarFlujosUseCase } from './use-cases/arbol-conversacional/listar-flujos.use-case';
@@ -57,6 +61,10 @@ export const ChatApplicationProviders = [
   HabilitarModalidadPersonalizadaUseCase,
   InicializarModalidadUsuarioUseCase,
   CrearFlujoConversacionalUseCase,
+  CrearFlujoSinPerfilService,
+  CrearFlujoSosUseCase,
+  ActivarSosUseCase,
+  FinalizarIntervencionSosUseCase,
   ListarFlujosUseCase,
   ConsultarArbolConversacionalUseCase,
   ValidarArbolConversacionalUseCase,

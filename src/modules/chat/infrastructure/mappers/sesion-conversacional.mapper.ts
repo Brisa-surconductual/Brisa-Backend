@@ -5,6 +5,7 @@ import {
   TipoCravingClinico,
   TipoDependenciaClinica,
 } from '../../domain/enums/perfil-clinico.enum';
+import { modalidadPrisma } from './modalidad-prisma';
 
 /** Fila de la sesión junto con su estado. */
 export type SesionConEstadoFila = Prisma.chat_sesionesGetPayload<{
@@ -48,7 +49,7 @@ export class SesionConversacionalMapper {
       ...(sesion.versionArbolUtilizada !== null && {
         version_arbol_utilizada: sesion.versionArbolUtilizada,
       }),
-      modalidad_activa: sesion.modalidadActiva,
+      modalidad_activa: modalidadPrisma(sesion.modalidadActiva),
       tipo_dependencia: sesion.tipoDependencia,
       tipo_craving: sesion.tipoCraving,
       ...(sesion.idNodoActual !== null && {
@@ -75,7 +76,7 @@ export class SesionConversacionalMapper {
     sesion: SesionConversacional,
   ): Prisma.chat_sesionesUncheckedUpdateInput {
     return {
-      modalidad_activa: sesion.modalidadActiva,
+      modalidad_activa: modalidadPrisma(sesion.modalidadActiva),
       tipo_dependencia: sesion.tipoDependencia,
       tipo_craving: sesion.tipoCraving,
       fecha_ultima_interaccion: sesion.fechaUltimaInteraccion,

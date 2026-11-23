@@ -114,6 +114,8 @@ describe('PrismaSesionConversacionalRepository', () => {
         where: {
           id_usuario: sesionBase.id_usuario,
           AND: [
+            // RF-43: las sesiones SOS nunca cuentan como pendientes.
+            { modalidad_activa: { in: ['GRUPAL', 'PERSONALIZADA'] } },
             {
               OR: [
                 {

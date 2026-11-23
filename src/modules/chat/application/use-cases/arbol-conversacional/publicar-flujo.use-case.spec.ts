@@ -6,7 +6,9 @@ import { ArbolConversacional } from '../../../domain/entities/flujo/arbol-conver
 import { NodoConversacional } from '../../../domain/entities/flujo/nodo-conversacional.entity';
 import { TransicionConversacional } from '../../../domain/entities/flujo/transicion-conversacional.entity';
 import { ReglaValidacion } from '../../../domain/entities/reglas-validacion/reglas-validacion.entity';
+import { FlujoConversacional } from '../../../domain/entities/flujo/flujo-conversacional.entity';
 import { EstadoFlujoConversacional } from '../../../domain/enums/estado-flujo-conversacional.enum';
+import { ModalidadConversacional } from '../../../domain/enums/modalidad-conversacional-enum';
 import {
   DimensionPerfilClinico as Dimension,
   TipoCravingClinico,
@@ -18,7 +20,8 @@ import {
   CoberturaTransicionesIncompletaException,
   EstadoFlujoInvalidoException,
   FlujoConversacionalNoEncontradoException,
-  FlujoGrupalPublicadoExistenteException,
+  FlujoPublicadoUnicoExistenteException,
+  FlujoSosInvalidoException,
   FlujoPersonalizadoArchivadoException,
   GrafoInvalidoException,
   NodoCapturaPerfilInvalidoException,
@@ -161,7 +164,7 @@ describe('PublicarFlujoUseCase (RF-25 / RF-25C)', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
-    repository.buscarPublicadoGrupal.mockResolvedValue(null);
+    repository.buscarPublicadoUnico.mockResolvedValue(null);
     repository.buscarPublicadoPersonalizado.mockResolvedValue(null);
   });
 
@@ -182,12 +185,12 @@ describe('PublicarFlujoUseCase (RF-25 / RF-25C)', () => {
 
   it('no publica un segundo flujo grupal', async () => {
     repository.obtenerArbol.mockResolvedValue(arbolGrupalConPerfil());
-    repository.buscarPublicadoGrupal.mockResolvedValue(
+    repository.buscarPublicadoUnico.mockResolvedValue(
       flujoGrupal(EstadoFlujoConversacional.PUBLICADO),
     );
 
     await expect(useCase.execute(ids.flujo, ids.actor)).rejects.toBeInstanceOf(
-      FlujoGrupalPublicadoExistenteException,
+      FlujoPublicadoUnicoExistenteException,
     );
     expect(repository.guardarFlujo).not.toHaveBeenCalled();
   });
@@ -470,5 +473,131 @@ describe('PublicarFlujoUseCase (RF-25 / RF-25C)', () => {
       },
     );
     expect(repository.guardarFlujo.mock.calls).toHaveLength(0);
+  });
+});
+
+describe('PublicarFlujoUseCase · flujo SOS (RF-43)', () => {
+  const repository = repositorioSimulado();
+  const useCase = new PublicarFlujoUseCase(
+    repository,
+    variableNodoServicePrueba(),
+  );
+
+  function flujoSos(
+    estado = EstadoFlujoConversacional.BORRADOR,
+  ): FlujoConversacional {
+    return new FlujoConversacional(
+      ids.flujo,
+      'Protocolo SOS',
+      ModalidadConversacional.SOS,
+      estado,
+      1,
+      ids.actor,
+      fecha,
+      estado === EstadoFlujoConversacional.BORRADOR ? null : fecha,
+    );
+  }
+
+  /** A (inicial, sí/no) → B (final). Sin captura de perfil: válido para SOS. */
+  function arbolSos(nodoA = nodo(ids.nodoA)): ArbolConversacional {
+    return conFinal(
+      new ArbolConversacional(
+        flujoSos(),
+        [nodoA, nodo(ids.nodoB)],
+        salidas(ids.nodoA, ids.nodoB, ['si', 'no']),
+      ),
+    );
+  }
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    repository.buscarPublicadoUnico.mockResolvedValue(null);
+  });
+
+  it('publica un flujo SOS válido sin exigir captura de perfil', async () => {
+    repository.obtenerArbol.mockResolvedValue(arbolSos());
+
+    const respuesta = await useCase.execute(ids.flujo, ids.actor);
+
+    expect(repository.buscarPublicadoUnico).toHaveBeenCalledWith(
+      ModalidadConversacional.SOS,
+    );
+    const [guardado] = repository.guardarFlujo.mock.calls[0];
+    expect(guardado.modalidad).toBe(ModalidadConversacional.SOS);
+    expect(respuesta.estado).toBe(EstadoFlujoConversacional.PUBLICADO);
+  });
+
+  it('no publica un segundo flujo SOS', async () => {
+    repository.obtenerArbol.mockResolvedValue(arbolSos());
+    repository.buscarPublicadoUnico.mockResolvedValue(
+      flujoSos(EstadoFlujoConversacional.PUBLICADO),
+    );
+
+    const error = await useCase
+      .execute(ids.flujo, ids.actor)
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(FlujoPublicadoUnicoExistenteException);
+    expect((error as Error).message).toContain('SOS');
+    expect(repository.guardarFlujo).not.toHaveBeenCalled();
+  });
+
+  it('rechaza nodos que capturan perfil clínico', async () => {
+    const captura = nodoCaptura(idNodoDependencia, Dimension.TIPO_DEPENDENCIA);
+    repository.obtenerArbol.mockResolvedValue(
+      conFinal(
+        new ArbolConversacional(
+          flujoSos(),
+          [nodo(ids.nodoA), captura, nodo(ids.nodoB)],
+          [
+            ...salidas(ids.nodoA, captura.idNodo, ['si', 'no']),
+            ...salidas(
+              captura.idNodo,
+              ids.nodoB,
+              DOMINIO[Dimension.TIPO_DEPENDENCIA],
+            ),
+          ],
+        ),
+      ),
+    );
+
+    const error = await useCase
+      .execute(ids.flujo, ids.actor)
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(FlujoSosInvalidoException);
+    expect((error as FlujoSosInvalidoException).detalles).toEqual({
+      nodos_con_captura_perfil: [idNodoDependencia],
+      nodos_con_contenido_cronograma: [],
+    });
+    expect(repository.guardarFlujo).not.toHaveBeenCalled();
+  });
+
+  it('rechaza nodos ligados a contenido del cronograma', async () => {
+    const base = nodo(ids.nodoA);
+    const conContenido = new NodoConversacional(
+      base.idNodo,
+      base.idFlujo,
+      base.idTipoNodo,
+      base.nombreTipoNodo,
+      base.contenido,
+      true,
+      base.orden,
+      '00000000-0000-4000-8000-0000000000c1',
+      base.creadoPor,
+      base.fechaCreacion,
+      base.fechaActualizacion,
+    );
+    repository.obtenerArbol.mockResolvedValue(arbolSos(conContenido));
+
+    const error = await useCase
+      .execute(ids.flujo, ids.actor)
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(FlujoSosInvalidoException);
+    expect(
+      (error as FlujoSosInvalidoException).detalles
+        .nodos_con_contenido_cronograma,
+    ).toEqual([ids.nodoA]);
   });
 });

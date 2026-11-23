@@ -40,6 +40,13 @@ export interface ContextoRespuestaTransaccion {
   esTerminal(idNodo: string, idFlujo: string): Promise<boolean>;
   /** RF-25: destino del avance implícito de un nodo sin respuesta, si aplica. */
   siguienteNodoImplicito(idNodo: string): Promise<string | null>;
+  /**
+   * RF-43: estado de la intervención de una sesión SOS, con `vencida`
+   * calculada por el reloj de PostgreSQL. null si la sesión no es SOS.
+   */
+  estadoIntervencionSos(
+    idSesion: string,
+  ): Promise<{ enCurso: boolean; vencida: boolean } | null>;
 }
 export interface RegistroRespuestaTransaccion {
   buscarResultado(idInteraccion: string): Promise<{

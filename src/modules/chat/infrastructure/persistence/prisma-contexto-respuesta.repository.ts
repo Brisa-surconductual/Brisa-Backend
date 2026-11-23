@@ -59,4 +59,20 @@ export class PrismaContextoRespuestaRepository implements ContextoRespuestaTrans
   siguienteNodoImplicito(idNodo: string): Promise<string | null> {
     return idSiguienteNodoPorOrden(this.tx, idNodo);
   }
+
+  async estadoIntervencionSos(
+    idSesion: string,
+  ): Promise<{ enCurso: boolean; vencida: boolean } | null> {
+    const [fila] = await this.tx.$queryRaw<
+      { en_curso: boolean; vencida: boolean }[]
+    >`
+      SELECT estado = 'EN_CURSO' AS en_curso,
+        statement_timestamp() >= fecha_limite AS vencida
+      FROM chat.intervenciones_sos
+      WHERE id_sesion_sos = ${idSesion}::uuid
+      FOR SHARE`;
+    return fila === undefined
+      ? null
+      : { enCurso: fila.en_curso, vencida: fila.vencida };
+  }
 }

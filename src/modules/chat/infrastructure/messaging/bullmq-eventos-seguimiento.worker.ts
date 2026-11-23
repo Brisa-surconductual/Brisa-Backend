@@ -9,8 +9,13 @@ import { Interval } from '@nestjs/schedule';
 import { Queue, RedisOptions, Worker } from 'bullmq';
 import {
   EVENTO_SESION_FINALIZADA,
-  EventoSesionFinalizada,
+  TIPO_EVENTO_SESION_FINALIZADA,
 } from '../../application/ports/evento-sesion-finalizada';
+import {
+  EVENTO_SOS_ACTIVADO,
+  EventoSeguimientoChat,
+  TIPO_EVENTO_SOS_ACTIVADO,
+} from '../../application/ports/evento-sos-activado';
 import { PrismaEventosSeguimientoRepository } from '../persistence/prisma-eventos-seguimiento.repository';
 
 function configuracionRedis(cadena: string): RedisOptions {
@@ -34,6 +39,17 @@ function configuracionRedis(cadena: string): RedisOptions {
   };
 }
 
+/**
+ * Tópico interno de cada tipo de evento. La cola BullMQ es una sola
+ * (`chat.sesion-finalizada`, RF-39); M05 escucha un tópico por tipo.
+ */
+export const TOPICO_POR_TIPO: Readonly<
+  Record<EventoSeguimientoChat['tipo'], string>
+> = {
+  [TIPO_EVENTO_SESION_FINALIZADA]: EVENTO_SESION_FINALIZADA,
+  [TIPO_EVENTO_SOS_ACTIVADO]: EVENTO_SOS_ACTIVADO,
+};
+
 function enteroPositivo(valor: string | undefined, defecto: number): number {
   const numero = Number(valor);
   return Number.isInteger(numero) && numero > 0 && numero <= 2_147_483_647
@@ -46,8 +62,8 @@ export class BullMqEventosSeguimientoWorker
   implements OnApplicationBootstrap, OnModuleDestroy
 {
   private readonly logger = new Logger(BullMqEventosSeguimientoWorker.name);
-  private cola?: Queue<EventoSesionFinalizada>;
-  private worker?: Worker<EventoSesionFinalizada>;
+  private cola?: Queue<EventoSeguimientoChat>;
+  private worker?: Worker<EventoSeguimientoChat>;
   private envio?: Promise<void>;
   private redisListo = () => false;
   private readonly reenvioMs = enteroPositivo(
@@ -72,7 +88,7 @@ export class BullMqEventosSeguimientoWorker
       return;
     }
 
-    const cola = new Queue<EventoSesionFinalizada>(EVENTO_SESION_FINALIZADA, {
+    const cola = new Queue<EventoSeguimientoChat>(EVENTO_SESION_FINALIZADA, {
       connection: {
         ...base,
         maxRetriesPerRequest: 1,
@@ -90,7 +106,7 @@ export class BullMqEventosSeguimientoWorker
       },
     });
     this.cola = cola;
-    this.worker = new Worker<EventoSesionFinalizada>(
+    this.worker = new Worker<EventoSeguimientoChat>(
       EVENTO_SESION_FINALIZADA,
       (trabajo) => this.entregar(trabajo.data),
       { connection: { ...base, maxRetriesPerRequest: null } },
@@ -128,7 +144,7 @@ export class BullMqEventosSeguimientoWorker
     await cola?.close();
   }
 
-  private async encolar(cola: Queue<EventoSesionFinalizada>): Promise<void> {
+  private async encolar(cola: Queue<EventoSeguimientoChat>): Promise<void> {
     const pendientes = await this.repositorio.reservarPendientes(
       this.reenvioMs,
     );
@@ -148,14 +164,15 @@ export class BullMqEventosSeguimientoWorker
     }
   }
 
-  private async entregar(evento: EventoSesionFinalizada): Promise<void> {
+  private async entregar(evento: EventoSeguimientoChat): Promise<void> {
     if (!(await this.repositorio.estaPendiente(evento.id_evento))) return;
 
     try {
-      if (!this.eventos.hasListeners(EVENTO_SESION_FINALIZADA)) {
+      const topico = TOPICO_POR_TIPO[evento.tipo];
+      if (topico === undefined || !this.eventos.hasListeners(topico)) {
         throw new Error('M05 no está disponible.');
       }
-      await this.eventos.emitAsync(EVENTO_SESION_FINALIZADA, evento);
+      await this.eventos.emitAsync(topico, evento);
       await this.repositorio.marcarEntregado(evento.id_evento);
     } catch {
       await this.repositorio.marcarError([evento.id_evento]);

@@ -5,13 +5,57 @@ import {
   EventoSesionFinalizada,
   TIPO_EVENTO_SESION_FINALIZADA,
 } from '../../application/ports/evento-sesion-finalizada';
+import {
+  EventoSeguimientoChat,
+  EventoSosActivado,
+  TIPO_EVENTO_SOS_ACTIVADO,
+} from '../../application/ports/evento-sos-activado';
+import { NIVEL_CRAVING_SOS } from '../../domain/enums/intervencion-sos.enum';
 
 type FilaEvento = Omit<
   EventoSesionFinalizada,
   'tipo' | 'version' | 'timestamp'
 > & {
+  tipo_evento: string;
   timestamp: Date;
+  // RF-43: columnas de la intervención (null en CHAT_SESION_FINALIZADA).
+  id_intervencion: string | null;
+  duracion_segundos: number | null;
+  estado_intervencion: string | null;
+  estado_sesion_anterior: string | null;
 };
+
+function aEvento(fila: FilaEvento): EventoSeguimientoChat {
+  if (fila.tipo_evento === TIPO_EVENTO_SOS_ACTIVADO) {
+    return {
+      id_evento: fila.id_evento,
+      tipo: TIPO_EVENTO_SOS_ACTIVADO,
+      version: '1.0',
+      id_usuario: fila.id_usuario,
+      id_intervencion: fila.id_intervencion!,
+      timestamp_craving: fila.timestamp.toISOString(),
+      tipo_craving: fila.tipo_craving,
+      duracion_intervencion: fila.duracion_segundos ?? 0,
+      estado_intervencion:
+        fila.estado_intervencion as EventoSosActivado['estado_intervencion'],
+      nivel_craving: NIVEL_CRAVING_SOS,
+      estado_sesion_anterior:
+        fila.estado_sesion_anterior as EventoSosActivado['estado_sesion_anterior'],
+    };
+  }
+  return {
+    id_evento: fila.id_evento,
+    tipo: TIPO_EVENTO_SESION_FINALIZADA,
+    version: '1.0',
+    id_usuario: fila.id_usuario,
+    id_sesion: fila.id_sesion,
+    modalidad: fila.modalidad,
+    tipo_dependencia: fila.tipo_dependencia,
+    tipo_craving: fila.tipo_craving,
+    origen_evento: fila.origen_evento,
+    timestamp: fila.timestamp.toISOString(),
+  };
+}
 
 @Injectable()
 export class PrismaEventosSeguimientoRepository {
@@ -19,7 +63,7 @@ export class PrismaEventosSeguimientoRepository {
 
   async reservarPendientes(
     reenvioMs: number,
-  ): Promise<EventoSesionFinalizada[]> {
+  ): Promise<EventoSeguimientoChat[]> {
     const filas = await this.prisma.$queryRaw<FilaEvento[]>`
       WITH pendientes AS (
         SELECT id_evento FROM chat.eventos_seguimiento
@@ -29,17 +73,20 @@ export class PrismaEventosSeguimientoRepository {
       )
       UPDATE chat.eventos_seguimiento e
       SET proximo_envio_en = now() + ${reenvioMs}::integer * interval '1 millisecond'
-      FROM pendientes p WHERE e.id_evento = p.id_evento
+      FROM pendientes p
+      WHERE e.id_evento = p.id_evento
       RETURNING e.id_evento, e.id_usuario, e.id_sesion, e.modalidad::text AS modalidad,
         e.tipo_dependencia::text AS tipo_dependencia, e.tipo_craving::text AS tipo_craving,
-        e.origen_evento::text AS origen_evento, e.timestamp
+        e.origen_evento::text AS origen_evento, e.tipo_evento::text AS tipo_evento,
+        e.timestamp, e.id_intervencion_sos AS id_intervencion,
+        (SELECT s.duracion_segundos FROM chat.intervenciones_sos s
+          WHERE s.id_intervencion = e.id_intervencion_sos) AS duracion_segundos,
+        (SELECT s.estado::text FROM chat.intervenciones_sos s
+          WHERE s.id_intervencion = e.id_intervencion_sos) AS estado_intervencion,
+        (SELECT s.estado_sesion_anterior::text FROM chat.intervenciones_sos s
+          WHERE s.id_intervencion = e.id_intervencion_sos) AS estado_sesion_anterior
     `;
-    return filas.map((fila) => ({
-      ...fila,
-      tipo: TIPO_EVENTO_SESION_FINALIZADA,
-      version: '1.0',
-      timestamp: fila.timestamp.toISOString(),
-    }));
+    return filas.map(aEvento);
   }
 
   async estaPendiente(idEvento: string): Promise<boolean> {

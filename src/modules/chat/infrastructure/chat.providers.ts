@@ -1,3 +1,6 @@
+import { IntervencionSosPort } from '../application/ports/intervencion-sos.port';
+import { ExpirarIntervencionesSosCron } from './cron/expirar-intervenciones-sos.cron';
+import { PrismaIntervencionSosRepository } from './persistence/prisma-intervencion-sos.repository';
 import { ContenidoVigenteChatRepository } from '../domain/repositories/contenido-vigente-chat.repository';
 import { HabilitacionContenidoChatRepository } from '../domain/repositories/habilitacion-contenido-chat.repository';
 import { CronogramaHabilitacionContenidoChatRepository } from './persistence/cronograma-habilitacion-contenido-chat.repository';
@@ -51,6 +54,8 @@ export const ChatInfrastructureProviders = [
   },
   PrismaEventosSeguimientoRepository,
   BullMqEventosSeguimientoWorker,
+  { provide: IntervencionSosPort, useClass: PrismaIntervencionSosRepository },
+  ExpirarIntervencionesSosCron,
   {
     provide: PerfilClinicoVigentePort,
     useClass: PrismaPerfilClinicoVigenteAdapter,

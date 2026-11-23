@@ -23,13 +23,24 @@ const SESION_COMPLETADA: Prisma.chat_sesionesWhereInput = {
 };
 
 /**
+ * RF-43: las sesiones SOS corren aparte de la sesión de terapia; nunca cuentan
+ * como sesión pendiente ni se reanudan desde RF-32.
+ */
+const SESION_DE_TERAPIA: Prisma.chat_sesionesWhereInput = {
+  modalidad_activa: { in: ['GRUPAL', 'PERSONALIZADA'] },
+};
+
+/**
  * Sesión pendiente que no duplica un árbol ya completado por el mismo usuario.
  * `id_flujo` es la clave del flujo, así que identifica también su versión.
  */
-function sesionPendiente(idUsuario: string): Prisma.chat_sesionesWhereInput {
+export function sesionPendiente(
+  idUsuario: string,
+): Prisma.chat_sesionesWhereInput {
   return {
     id_usuario: idUsuario,
     AND: [
+      SESION_DE_TERAPIA,
       SESION_NO_COMPLETADA,
       {
         OR: [

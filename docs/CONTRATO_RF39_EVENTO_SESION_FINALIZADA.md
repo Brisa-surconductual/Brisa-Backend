@@ -24,3 +24,14 @@ RF-39 menciona las etiquetas de RF-36 para las variables que las requieran. La c
 | `CHAT_SEGUIMIENTO_REENCOLAR_MS` | Intervalo para ofrecer nuevamente eventos pendientes a Redis.                                                                                      | `30000`       |
 
 El worker revisa PostgreSQL cada 200 ms con Redis disponible. El objetivo de emisión del RF es menor a 500 ms en condiciones operativas. La entrega depende de Redis, M05 y la carga del entorno. Para ejecutar las pruebas completas se requieren una base PostgreSQL desechable con prefijo `brisa_rf39_` y una instancia Redis local aislada. Se usan `RF39_TEST_DATABASE_URL` y `RF39_TEST_REDIS_URL` con `pnpm test:e2e:chat --runTestsByPath test/chat/evento-sesion-finalizada-rf39.e2e-spec.ts`.
+
+## Cambio 2026-11-22: outbox multi-tipo (RF-43)
+
+`chat.eventos_seguimiento` tiene ahora la columna `tipo_evento` (`CHAT_SESION_FINALIZADA` por defecto, o `CHAT_SOS_ACTIVADO`) y la columna `id_intervencion_sos`. La cola BullMQ sigue siendo `chat.sesion-finalizada`; el worker entrega cada evento en el tópico de su tipo:
+
+| Tipo | Tópico | Contrato TypeScript |
+| --- | --- | --- |
+| `CHAT_SESION_FINALIZADA` | `chat.sesion-finalizada` | `EventoSesionFinalizada` |
+| `CHAT_SOS_ACTIVADO` | `chat.sos-activado` | `EventoSosActivado` (`application/ports/evento-sos-activado.ts`) |
+
+Las sesiones `SOS` no emiten `CHAT_SESION_FINALIZADA`. El evento SOS se escribe al cerrar la intervención (origen `SOS`) y lleva `id_usuario`, `timestamp_craving`, `tipo_craving` y `duracion_intervencion`, más el estado de la intervención. M05 debe registrar un listener para `chat.sos-activado` con las mismas reglas de idempotencia por `id_evento`. Ver `CONTRATO_RF43_SOS_CRAVING.md`.

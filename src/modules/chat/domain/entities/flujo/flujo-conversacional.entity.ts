@@ -11,6 +11,15 @@ import {
   PerfilClinicoArbolInvalidoException,
 } from '../../exceptions';
 
+/** Modalidades sin perfil clínico y con un único flujo publicado. */
+export type ModalidadSinPerfil =
+  ModalidadConversacional.GRUPAL | ModalidadConversacional.SOS;
+
+export const MODALIDADES_SIN_PERFIL: readonly ModalidadConversacional[] = [
+  ModalidadConversacional.GRUPAL,
+  ModalidadConversacional.SOS,
+];
+
 export class FlujoConversacional {
   constructor(
     readonly idFlujo: string,
@@ -31,10 +40,39 @@ export class FlujoConversacional {
     version: number,
     creadoPor: string,
   ): FlujoConversacional {
+    return FlujoConversacional.crearSinPerfil(
+      ModalidadConversacional.GRUPAL,
+      nombre,
+      version,
+      creadoPor,
+    );
+  }
+
+  /** RF-43: flujo SOS; como el grupal, sin perfil clínico y un único publicado. */
+  static crearSos(
+    nombre: string,
+    version: number,
+    creadoPor: string,
+  ): FlujoConversacional {
+    return FlujoConversacional.crearSinPerfil(
+      ModalidadConversacional.SOS,
+      nombre,
+      version,
+      creadoPor,
+    );
+  }
+
+  /** Flujo sin perfil clínico (GRUPAL o SOS), en borrador. */
+  static crearSinPerfil(
+    modalidad: ModalidadSinPerfil,
+    nombre: string,
+    version: number,
+    creadoPor: string,
+  ): FlujoConversacional {
     return new FlujoConversacional(
       randomUUID(),
       nombre,
-      ModalidadConversacional.GRUPAL,
+      modalidad,
       EstadoFlujoConversacional.BORRADOR,
       version,
       creadoPor,
@@ -76,6 +114,14 @@ export class FlujoConversacional {
     ) {
       throw new PerfilClinicoArbolInvalidoException();
     }
+  }
+
+  /**
+   * GRUPAL y SOS admiten un solo flujo publicado por modalidad; el
+   * personalizado admite uno por combinación de perfil clínico.
+   */
+  get esPublicadoUnico(): boolean {
+    return MODALIDADES_SIN_PERFIL.includes(this.modalidad);
   }
 
   get esEditable(): boolean {

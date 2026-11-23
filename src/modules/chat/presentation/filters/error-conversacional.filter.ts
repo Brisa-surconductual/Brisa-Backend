@@ -25,7 +25,12 @@ import {
 } from './domain-exception.filter';
 
 type Contrato =
-  'iniciar' | 'respuestas' | 'nodo-actual' | 'historial' | 'errores-cliente';
+  | 'iniciar'
+  | 'respuestas'
+  | 'nodo-actual'
+  | 'historial'
+  | 'errores-cliente'
+  | 'sos';
 
 const CAMPOS_RESPUESTA = new Set([
   'valor',
@@ -47,6 +52,12 @@ function contratoConversacional(
     if (ruta === '/chat/sesiones/iniciar') return 'iniciar';
     if (/^\/chat\/sesiones\/[^/]+\/respuestas$/u.test(ruta))
       return 'respuestas';
+    // RF-43: protocolo SOS del estudiante.
+    if (
+      ruta === '/chat/sos/activar' ||
+      /^\/chat\/sos\/[^/]+\/finalizar$/u.test(ruta)
+    )
+      return 'sos';
   }
   if (solicitud.method === 'GET' || solicitud.method === 'HEAD') {
     if (/^\/chat\/sesiones\/[^/]+\/nodo-actual$/u.test(ruta))
@@ -140,7 +151,9 @@ export class ErrorConversacionalFilter implements ExceptionFilter {
     else if (
       codigo === null &&
       statusCode === 400 &&
-      (contrato === 'historial' || contrato === 'errores-cliente')
+      (contrato === 'historial' ||
+        contrato === 'errores-cliente' ||
+        contrato === 'sos')
     )
       codigo = 'PARAMETRO_INVALIDO';
     else if (
