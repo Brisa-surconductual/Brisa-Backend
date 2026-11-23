@@ -10,9 +10,13 @@ APROBADA. Implementación en `feat/administrativo-gestion-cohortes-rf124`.
 | --- | --- | --- |
 | `POST /admin/cohortes` | Crear una cohorte en `BORRADOR` | 201 |
 | `PATCH /admin/cohortes/:id_cohorte` | Editar los datos, activar, inactivar o reactivar | 200 |
+| `GET /admin/cohortes` | Listar las cohortes disponibles | 200 |
+| `GET /admin/cohortes/:id_cohorte` | Consultar una cohorte | 200 |
 
 Las escrituras requieren cookie de sesión, alcance `COMPLETA`, rol
 `ADMINISTRATIVO` y el encabezado `X-CSRF-Token`.
+Las lecturas requieren la misma sesión administrativa, con CSRF reservado
+para escrituras.
 
 ## Solicitud
 
@@ -51,9 +55,8 @@ se omite ese campo.
 ## Reglas y decisiones
 
 - Las transiciones admitidas por el trigger vigente son `BORRADOR → ACTIVA`,
-  `ACTIVA → INACTIVA` e `INACTIVA → ACTIVA`. La demostración del frontend solo
-  ofrece las primeras dos. Cualquier cambio de esa política requiere alinear
-  el contrato y el trigger.
+  `ACTIVA → INACTIVA` e `INACTIVA → ACTIVA`. Cualquier cambio de esa política
+  requiere alinear el contrato y el trigger.
 - Solicitar el estado actual devuelve 409. PostgreSQL también exige nombres
   únicos entre cohortes sin eliminación lógica, incluso si están inactivas.
 - Crear, editar datos y pasar a `ACTIVA` requieren un cronograma activo.
@@ -63,10 +66,11 @@ se omite ese campo.
 - El cambio y la auditoría `GESTION_COHORTE` se confirman en la misma
   transacción. El detalle distingue `CREAR`, `EDITAR`, `ACTIVAR` e
   `INACTIVAR`. La identidad del actor proviene de la sesión.
-- El contrato del listado y el detalle de cohortes queda pendiente para
-  conectar el frontend, que actualmente usa datos de demostración. El selector
-  puede reutilizar `GET /cronograma/obtener-cronogramas` de M04 y filtrar los
-  cronogramas activos. Este contrato cubre las dos escrituras solicitadas.
+- El detalle devuelve los campos de la cohorte y `nombre_cronograma`. El
+  listado devuelve un arreglo de ese mismo objeto ordenado por última
+  actualización descendente e identificador descendente. Las consultas
+  excluyen cohortes con eliminación lógica y auditan el `ACCESO_MODULO`. El
+  selector reutiliza `GET /cronograma/obtener-cronogramas` de M04.
 
 ## Trazabilidad
 

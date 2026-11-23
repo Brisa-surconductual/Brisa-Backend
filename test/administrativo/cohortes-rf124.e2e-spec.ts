@@ -275,6 +275,47 @@ conPostgres('RF-124 gestión de cohortes con PostgreSQL y sesión real', () => {
     await crear(datosValidos(), admin, 'invalido').expect(403);
   });
 
+  it('lista y consulta con sesión administrativa, e ignora cohortes eliminadas', async () => {
+    const vigente = await crearBorrador();
+    const eliminada = await crearBorrador();
+    await prisma.$executeRaw`
+      UPDATE administrativo.cohortes SET fecha_eliminacion = now()
+      WHERE id_cohorte = ${eliminada.id_cohorte}::uuid
+    `;
+
+    const cookieAdmin = `${cookie}=${admin.token}`;
+    const esperado = { ...vigente, nombre_cronograma: 'Cronograma RF-124' };
+    const listado = await request(servidor())
+      .get(ruta)
+      .set('Cookie', cookieAdmin)
+      .expect('Cache-Control', 'no-store')
+      .expect(200);
+    expect(listado.body).toContainEqual(esperado);
+    expect(listado.body).not.toContainEqual(
+      expect.objectContaining({ id_cohorte: eliminada.id_cohorte }),
+    );
+    await request(servidor())
+      .get(`${ruta}/${vigente.id_cohorte}`)
+      .set('Cookie', cookieAdmin)
+      .expect(200)
+      .expect(esperado);
+    await request(servidor())
+      .get(`${ruta}/${eliminada.id_cohorte}`)
+      .set('Cookie', cookieAdmin)
+      .expect(404);
+    await request(servidor()).get(ruta).expect(401);
+    await request(servidor())
+      .get(ruta)
+      .set('Cookie', `${cookie}=${estudiante.token}`)
+      .expect(403);
+
+    await expect(prisma.$queryRaw`
+      SELECT recurso_afectado FROM administrativo.bitacora_auditoria
+      WHERE id_recurso = ${vigente.id_cohorte}::uuid
+        AND accion = 'ACCESO_MODULO' AND estado_accion = 'EXITOSA'
+    `).resolves.toEqual([{ recurso_afectado: 'COHORTE' }]);
+  });
+
   it('traduce un nombre duplicado al crear y al editar', async () => {
     const primera = await crearBorrador();
     const segunda = await crearBorrador();

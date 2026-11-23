@@ -1,7 +1,16 @@
 import type { Prisma } from '@prisma/client';
-import type { Cohorte, DatosCohorte } from '../../domain/cohorte';
+import type {
+  Cohorte,
+  CohorteConsultada,
+  DatosCohorte,
+} from '../../domain/cohorte';
 
 export abstract class CohortesRepository {
+  abstract consultarVigentes(
+    tx: Prisma.TransactionClient,
+    id?: string,
+  ): Promise<CohorteConsultada[]>;
+
   abstract buscarParaActualizar(
     tx: Prisma.TransactionClient,
     id: string,

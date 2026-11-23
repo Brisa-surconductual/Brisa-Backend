@@ -1,6 +1,10 @@
 import { HttpException } from '@nestjs/common';
 
 const ERRORES = {
+  ERROR_CONSULTA_COHORTE: [
+    500,
+    'No fue posible consultar las cohortes en este momento.',
+  ],
   NOMBRE_COHORTE_DUPLICADO: [
     409,
     'Ya existe una cohorte vigente con ese nombre.',

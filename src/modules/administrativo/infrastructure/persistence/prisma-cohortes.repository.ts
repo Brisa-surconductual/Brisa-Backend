@@ -3,11 +3,18 @@ import { Prisma } from '@prisma/client';
 import type { CodigoErrorCohorte } from '../../application/cohorte.errors';
 import { errorCohorte } from '../../application/cohorte.errors';
 import { CohortesRepository } from '../../application/ports/cohortes.repository';
-import type { Cohorte, DatosCohorte } from '../../domain/cohorte';
+import type {
+  Cohorte,
+  CohorteConsultada,
+  DatosCohorte,
+} from '../../domain/cohorte';
 
 type FilaCohorte = Omit<Cohorte, 'fecha_actualizacion'> & {
   fecha_actualizacion: Date;
 };
+
+type FilaCohorteConsultada = FilaCohorte &
+  Pick<CohorteConsultada, 'nombre_cronograma'>;
 
 type ErrorAdaptadorSql = {
   cause?: { originalCode?: unknown; originalMessage?: unknown };
@@ -35,6 +42,27 @@ const ERRORES_SQL: Record<
 
 @Injectable()
 export class PrismaCohortesRepository implements CohortesRepository {
+  consultarVigentes(tx: Prisma.TransactionClient, id?: string) {
+    const filtro =
+      id === undefined
+        ? Prisma.empty
+        : Prisma.sql`AND id_cohorte = ${id}::uuid`;
+    return this.consultar<FilaCohorteConsultada>(
+      tx,
+      Prisma.sql`
+      SELECT cohorte.*, cronograma.nombre_cronograma
+      FROM (
+        SELECT ${CAMPOS_COHORTE}
+        FROM administrativo.cohortes
+        WHERE fecha_eliminacion IS NULL ${filtro}
+      ) AS cohorte
+      JOIN cronograma.cronogramas AS cronograma USING (id_cronograma)
+      ORDER BY cohorte.fecha_actualizacion DESC, cohorte.id_cohorte DESC
+    `,
+      'ERROR_CONSULTA_COHORTE',
+    );
+  }
+
   async buscarParaActualizar(tx: Prisma.TransactionClient, id: string) {
     const [fila] = await this.consultar(
       tx,
@@ -94,9 +122,13 @@ export class PrismaCohortesRepository implements CohortesRepository {
     return actualizada;
   }
 
-  private async consultar(tx: Prisma.TransactionClient, consulta: Prisma.Sql) {
+  private async consultar<T extends FilaCohorte = FilaCohorte>(
+    tx: Prisma.TransactionClient,
+    consulta: Prisma.Sql,
+    codigoFallo: CodigoErrorCohorte = 'ERROR_PERSISTENCIA_COHORTE',
+  ) {
     try {
-      const filas = await tx.$queryRaw<FilaCohorte[]>(consulta);
+      const filas = await tx.$queryRaw<T[]>(consulta);
       return filas.map(({ fecha_actualizacion, ...fila }) => ({
         ...fila,
         fecha_actualizacion: fecha_actualizacion.toISOString(),
@@ -118,7 +150,7 @@ export class PrismaCohortesRepository implements CohortesRepository {
           }
         }
       }
-      throw errorCohorte('ERROR_PERSISTENCIA_COHORTE', error);
+      throw errorCohorte(codigoFallo, error);
     }
   }
 }
