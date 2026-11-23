@@ -8,6 +8,7 @@ import type {
   CohorteConsultada,
   DatosCohorte,
 } from '../../domain/cohorte';
+import { errorSqlPrisma } from './error-sql-prisma';
 
 type FilaCohorte = Omit<Cohorte, 'fecha_actualizacion'> & {
   fecha_actualizacion: Date;
@@ -15,10 +16,6 @@ type FilaCohorte = Omit<Cohorte, 'fecha_actualizacion'> & {
 
 type FilaCohorteConsultada = FilaCohorte &
   Pick<CohorteConsultada, 'nombre_cronograma'>;
-
-type ErrorAdaptadorSql = {
-  cause?: { originalCode?: unknown; originalMessage?: unknown };
-};
 
 const CAMPOS_COHORTE = Prisma.sql`
   id_cohorte, nombre_cohorte,
@@ -34,6 +31,10 @@ const ERRORES_SQL: Record<
   CRONOGRAMA_NO_ENCONTRADO: ['AD404', 'CRONOGRAMA_NO_ENCONTRADO'],
   CRONOGRAMA_NO_ACTIVO: ['AD422', 'CRONOGRAMA_NO_ACTIVO'],
   TRANSICION_COHORTE_INVALIDA: ['AD409', 'TRANSICION_COHORTE_INVALIDA'],
+  PARTICIPANTE_EN_OTRA_COHORTE_ACTIVA: [
+    'AD409',
+    'PARTICIPANTE_EN_OTRA_COHORTE_ACTIVA',
+  ],
   ROL_INVALIDO: ['AD422', 'ROL_INVALIDO'],
   ck_cohorte_fechas: ['23514', 'FECHAS_COHORTE_INVALIDAS'],
   ck_cohorte_nombre: ['23514', 'NOMBRE_COHORTE_INVALIDO'],
@@ -134,20 +135,11 @@ export class PrismaCohortesRepository implements CohortesRepository {
         fecha_actualizacion: fecha_actualizacion.toISOString(),
       }));
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2010'
-      ) {
-        const meta = error.meta;
-        const adaptador = meta?.driverAdapterError as
-          ErrorAdaptadorSql | undefined;
-        const code = adaptador?.cause?.originalCode ?? meta?.code;
-        const message = adaptador?.cause?.originalMessage ?? meta?.message;
-        if (typeof message === 'string') {
-          for (const [token, [estado, codigo]] of Object.entries(ERRORES_SQL)) {
-            if (estado === code && message.includes(token))
-              throw errorCohorte(codigo);
-          }
+      const db = errorSqlPrisma(error);
+      if (db && typeof db.mensaje === 'string') {
+        for (const [token, [estado, codigo]] of Object.entries(ERRORES_SQL)) {
+          if (estado === db.estado && db.mensaje.includes(token))
+            throw errorCohorte(codigo);
         }
       }
       throw errorCohorte(codigoFallo, error);
