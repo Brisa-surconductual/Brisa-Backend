@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { cacheTipoEntrada } from './catalogo-tipos-cache';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import {
   ConsultaHistorialInteracciones,
@@ -21,7 +22,7 @@ const SELECCION_INTERACCION = {
     take: 1,
     select: {
       valor_respuesta: true,
-      tipo_entrada: { select: { nombre: true } },
+      id_tipo_entrada: true,
     },
   },
 } satisfies Prisma.interaccionesSelect;
@@ -128,13 +129,18 @@ export class PrismaHistorialInteraccionesRepository implements HistorialInteracc
         idNodoDestino = finSinDestino ? null : undefined;
       }
       if (idNodoDestino === undefined) return null;
+      const nombreTipoEntrada = await cacheTipoEntrada.nombre(
+        tx,
+        respuesta.id_tipo_entrada,
+      );
+      if (nombreTipoEntrada === undefined) return null;
       registros.push({
         idInteraccion: fila.id_interaccion,
         secuencia: fila.secuencia,
         timestampInteraccion: fila.timestamp_interaccion,
         idNodo: fila.id_nodo,
         idNodoDestino,
-        tipoEntrada: respuesta.tipo_entrada.nombre,
+        tipoEntrada: nombreTipoEntrada,
         valor: respuesta.valor_respuesta,
       });
     }

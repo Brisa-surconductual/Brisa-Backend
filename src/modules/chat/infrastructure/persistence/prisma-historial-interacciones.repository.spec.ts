@@ -4,7 +4,15 @@ import { PrismaHistorialInteraccionesRepository } from './prisma-historial-inter
 describe('PrismaHistorialInteraccionesRepository (RF-31 / RF-32)', () => {
   const findMany = jest.fn();
   const $queryRaw = jest.fn();
-  const tx = { interacciones: { findMany }, $queryRaw };
+  const tx = {
+    interacciones: { findMany },
+    tipo_entrada: {
+      findMany: jest
+        .fn()
+        .mockResolvedValue([{ id_tipo_entrada: 'te-1', nombre: 'NUMERICO' }]),
+    },
+    $queryRaw,
+  };
   const $transaction = jest.fn(
     (operacion: (lectura: typeof tx) => Promise<unknown>) => operacion(tx),
   );
@@ -18,9 +26,7 @@ describe('PrismaHistorialInteraccionesRepository (RF-31 / RF-32)', () => {
     timestamp_interaccion: fecha,
     id_nodo: `n-${secuencia}`,
     historial_nodos: { id_nodo_destino: `n-${secuencia + 1}` },
-    respuestas: [
-      { valor_respuesta: secuencia, tipo_entrada: { nombre: 'NUMERICO' } },
-    ],
+    respuestas: [{ valor_respuesta: secuencia, id_tipo_entrada: 'te-1' }],
   });
 
   beforeEach(() => {
