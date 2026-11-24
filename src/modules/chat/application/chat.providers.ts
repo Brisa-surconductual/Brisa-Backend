@@ -1,5 +1,8 @@
 import { ConsultarTrazabilidadSesionUseCase } from './use-cases/sesion/consultar-trazabilidad-sesion.use-case';
 import { TrazabilidadPort } from './ports/trazabilidad-sesion.port';
+import { ListarSesionesParticipanteUseCase } from './use-cases/sesion/listar-sesiones-participante.use-case';
+import { AuditarConsultaTrazabilidadService } from './services/auditar-consulta-trazabilidad.service';
+import { DescribirContenidoHistoricoService } from './services/describir-contenido-historico.service';
 import { ActualizarNodoConversacionalUseCase } from './use-cases/arbol-conversacional/actualizar-nodo-conversacional.use-case';
 import { ActualizarTransicionConversacionalUseCase } from './use-cases/arbol-conversacional/actualizar-transicion-conversacional.use-case';
 import { ArchivarFlujoUseCase } from './use-cases/arbol-conversacional/archivar-flujo.use-case';
@@ -47,6 +50,9 @@ import { CambiarEstadoVariableTaxonomiaUseCase } from './use-cases/taxonomia/cam
 
 export const ChatApplicationProviders = [
   ConsultarTrazabilidadSesionUseCase,
+  ListarSesionesParticipanteUseCase,
+  DescribirContenidoHistoricoService,
+  AuditarConsultaTrazabilidadService,
   {
     provide: TrazabilidadPort,
     useExisting: ConsultarTrazabilidadSesionUseCase,

@@ -21,6 +21,7 @@ const MENSAJES: Readonly<Record<string, string>> = {
   SIN_COINCIDENCIA:
     'Tu respuesta no coincide con las opciones esperadas. Revisa la pregunta o solicita ayuda.',
   SESION_NO_ENCONTRADA: 'No se pudo recuperar el contenido del chat.',
+  PARTICIPANTE_NO_ENCONTRADO: 'No se encontró el participante solicitado.',
   NODO_INEXISTENTE: 'No se pudo recuperar el contenido del chat.',
   SESION_ERROR_CONFIGURACION: RETOMAR,
   SESION_NO_REANUDABLE:

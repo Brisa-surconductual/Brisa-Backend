@@ -78,3 +78,15 @@ export class ArbolYaCompletadoException extends DomainException {
     );
   }
 }
+
+/** RF-38 (M-8): el código seudonimizado no corresponde a ningún participante. */
+export class ParticipanteNoEncontradoException extends DomainException {
+  readonly tipo = 'NO_ENCONTRADO';
+
+  constructor() {
+    super(
+      'No se encontró el participante solicitado.',
+      'PARTICIPANTE_NO_ENCONTRADO',
+    );
+  }
+}

@@ -7,7 +7,13 @@ import {
   EstadoSesionInconsistenteException,
   SesionActivaExistenteException,
 } from '../../domain/exceptions/sesion.exceptions';
-import { SesionConversacionalRepository } from '../../domain/repositories/sesion-conversacional.repository';
+import {
+  CursorSesionesParticipante,
+  PaginaSesionesParticipante,
+  SesionConversacionalRepository,
+} from '../../domain/repositories/sesion-conversacional.repository';
+import { EstadoSesionConversacional } from '../../domain/entities/sesion/sesion-conversacional.entity';
+import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
 import { SesionConversacionalMapper } from '../mappers/sesion-conversacional.mapper';
 import { actualizarSesionConversacional } from './prisma-actualizar-sesion-conversacional';
 
@@ -73,9 +79,75 @@ function sesionCompletadaDelArbol(
   };
 }
 
+interface FilaResumenSesion {
+  id_sesion: string;
+  id_usuario: string;
+  modalidad: string;
+  estado: string;
+  fecha_inicio: Date;
+  fecha_ultima_interaccion: Date;
+  marca_orden: string;
+}
+
 @Injectable()
 export class PrismaSesionConversacionalRepository implements SesionConversacionalRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * RF-38 (M-8). Paginación por conjunto (keyset) sobre
+   * (fecha_ultima_interaccion, id_sesion) descendente: estable aunque se
+   * creen sesiones nuevas. La marca de orden conserva los microsegundos de la
+   * BD, porque `Date` de JS los trunca y el cursor podría saltar o repetir
+   * sesiones. Página y total se leen en la misma instantánea (RepeatableRead).
+   * Solo cuenta sesiones con estado registrado, como `buscarPorId`.
+   */
+  listarPorUsuario(
+    idUsuario: string,
+    limite: number,
+    despuesDe: CursorSesionesParticipante | null,
+  ): Promise<PaginaSesionesParticipante> {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const filas = await tx.$queryRaw<FilaResumenSesion[]>`
+          SELECT s.id_sesion::text AS id_sesion,
+                 s.id_usuario::text AS id_usuario,
+                 s.modalidad_activa::text AS modalidad,
+                 e.estado_actual::text AS estado,
+                 s.fecha_inicio,
+                 s.fecha_ultima_interaccion,
+                 to_char(s.fecha_ultima_interaccion AT TIME ZONE 'UTC',
+                         'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS marca_orden
+            FROM chat.sesiones s
+            JOIN chat.estado_sesiones e ON e.id_sesion = s.id_sesion
+           WHERE s.id_usuario = ${idUsuario}::uuid
+             AND (${despuesDe?.fechaUltimaInteraccion ?? null}::timestamptz IS NULL
+                  OR (s.fecha_ultima_interaccion, s.id_sesion)
+                     < (${despuesDe?.fechaUltimaInteraccion ?? null}::timestamptz,
+                        ${despuesDe?.idSesion ?? null}::uuid))
+           ORDER BY s.fecha_ultima_interaccion DESC, s.id_sesion DESC
+           LIMIT ${limite + 1}`;
+        const [{ total }] = await tx.$queryRaw<{ total: number }[]>`
+          SELECT count(*)::int AS total
+            FROM chat.sesiones s
+            JOIN chat.estado_sesiones e ON e.id_sesion = s.id_sesion
+           WHERE s.id_usuario = ${idUsuario}::uuid`;
+        return {
+          sesiones: filas.slice(0, limite).map((fila) => ({
+            idSesion: fila.id_sesion,
+            idUsuario: fila.id_usuario,
+            modalidad: fila.modalidad as ModalidadConversacional,
+            estado: fila.estado as EstadoSesionConversacional,
+            fechaInicio: fila.fecha_inicio,
+            fechaUltimaInteraccion: fila.fecha_ultima_interaccion,
+            marcaOrden: fila.marca_orden,
+          })),
+          total,
+          hayMas: filas.length > limite,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
 
   async buscarPorId(idSesion: string): Promise<SesionConversacional | null> {
     const sesion = await this.prisma.chat_sesiones.findUnique({

@@ -3,15 +3,23 @@ import { PrismaService } from '../../prisma/prisma.service';
 import type { ProcesarRespuestaDtoRequest } from '../../src/modules/chat/application/dto/procesar-respuesta.dto-request';
 import { EstadoConversacionalService } from '../../src/modules/chat/application/services/estado-conversacional.service';
 import { HabilitacionNodoService } from '../../src/modules/chat/application/services/habilitacion-nodo.service';
+import { DescribirContenidoHistoricoService } from '../../src/modules/chat/application/services/describir-contenido-historico.service';
+import { PrepararEntradaNodoActualService } from '../../src/modules/chat/application/services/preparar-entrada-nodo-actual.service';
 import { ConsultarTrazabilidadSesionUseCase } from '../../src/modules/chat/application/use-cases/sesion/consultar-trazabilidad-sesion.use-case';
+import { ListarSesionesParticipanteUseCase } from '../../src/modules/chat/application/use-cases/sesion/listar-sesiones-participante.use-case';
 import { ProcesarRespuestaUseCase } from '../../src/modules/chat/application/use-cases/sesion/procesar-respuesta.use-case';
-import { SesionConversacionalNoEncontradaException } from '../../src/modules/chat/domain/exceptions/sesion.exceptions';
+import {
+  ParticipanteNoEncontradoException,
+  SesionConversacionalNoEncontradaException,
+} from '../../src/modules/chat/domain/exceptions/sesion.exceptions';
 import type { HabilitacionContenidoChatRepository } from '../../src/modules/chat/domain/repositories/habilitacion-contenido-chat.repository';
+import { PrismaArbolConversacionalRepository } from '../../src/modules/chat/infrastructure/persistence/prisma-arbol-conversacional.repository';
 import { PrismaHistorialInteraccionesRepository } from '../../src/modules/chat/infrastructure/persistence/prisma-historial-interacciones.repository';
 import { PrismaProcesarRespuestaRepository } from '../../src/modules/chat/infrastructure/persistence/prisma-procesar-respuesta.repository';
 import { PrismaSesionConversacionalRepository } from '../../src/modules/chat/infrastructure/persistence/prisma-sesion-conversacional.repository';
 import { PrismaSeudonimoParticipanteAdapter } from '../../src/modules/chat/infrastructure/persistence/prisma-seudonimo-participante.adapter';
 import { FormatoRespuestaAdapter } from '../../src/modules/chat/infrastructure/validation/formato-respuesta.adapter';
+import { PrismaAuditoriaAdministrativaAdapter } from '../../src/shared/infrastructure/persistence/prisma-auditoria-administrativa.adapter';
 
 /**
  * Trazabilidad contra PostgreSQL real (base local desechable `brisa_traz_*`
@@ -34,6 +42,9 @@ conPostgres('Trazabilidad de una sesión (PostgreSQL)', () => {
   const nodoB = randomUUID();
   const nodoFin = randomUUID();
   const sesion = randomUUID();
+  const otroEstudiante = randomUUID();
+  const sesionAjena = randomUUID();
+  let listar: ListarSesionesParticipanteUseCase;
 
   beforeAll(async () => {
     const url = new URL(urlBd ?? '');
@@ -56,6 +67,14 @@ conPostgres('Trazabilidad de una sesión (PostgreSQL)', () => {
       new PrismaSesionConversacionalRepository(prisma),
       new PrismaHistorialInteraccionesRepository(prisma),
       new PrismaSeudonimoParticipanteAdapter(prisma),
+      new DescribirContenidoHistoricoService(
+        new PrismaArbolConversacionalRepository(prisma),
+        new PrepararEntradaNodoActualService(),
+      ),
+    );
+    listar = new ListarSesionesParticipanteUseCase(
+      new PrismaSesionConversacionalRepository(prisma),
+      new PrismaSeudonimoParticipanteAdapter(prisma),
     );
     responder = new ProcesarRespuestaUseCase(
       new PrismaProcesarRespuestaRepository(prisma),
@@ -70,7 +89,8 @@ conPostgres('Trazabilidad de una sesión (PostgreSQL)', () => {
       prisma.$executeRaw`
         INSERT INTO usuario.usuarios (id_usuario, correo_electronico, contrasena_hash, rol) VALUES
           (${admin}::uuid, ${`${admin}@example.invalid`}, 'fixture', 'ADMINISTRATIVO'),
-          (${estudiante}::uuid, ${`${estudiante}@example.invalid`}, 'fixture', 'ESTUDIANTE')`,
+          (${estudiante}::uuid, ${`${estudiante}@example.invalid`}, 'fixture', 'ESTUDIANTE'),
+          (${otroEstudiante}::uuid, ${`${otroEstudiante}@example.invalid`}, 'fixture', 'ESTUDIANTE')`,
       prisma.$executeRaw`
         INSERT INTO chat.flujo_conversacion (id_flujo, nombre, modalidad, version, creado_por)
         VALUES (${flujo}::uuid, 'Trazabilidad e2e', 'GRUPAL', 1, ${admin}::uuid)`,
@@ -88,6 +108,11 @@ conPostgres('Trazabilidad de una sesión (PostgreSQL)', () => {
         INSERT INTO chat.sesiones (id_sesion, id_usuario, id_flujo_conversacional, version_arbol_utilizada, modalidad_activa, id_nodo_actual)
         VALUES (${sesion}::uuid, ${estudiante}::uuid, ${flujo}::uuid, 1, 'GRUPAL', ${nodoA}::uuid)`,
       prisma.$executeRaw`INSERT INTO chat.estado_sesiones (id_sesion) VALUES (${sesion}::uuid)`,
+      // Sesión de otro participante: nunca debe aparecer en el listado.
+      prisma.$executeRaw`
+        INSERT INTO chat.sesiones (id_sesion, id_usuario, id_flujo_conversacional, version_arbol_utilizada, modalidad_activa, id_nodo_actual)
+        VALUES (${sesionAjena}::uuid, ${otroEstudiante}::uuid, ${flujo}::uuid, 1, 'GRUPAL', ${nodoA}::uuid)`,
+      prisma.$executeRaw`INSERT INTO chat.estado_sesiones (id_sesion) VALUES (${sesionAjena}::uuid)`,
     ]);
 
     const continuar = (
@@ -136,12 +161,19 @@ conPostgres('Trazabilidad de una sesión (PostgreSQL)', () => {
         id_nodo: nodoA,
         respuesta_usuario: { valor: null },
         id_nodo_destino: nodoB,
+        tipo_entrada: 'CONTINUAR',
+        contenido_historico: 'VERIFICADO',
+        tipo_nodo: 'MENSAJE',
+        texto_nodo: 'A',
+        etiqueta_respuesta: null,
       }),
       expect.objectContaining({
         secuencia: 2,
         id_nodo: nodoB,
         respuesta_usuario: { valor: null },
         id_nodo_destino: nodoFin,
+        contenido_historico: 'VERIFICADO',
+        texto_nodo: 'B',
       }),
     ]);
     expect(
@@ -154,5 +186,85 @@ conPostgres('Trazabilidad de una sesión (PostgreSQL)', () => {
     await expect(trazabilidad.execute(randomUUID())).rejects.toBeInstanceOf(
       SesionConversacionalNoEncontradaException,
     );
+  });
+
+  it('lista las sesiones del participante por su seudónimo, sin las de otro', async () => {
+    const { id_participante: codigo } = await trazabilidad.execute(sesion);
+    const antes = await huellaChat();
+
+    const listado = await listar.execute(codigo, { limite: 20 });
+
+    expect(listado).toEqual({
+      id_participante: codigo,
+      items: [
+        expect.objectContaining({
+          id_sesion: sesion,
+          modalidad: 'GRUPAL',
+        }),
+      ],
+      total: 1,
+      siguiente_cursor: null,
+    });
+    expect(JSON.stringify(listado)).not.toContain(estudiante);
+    expect(JSON.stringify(listado)).not.toContain(sesionAjena);
+    expect(await huellaChat()).toBe(antes);
+  });
+
+  it('la sesión no se entrega si se pide con el seudónimo de otro participante', async () => {
+    const { id_participante: codigo } = await trazabilidad.execute(sesion);
+
+    await expect(
+      trazabilidad.execute(sesionAjena, { codigoParticipante: codigo }),
+    ).rejects.toBeInstanceOf(SesionConversacionalNoEncontradaException);
+  });
+
+  it('404 para un seudónimo que no existe, sin crearlo', async () => {
+    await expect(
+      listar.execute('P-00000000', { limite: 20 }),
+    ).rejects.toBeInstanceOf(ParticipanteNoEncontradoException);
+    const [fila] = await prisma.$queryRaw<{ total: number }[]>`
+      SELECT count(*)::int AS total FROM administrativo.seudonimos_participante
+       WHERE codigo_participante = 'P-00000000'`;
+    expect(fila.total).toBe(0);
+  });
+
+  it('RF-123: registra la consulta en la bitácora existente, que no admite UPDATE', async () => {
+    const sesionAutenticacion = randomUUID();
+    const id = await new PrismaAuditoriaAdministrativaAdapter(prisma).registrar(
+      {
+        actor: {
+          idUsuario: admin,
+          idSesionAutenticacion: sesionAutenticacion,
+          direccionIp: '127.0.0.1',
+        },
+        accion: 'CONSULTA_PARTICIPANTE',
+        recursoAfectado: 'trazabilidad_sesion_chat',
+        idRecurso: sesion,
+        idParticipante: estudiante,
+        estado: 'EXITOSA',
+        detalle: { operacion: 'CONSULTAR_TRAZABILIDAD_SESION' },
+      },
+    );
+
+    const [fila] = await prisma.$queryRaw<
+      {
+        id_sesion: string;
+        id_recurso: string;
+        estado_accion: string;
+        severidad: string;
+        detalle: unknown;
+      }[]
+    >`SELECT id_sesion::text, id_recurso::text, estado_accion::text, severidad::text, detalle
+        FROM administrativo.bitacora_auditoria WHERE id_auditoria = ${id}::uuid`;
+    expect(fila).toEqual({
+      id_sesion: sesionAutenticacion,
+      id_recurso: sesion,
+      estado_accion: 'EXITOSA',
+      severidad: 'BAJA',
+      detalle: { operacion: 'CONSULTAR_TRAZABILIDAD_SESION' },
+    });
+    await expect(
+      prisma.$executeRaw`UPDATE administrativo.bitacora_auditoria SET estado_accion = 'FALLIDA' WHERE id_auditoria = ${id}::uuid`,
+    ).rejects.toThrow();
   });
 });
