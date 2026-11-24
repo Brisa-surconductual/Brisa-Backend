@@ -5,6 +5,10 @@ import type {
 } from '../../domain/vista-agregada';
 
 export abstract class VistasAgregadasRepository {
+  abstract identificarCohortesActivas(
+    tx?: Prisma.TransactionClient,
+  ): Promise<string[]>;
+
   abstract obtenerCronogramaCohorteActiva(
     tx: Prisma.TransactionClient,
     idCohorte: string,

@@ -18,7 +18,7 @@ import { BitacoraRepository, ColaAuditoriaPort } from '../ports/auditoria.port';
 type ModoRegistro =
   { modo: 'SINCRONO'; tx: Prisma.TransactionClient } | { modo: 'DIFERIDO' };
 
-class RegistroAuditoriaException extends InternalServerErrorException {
+export class RegistroAuditoriaException extends InternalServerErrorException {
   constructor() {
     super({
       statusCode: 500,
