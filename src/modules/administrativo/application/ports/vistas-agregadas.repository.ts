@@ -1,7 +1,10 @@
 import type { Prisma } from '@prisma/client';
-import type { DatosConductuales } from '../../domain/vista-conductual';
+import type {
+  DatosVistaAgregada,
+  TipoVistaAgregada,
+} from '../../domain/vista-agregada';
 
-export abstract class VistasConductualesRepository {
+export abstract class VistasAgregadasRepository {
   abstract bloquearCohorteActiva(
     tx: Prisma.TransactionClient,
     idCohorte: string,
@@ -9,14 +12,17 @@ export abstract class VistasConductualesRepository {
   abstract obtenerUltimo(
     tx: Prisma.TransactionClient,
     idCohorte: string,
+    vista: TipoVistaAgregada,
   ): Promise<unknown>;
   abstract guardar(
     tx: Prisma.TransactionClient,
     idCohorte: string,
-    datos: DatosConductuales,
+    vista: TipoVistaAgregada,
+    datos: DatosVistaAgregada,
   ): Promise<boolean>;
   abstract suprimir(
     tx: Prisma.TransactionClient,
     idCohorte: string,
+    vista: TipoVistaAgregada,
   ): Promise<void>;
 }

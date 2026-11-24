@@ -296,6 +296,7 @@ No todas las secciones aplican a toda spec (p. ej. una regla de negocio interna 
 | [`CONTRATO_RF124_GESTION_COHORTES.md`](CONTRATO_RF124_GESTION_COHORTES.md) | RF-124 (con RF-19, RF-122 y RF-123) | M-8 (Administrativo) | APROBADA (`feat/administrativo-gestion-cohortes-rf124`) | Alta, edición y cambios de estado de cohortes con auditoría |
 | [`CONTRATO_RF125_PARTICIPANTES_COHORTE.md`](CONTRATO_RF125_PARTICIPANTES_COHORTE.md) | RF-125 (con RF-19, RF-122, RF-123 y RF-124) | M-8 (Administrativo) | IMPLEMENTADA (`feat/administrativo-participantes-cohorte-rf125`) | Consulta seudonimizada, asignación y retiro de participantes con validación y auditoría |
 | [`CONTRATO_RF132_VISTA_AGREGADA_CONDUCTUAL.md`](CONTRATO_RF132_VISTA_AGREGADA_CONDUCTUAL.md) | RF-132 (con RF-78, RF-122, RF-123 y RF-124) | M-8 (Administrativo) | IMPLEMENTADA en M08, proveedor RF-78 pendiente | Consulta conductual agregada, respaldo y auditoría |
+| [`CONTRATO_RF133_RF134_VISTAS_AGREGADAS.md`](CONTRATO_RF133_RF134_VISTAS_AGREGADAS.md) | RF-133 y RF-134 (con RF-117, RF-101, RF-122, RF-123 y RF-124) | M-8 (Administrativo) | IMPLEMENTADAS en M08, proveedores RF-117 y RF-101 pendientes | Vistas narrativa y de notificaciones con respaldo independiente |
 | [`RF25B_DECISIONES_TECNICAS.md`](RF25B_DECISIONES_TECNICAS.md) | RF-25B | Por confirmar | N/A (decisión técnica) | No es contrato de comportamiento |
 
 > Esta tabla se mantiene al día en esta misma sesión y en las siguientes: cada spec nueva o cambio de estado se refleja aquí.
