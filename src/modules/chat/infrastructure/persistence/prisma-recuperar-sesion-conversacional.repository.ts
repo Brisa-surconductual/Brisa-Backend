@@ -34,7 +34,13 @@ export class PrismaRecuperarSesionConversacionalRepository implements RecuperarS
             this.historial.consultarEn(tx, consulta),
         });
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+        // Igual que procesar-respuesta: con 5 s por omisión, la recuperación
+        // se cancelaba cuando la base responde con latencia.
+        maxWait: 10000,
+        timeout: 10000,
+      },
     );
   }
 

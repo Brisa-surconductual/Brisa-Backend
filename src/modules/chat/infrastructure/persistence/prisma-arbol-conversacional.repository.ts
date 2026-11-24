@@ -46,6 +46,7 @@ import { CatalogosConversacionalesMapper } from '../mappers/catalogos-conversaci
 import { FlujoConversacionalMapper } from '../mappers/flujo-conversacional.mapper';
 import { NodoConversacionalMapper } from '../mappers/nodo-conversacional.mapper';
 import { ReglaValidacionMapper } from '../mappers/regla-validacion.mapper';
+import { conTipoNodo } from './catalogo-tipos-cache';
 import { extrasNodos, guardarExtrasNodo } from './consultas-nodo-extra';
 import {
   INCLUIR_REGLA_DE_TRANSICION,
@@ -71,20 +72,20 @@ export class PrismaArbolConversacionalRepository implements ArbolConversacionalR
   }
 
   async buscarNodo(idNodo: string): Promise<NodoConversacional | null> {
-    const nodo = await this.prisma.nodos.findUnique({
+    const fila = await this.prisma.nodos.findUnique({
       where: { id_nodo: idNodo },
-      include: { tipo_nodo: { select: { nombre: true } } },
     });
-    if (nodo === null) return null;
+    if (fila === null) return null;
+    const [nodo] = await conTipoNodo(this.prisma, [fila]);
     const extras = await extrasNodos(this.prisma, [nodo.id_nodo]);
     return NodoConversacionalMapper.toDomain(nodo, extras.get(nodo.id_nodo));
   }
 
   async buscarNodosPorIds(ids: string[]): Promise<NodoConversacional[]> {
-    const nodos = await this.prisma.nodos.findMany({
-      where: { id_nodo: { in: ids } },
-      include: { tipo_nodo: { select: { nombre: true } } },
-    });
+    const nodos = await conTipoNodo(
+      this.prisma,
+      await this.prisma.nodos.findMany({ where: { id_nodo: { in: ids } } }),
+    );
     const extras = await extrasNodos(
       this.prisma,
       nodos.map((nodo) => nodo.id_nodo),
