@@ -2,7 +2,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AdministrativoModule } from '../../src/modules/administrativo/administrativo.module';
@@ -10,7 +10,7 @@ import { NarrativaAgregadaPort } from '../../src/modules/administrativo/applicat
 import { NotificacionesAgregadasPort } from '../../src/modules/administrativo/application/ports/notificaciones-agregadas.port';
 import { SeguimientoAgregadoPort } from '../../src/modules/administrativo/application/ports/seguimiento-agregado.port';
 import type { ResultadoSeguimientoAgregado } from '../../src/modules/administrativo/application/ports/seguimiento-agregado.port';
-import { SessionCookieConfig } from '../../src/modules/usuarios/application/ports/session-cookie-config';
+import { crearActorConSesion } from './fixtures/actor-con-sesion';
 
 const urlPruebas = process.env.RF132_TEST_DATABASE_URL;
 const conPostgres = urlPruebas ? describe : describe.skip;
@@ -42,33 +42,6 @@ conPostgres('Vistas agregadas con PostgreSQL y fuentes simuladas', () => {
     Promise<ResultadoSeguimientoAgregado>,
     [string]
   >();
-
-  async function crearActor(rol: 'ADMINISTRATIVO' | 'ESTUDIANTE') {
-    const id = randomUUID();
-    const token = randomUUID();
-    const hash = createHash('sha256').update(token).digest('hex');
-    const consentimiento = rol === 'ESTUDIANTE' ? randomUUID() : null;
-    if (consentimiento) {
-      await prisma.$executeRaw`
-        INSERT INTO usuario.consentimientos
-          (id_consentimiento, version_consentimiento, vigente, fecha_invalidacion, motivo_invalidacion, url_contenido, titulo)
-        VALUES (${consentimiento}::uuid, ${consentimiento.slice(0, 18)}, false, now(),
-          'Prueba RF-132', 'https://example.invalid/consentimiento', 'Consentimiento RF-132')
-      `;
-    }
-    await prisma.$executeRaw`
-      INSERT INTO usuario.usuarios (id_usuario, correo_electronico, contrasena_hash,
-        rol, estado_registro, consentimiento_aceptado, registro_consumo_aceptado, id_consentimiento)
-      VALUES (${id}::uuid, ${id + '@example.invalid'}, ${randomUUID()}, ${rol}::usuario.rol_enum,
-        'REGISTRO_COMPLETO', true, true, ${consentimiento}::uuid)
-    `;
-    await prisma.$executeRaw`
-      INSERT INTO usuario.sesiones (id_usuario, token_hash, csrf_token_hash, alcance_sesion)
-      VALUES (${id}::uuid, ${hash}, ${randomUUID()}, 'COMPLETA')
-    `;
-    const cookie = app.get(SessionCookieConfig).obtenerNombreCookie();
-    return { id, cookie: `${cookie}=${token}` };
-  }
 
   async function crearCohorte(estado: 'ACTIVA' | 'BORRADOR' = 'ACTIVA') {
     const id = randomUUID();
@@ -133,8 +106,8 @@ conPostgres('Vistas agregadas con PostgreSQL y fuentes simuladas', () => {
     );
     await app.init();
     prisma = app.get(PrismaService);
-    admin = await crearActor('ADMINISTRATIVO');
-    estudiante = await crearActor('ESTUDIANTE');
+    admin = await crearActorConSesion(app, prisma, 'ADMINISTRATIVO', 'RF-132');
+    estudiante = await crearActorConSesion(app, prisma, 'ESTUDIANTE', 'RF-132');
     await prisma.$executeRaw`
       INSERT INTO cronograma.cronogramas (id_cronograma, nombre_cronograma, estado, fecha_activacion)
       VALUES (${cronograma}::uuid, 'Cronograma RF-132', 'ACTIVO', now())

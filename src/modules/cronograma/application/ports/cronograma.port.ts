@@ -6,4 +6,9 @@ export abstract class CronogramaPort {
     tx: Prisma.TransactionClient,
     idCronograma: string,
   ): Promise<EstadoCronograma | null>;
+
+  abstract listarIdsUnidadesEnOrden(
+    tx: Prisma.TransactionClient,
+    idCronograma: string,
+  ): Promise<string[]>;
 }
