@@ -13,12 +13,10 @@ import type {
   VistaAgregada,
 } from '../../domain/vista-agregada';
 import { fuenteAgregadaNoDisponible } from '../ports/fuente-vista-agregada.port';
-import type {
-  FuenteVistaAgregada,
-  ResultadoFuenteAgregada,
-} from '../ports/fuente-vista-agregada.port';
+import type { FuenteVistaAgregada } from '../ports/fuente-vista-agregada.port';
 import { VistasAgregadasRepository } from '../ports/vistas-agregadas.repository';
 import { AuditoriaService } from '../services/auditoria.service';
+import { consultarFuenteConLimite } from '../services/consultar-fuente-con-limite';
 
 interface DefinicionVista<T extends DatosVistaAgregada> {
   tipo: TipoVistaAgregada;
@@ -30,8 +28,6 @@ interface DefinicionVista<T extends DatosVistaAgregada> {
   estadoPendiente?: VistaAgregada<T>['estado'];
   proyectar(valor: unknown): T | null;
 }
-
-const TIEMPO_LIMITE_FUENTE_MS = 2_000;
 
 function errorConsulta(mensaje: string, cause?: unknown) {
   return new InternalServerErrorException(
@@ -66,7 +62,9 @@ export class ConsultarVistaAgregadaUseCase {
           idRecurso: idCohorte,
         },
         async (tx) => {
-          if (!(await this.vistas.bloquearCohorteActiva(tx, idCohorte))) {
+          if (
+            !(await this.vistas.obtenerCronogramaCohorteActiva(tx, idCohorte))
+          ) {
             throw new NotFoundException({
               statusCode: 404,
               codigo: 'COHORTE_ACTIVA_NO_ENCONTRADA',
@@ -74,7 +72,10 @@ export class ConsultarVistaAgregadaUseCase {
             });
           }
 
-          const resultado = await this.consultarFuente(fuente, idCohorte);
+          const resultado = await consultarFuenteConLimite(
+            () => fuente.obtener(idCohorte),
+            fuenteAgregadaNoDisponible(idCohorte),
+          );
           if (resultado?.id_cohorte !== idCohorte)
             throw errorConsulta(definicion.mensajeError);
 
@@ -163,27 +164,6 @@ export class ConsultarVistaAgregadaUseCase {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw errorConsulta(definicion.mensajeError, error);
-    }
-  }
-
-  private async consultarFuente(
-    fuente: FuenteVistaAgregada,
-    idCohorte: string,
-  ): Promise<ResultadoFuenteAgregada> {
-    const indisponible = fuenteAgregadaNoDisponible(idCohorte);
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    try {
-      const limite = new Promise<ResultadoFuenteAgregada>((resolve) => {
-        timer = setTimeout(
-          () => resolve(indisponible),
-          TIEMPO_LIMITE_FUENTE_MS,
-        );
-      });
-      return await Promise.race([fuente.obtener(idCohorte), limite]);
-    } catch {
-      return indisponible;
-    } finally {
-      clearTimeout(timer);
     }
   }
 }

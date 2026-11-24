@@ -18,4 +18,16 @@ export class PrismaCronogramaCohorteAdapter implements CronogramaPort {
     `;
     return cronograma?.estado ?? null;
   }
+
+  async listarIdsUnidadesEnOrden(
+    tx: Prisma.TransactionClient,
+    idCronograma: string,
+  ): Promise<string[]> {
+    const unidades = await tx.unidades_temporales.findMany({
+      where: { id_cronograma: idCronograma },
+      orderBy: { orden_unidad: 'asc' },
+      select: { id_unidad_temporal: true },
+    });
+    return unidades.map(({ id_unidad_temporal }) => id_unidad_temporal);
+  }
 }

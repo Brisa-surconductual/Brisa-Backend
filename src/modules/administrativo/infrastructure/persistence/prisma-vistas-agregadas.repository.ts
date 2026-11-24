@@ -8,15 +8,18 @@ import type {
 
 @Injectable()
 export class PrismaVistasAgregadasRepository implements VistasAgregadasRepository {
-  async bloquearCohorteActiva(tx: Prisma.TransactionClient, idCohorte: string) {
-    const [fila] = await tx.$queryRaw<{ id_cohorte: string }[]>`
-      SELECT c.id_cohorte FROM administrativo.cohortes c
+  async obtenerCronogramaCohorteActiva(
+    tx: Prisma.TransactionClient,
+    idCohorte: string,
+  ) {
+    const [fila] = await tx.$queryRaw<{ id_cronograma: string }[]>`
+      SELECT c.id_cronograma FROM administrativo.cohortes c
       JOIN cronograma.cronogramas cr USING (id_cronograma)
       WHERE c.id_cohorte = ${idCohorte}::uuid AND c.fecha_eliminacion IS NULL
         AND c.estado = 'ACTIVA' AND cr.estado = 'ACTIVO'
       FOR SHARE OF c
     `;
-    return Boolean(fila);
+    return fila?.id_cronograma ?? null;
   }
 
   async obtenerUltimo(

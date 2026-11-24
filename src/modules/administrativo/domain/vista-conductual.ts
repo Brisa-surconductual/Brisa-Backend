@@ -6,8 +6,8 @@ import {
 } from './vista-agregada';
 import type { DatosVistaAgregada } from './vista-agregada';
 
-const NIVELES = ['INICIAL', 'EN_AVANCE', 'AVANZADO', 'COMPLETADO'] as const;
-type NivelProgreso = (typeof NIVELES)[number];
+import { NIVELES_PROGRESO } from './niveles-progreso';
+type NivelProgreso = (typeof NIVELES_PROGRESO)[number];
 
 export interface DatosConductuales extends DatosVistaAgregada {
   total_usuarios_activos: number | null;
@@ -19,7 +19,7 @@ export interface DatosConductuales extends DatosVistaAgregada {
 }
 
 function esNivel(valor: unknown): valor is NivelProgreso {
-  return NIVELES.some((nivel) => nivel === valor);
+  return NIVELES_PROGRESO.some((nivel) => nivel === valor);
 }
 
 function distribucion(

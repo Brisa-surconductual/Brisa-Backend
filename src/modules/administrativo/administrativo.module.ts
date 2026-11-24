@@ -13,6 +13,7 @@ import {
   ColaAuditoriaPort,
 } from './application/ports/auditoria.port';
 import { AuditoriaService } from './application/services/auditoria.service';
+import { EvolucionSeguimientoPort } from './application/ports/evolucion-seguimiento.port';
 import { CohortesRepository } from './application/ports/cohortes.repository';
 import { ParticipantesCohorteRepository } from './application/ports/participantes-cohorte.repository';
 import { fuenteAgregadaNoDisponible } from './application/ports/fuente-vista-agregada.port';
@@ -22,6 +23,7 @@ import { SeguimientoAgregadoPort } from './application/ports/seguimiento-agregad
 import { VistasAgregadasRepository } from './application/ports/vistas-agregadas.repository';
 import { ConsultarBitacoraUseCase } from './application/use-cases/consultar-bitacora.use-case';
 import { ConsultarCohortesUseCase } from './application/use-cases/consultar-cohortes.use-case';
+import { ConsultarEvolucionTemporalUseCase } from './application/use-cases/consultar-evolucion-temporal.use-case';
 import { ConsultarVistaAgregadaUseCase } from './application/use-cases/consultar-vista-agregada.use-case';
 import { ConsultarVistaNarrativaUseCase } from './application/use-cases/consultar-vista-narrativa.use-case';
 import { ConsultarVistaNotificacionesUseCase } from './application/use-cases/consultar-vista-notificaciones.use-case';
@@ -35,6 +37,7 @@ import { PrismaParticipantesCohorteRepository } from './infrastructure/persisten
 import { PrismaVistasAgregadasRepository } from './infrastructure/persistence/prisma-vistas-agregadas.repository';
 import { BitacoraController } from './presentation/controllers/bitacora.controller';
 import { CohortesController } from './presentation/controllers/cohortes.controller';
+import { EvolucionTemporalController } from './presentation/controllers/evolucion-temporal.controller';
 import { ParticipantesCohorteController } from './presentation/controllers/participantes-cohorte.controller';
 import { VistaConductualController } from './presentation/controllers/vista-conductual.controller';
 import { VistasAgregadasController } from './presentation/controllers/vistas-agregadas.controller';
@@ -46,6 +49,7 @@ import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/so
   controllers: [
     BitacoraController,
     CohortesController,
+    EvolucionTemporalController,
     ParticipantesCohorteController,
     VistaConductualController,
     VistasAgregadasController,
@@ -54,6 +58,7 @@ import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/so
     AuditoriaService,
     ConsultarBitacoraUseCase,
     ConsultarCohortesUseCase,
+    ConsultarEvolucionTemporalUseCase,
     ConsultarVistaAgregadaUseCase,
     ConsultarVistaConductualUseCase,
     ConsultarVistaNarrativaUseCase,
@@ -72,6 +77,14 @@ import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/so
     {
       provide: VistasAgregadasRepository,
       useClass: PrismaVistasAgregadasRepository,
+    },
+    {
+      provide: EvolucionSeguimientoPort,
+      // Sustituir al conectar la consulta temporal de RF-78.
+      useValue: {
+        obtener: (id_cohorte: string) =>
+          Promise.resolve({ id_cohorte, estado: 'NO_DISPONIBLE' }),
+      } satisfies EvolucionSeguimientoPort,
     },
     {
       provide: SeguimientoAgregadoPort,
