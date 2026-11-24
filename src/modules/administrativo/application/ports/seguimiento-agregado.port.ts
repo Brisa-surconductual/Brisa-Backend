@@ -1,8 +1,10 @@
-export type ResultadoSeguimientoAgregado = { id_cohorte: string } & (
-  | { estado: 'ACTUALIZADO'; datos: unknown }
-  | { estado: 'PENDIENTE' | 'SUPRIMIDO' | 'NO_DISPONIBLE' }
-);
+import type {
+  FuenteVistaAgregada,
+  ResultadoFuenteAgregada,
+} from './fuente-vista-agregada.port';
 
-export abstract class SeguimientoAgregadoPort {
+export type ResultadoSeguimientoAgregado = ResultadoFuenteAgregada;
+
+export abstract class SeguimientoAgregadoPort implements FuenteVistaAgregada {
   abstract obtener(idCohorte: string): Promise<ResultadoSeguimientoAgregado>;
 }

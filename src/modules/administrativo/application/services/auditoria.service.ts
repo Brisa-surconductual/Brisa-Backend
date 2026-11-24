@@ -68,13 +68,14 @@ export class AuditoriaService {
     ctx: ContextoAuditoria,
     accion: AccionAuditable,
     operacion: (tx: Prisma.TransactionClient) => Promise<T>,
+    estadoResultado?: (resultado: T) => EstadoAccion,
   ): Promise<T> {
     try {
       return await this.bitacora.enTransaccion(async (tx) => {
         const resultado = await operacion(tx);
         await this.registrar(
           ctx,
-          { ...accion, estado: 'EXITOSA' },
+          { ...accion, estado: estadoResultado?.(resultado) ?? 'EXITOSA' },
           { modo: 'SINCRONO', tx },
         );
         return resultado;

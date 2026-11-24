@@ -15,10 +15,16 @@ import {
 import { AuditoriaService } from './application/services/auditoria.service';
 import { CohortesRepository } from './application/ports/cohortes.repository';
 import { ParticipantesCohorteRepository } from './application/ports/participantes-cohorte.repository';
+import { fuenteAgregadaNoDisponible } from './application/ports/fuente-vista-agregada.port';
+import { NarrativaAgregadaPort } from './application/ports/narrativa-agregada.port';
+import { NotificacionesAgregadasPort } from './application/ports/notificaciones-agregadas.port';
 import { SeguimientoAgregadoPort } from './application/ports/seguimiento-agregado.port';
-import { VistasConductualesRepository } from './application/ports/vistas-conductuales.repository';
+import { VistasAgregadasRepository } from './application/ports/vistas-agregadas.repository';
 import { ConsultarBitacoraUseCase } from './application/use-cases/consultar-bitacora.use-case';
 import { ConsultarCohortesUseCase } from './application/use-cases/consultar-cohortes.use-case';
+import { ConsultarVistaAgregadaUseCase } from './application/use-cases/consultar-vista-agregada.use-case';
+import { ConsultarVistaNarrativaUseCase } from './application/use-cases/consultar-vista-narrativa.use-case';
+import { ConsultarVistaNotificacionesUseCase } from './application/use-cases/consultar-vista-notificaciones.use-case';
 import { ConsultarVistaConductualUseCase } from './application/use-cases/consultar-vista-conductual.use-case';
 import { GestionarCohortesUseCase } from './application/use-cases/gestionar-cohortes.use-case';
 import { GestionarParticipantesCohorteUseCase } from './application/use-cases/gestionar-participantes-cohorte.use-case';
@@ -26,11 +32,12 @@ import { BullMqAuditoriaAdapter } from './infrastructure/messaging/bullmq-audito
 import { PrismaBitacoraRepository } from './infrastructure/persistence/prisma-bitacora.repository';
 import { PrismaCohortesRepository } from './infrastructure/persistence/prisma-cohortes.repository';
 import { PrismaParticipantesCohorteRepository } from './infrastructure/persistence/prisma-participantes-cohorte.repository';
-import { PrismaVistasConductualesRepository } from './infrastructure/persistence/prisma-vistas-conductuales.repository';
+import { PrismaVistasAgregadasRepository } from './infrastructure/persistence/prisma-vistas-agregadas.repository';
 import { BitacoraController } from './presentation/controllers/bitacora.controller';
 import { CohortesController } from './presentation/controllers/cohortes.controller';
 import { ParticipantesCohorteController } from './presentation/controllers/participantes-cohorte.controller';
 import { VistaConductualController } from './presentation/controllers/vista-conductual.controller';
+import { VistasAgregadasController } from './presentation/controllers/vistas-agregadas.controller';
 import { AccesoBitacoraGuard } from './presentation/guards/acceso-bitacora.guard';
 import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/solo-lectura-participantes.middleware';
 
@@ -41,12 +48,16 @@ import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/so
     CohortesController,
     ParticipantesCohorteController,
     VistaConductualController,
+    VistasAgregadasController,
   ],
   providers: [
     AuditoriaService,
     ConsultarBitacoraUseCase,
     ConsultarCohortesUseCase,
+    ConsultarVistaAgregadaUseCase,
     ConsultarVistaConductualUseCase,
+    ConsultarVistaNarrativaUseCase,
+    ConsultarVistaNotificacionesUseCase,
     GestionarCohortesUseCase,
     GestionarParticipantesCohorteUseCase,
     AccesoBitacoraGuard,
@@ -59,16 +70,32 @@ import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/so
     },
     { provide: ColaAuditoriaPort, useClass: BullMqAuditoriaAdapter },
     {
-      provide: VistasConductualesRepository,
-      useClass: PrismaVistasConductualesRepository,
+      provide: VistasAgregadasRepository,
+      useClass: PrismaVistasAgregadasRepository,
     },
     {
       provide: SeguimientoAgregadoPort,
       // Reemplazar con el proveedor real cuando M05 publique RF-78.
       useValue: {
-        obtener: (id_cohorte: string) =>
-          Promise.resolve({ id_cohorte, estado: 'NO_DISPONIBLE' }),
+        obtener: (id: string) =>
+          Promise.resolve(fuenteAgregadaNoDisponible(id)),
       } satisfies SeguimientoAgregadoPort,
+    },
+    {
+      provide: NarrativaAgregadaPort,
+      // Sustituir con el proveedor de M06 cuando se integre RF-117.
+      useValue: {
+        obtener: (id: string) =>
+          Promise.resolve(fuenteAgregadaNoDisponible(id)),
+      } satisfies NarrativaAgregadaPort,
+    },
+    {
+      provide: NotificacionesAgregadasPort,
+      // Sustituir con el proveedor de M07 cuando se integre RF-101.
+      useValue: {
+        obtener: (id: string) =>
+          Promise.resolve(fuenteAgregadaNoDisponible(id)),
+      } satisfies NotificacionesAgregadasPort,
     },
   ],
   exports: [AuditoriaService],

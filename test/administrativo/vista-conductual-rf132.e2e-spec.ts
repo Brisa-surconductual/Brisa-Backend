@@ -6,6 +6,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AdministrativoModule } from '../../src/modules/administrativo/administrativo.module';
+import { NarrativaAgregadaPort } from '../../src/modules/administrativo/application/ports/narrativa-agregada.port';
+import { NotificacionesAgregadasPort } from '../../src/modules/administrativo/application/ports/notificaciones-agregadas.port';
 import { SeguimientoAgregadoPort } from '../../src/modules/administrativo/application/ports/seguimiento-agregado.port';
 import type { ResultadoSeguimientoAgregado } from '../../src/modules/administrativo/application/ports/seguimiento-agregado.port';
 import { SessionCookieConfig } from '../../src/modules/usuarios/application/ports/session-cookie-config';
@@ -23,7 +25,7 @@ const DATOS = {
 };
 const FECHA_UTC = '2026-11-23T11:10:00.000Z';
 
-conPostgres('RF-132 vista conductual con PostgreSQL y M05 simulado', () => {
+conPostgres('Vistas agregadas con PostgreSQL y fuentes simuladas', () => {
   jest.setTimeout(60_000);
   let app: INestApplication;
   let prisma: PrismaService;
@@ -32,6 +34,14 @@ conPostgres('RF-132 vista conductual con PostgreSQL y M05 simulado', () => {
   const cronograma = randomUUID();
   const envAnterior = process.env.DATABASE_URL;
   const obtener = jest.fn<Promise<ResultadoSeguimientoAgregado>, [string]>();
+  const obtenerNarrativa = jest.fn<
+    Promise<ResultadoSeguimientoAgregado>,
+    [string]
+  >();
+  const obtenerNotificaciones = jest.fn<
+    Promise<ResultadoSeguimientoAgregado>,
+    [string]
+  >();
 
   async function crearActor(rol: 'ADMINISTRATIVO' | 'ESTUDIANTE') {
     const id = randomUUID();
@@ -106,6 +116,10 @@ conPostgres('RF-132 vista conductual con PostgreSQL y M05 simulado', () => {
     })
       .overrideProvider(SeguimientoAgregadoPort)
       .useValue({ obtener })
+      .overrideProvider(NarrativaAgregadaPort)
+      .useValue({ obtener: obtenerNarrativa })
+      .overrideProvider(NotificacionesAgregadasPort)
+      .useValue({ obtener: obtenerNotificaciones })
       .compile();
 
     app = modulo.createNestApplication({ logger: false });
@@ -362,5 +376,264 @@ conPostgres('RF-132 vista conductual con PostgreSQL y M05 simulado', () => {
       await prisma.$executeRaw`DROP TRIGGER trg_prueba_fallar_rf132 ON administrativo.bitacora_auditoria`;
       await prisma.$executeRaw`DROP FUNCTION administrativo.fn_prueba_fallar_rf132()`;
     }
+  });
+
+  describe('RF-133 y RF-134 con fuentes independientes', () => {
+    const fecha = '2026-11-15T00:00:00-05:00';
+    const narrativa = {
+      total_usuarios_cohorte: 45,
+      distribucion_por_fase_narrativa: [
+        { fase: 'INICIO', total: 12 },
+        { fase: 'DESARROLLO', total: 24 },
+        { fase: 'CIERRE', total: 6 },
+      ],
+      total_usuarios_programa_completado: 3,
+      total_usuarios_con_logros: 31,
+      total_logros_desbloqueados: 87,
+      fecha_actualizacion: fecha,
+    };
+    const notificaciones = {
+      tasa_apertura_promedio: 0.612345678,
+      tasa_conversion_promedio: 0.34,
+      total_notificaciones_enviadas: 1260,
+      total_notificaciones_entregadas: 1198,
+      total_notificaciones_descartadas: 62,
+      fecha_actualizacion: fecha,
+    };
+
+    const rutaVista = (id: string, vista: 'narrativa' | 'notificaciones') =>
+      `${base}/${id}/vistas/${vista}`;
+    const consultarVista = (
+      id: string,
+      vista: 'narrativa' | 'notificaciones',
+    ) =>
+      request(servidor()).get(rutaVista(id, vista)).set('Cookie', admin.cookie);
+
+    afterEach(() => {
+      obtenerNarrativa.mockReset();
+      obtenerNotificaciones.mockReset();
+    });
+
+    it('narrativa conserva el agregado de RF-117 sin computar a los excluidos ni exponer sus datos', async () => {
+      const id = await crearCohorte();
+      obtenerNarrativa.mockResolvedValueOnce(
+        actualizado(id, {
+          ...narrativa,
+          perfiles_excluidos: [{ id_usuario: randomUUID() }],
+          distribucion_por_fase_narrativa: [
+            {
+              ...narrativa.distribucion_por_fase_narrativa[0],
+              capitulo_activo: 'Privado',
+            },
+            ...narrativa.distribucion_por_fase_narrativa.slice(1),
+          ],
+        }),
+      );
+
+      const respuesta = await consultarVista(id, 'narrativa')
+        .expect(200)
+        .expect('Cache-Control', 'no-store');
+      expect(respuesta.body).toEqual({
+        id_cohorte: id,
+        estado: 'DISPONIBLE',
+        estado_agregacion: 'ACTUALIZADO',
+        ultimo_timestamp_disponible: '2026-11-15T05:00:00.000Z',
+        motivo_sin_datos: null,
+        mensaje: null,
+        datos: narrativa,
+      });
+      expect(obtenerNarrativa).toHaveBeenCalledWith(id);
+      expect(obtenerNotificaciones).not.toHaveBeenCalled();
+    });
+
+    it('notificaciones conserva la precisión de RF-101 sin exponer métricas individuales', async () => {
+      const id = await crearCohorte();
+      obtenerNotificaciones.mockResolvedValueOnce(
+        actualizado(id, {
+          ...notificaciones,
+          metricas_por_usuario: [{ id_usuario: randomUUID(), tasa: null }],
+          mensaje: 'Contenido privado',
+        }),
+      );
+      const respuesta = await consultarVista(id, 'notificaciones').expect(200);
+      expect(respuesta.body).toMatchObject({
+        id_cohorte: id,
+        estado: 'DISPONIBLE',
+        estado_agregacion: 'ACTUALIZADO',
+        ultimo_timestamp_disponible: '2026-11-15T05:00:00.000Z',
+      });
+      expect(respuesta.body).toHaveProperty('datos', notificaciones);
+      expect(obtenerNotificaciones).toHaveBeenCalledWith(id);
+      expect(obtenerNarrativa).not.toHaveBeenCalled();
+    });
+
+    it('notificaciones distingue cero envíos consolidado de una cohorte pendiente', async () => {
+      const id = await crearCohorte();
+      const sinEnvios = {
+        ...notificaciones,
+        tasa_apertura_promedio: null,
+        tasa_conversion_promedio: null,
+        total_notificaciones_enviadas: 0,
+        total_notificaciones_entregadas: 0,
+        total_notificaciones_descartadas: 0,
+      };
+      obtenerNotificaciones
+        .mockResolvedValueOnce(actualizado(id, sinEnvios))
+        .mockResolvedValueOnce({ id_cohorte: id, estado: 'PENDIENTE' });
+      const disponible = await consultarVista(id, 'notificaciones').expect(200);
+      expect(disponible.body).toMatchObject({
+        estado: 'DISPONIBLE',
+        estado_agregacion: 'ACTUALIZADO',
+        datos: sinEnvios,
+      });
+      const pendiente = await consultarVista(id, 'notificaciones').expect(200);
+      expect(pendiente.body).toEqual({
+        id_cohorte: id,
+        estado: 'DISPONIBLE',
+        estado_agregacion: 'PENDIENTE',
+        ultimo_timestamp_disponible: null,
+        motivo_sin_datos: 'SIN_CONSOLIDAR',
+        mensaje:
+          'La cohorte activa no cuenta todavía con métricas de efectividad de notificaciones consolidadas.',
+        datos: null,
+      });
+    });
+
+    it('narrativa sin perfiles consolidados devuelve un estado funcional', async () => {
+      const id = await crearCohorte();
+      obtenerNarrativa.mockResolvedValueOnce({
+        id_cohorte: id,
+        estado: 'PENDIENTE',
+      });
+      const respuesta = await consultarVista(id, 'narrativa').expect(200);
+      expect(respuesta.body).toMatchObject({
+        id_cohorte: id,
+        estado: 'NO_DISPONIBLE',
+        estado_agregacion: 'PENDIENTE',
+        ultimo_timestamp_disponible: null,
+        motivo_sin_datos: 'SIN_CONSOLIDAR',
+        datos: null,
+      });
+    });
+
+    it('aísla las caídas y las copias de cada vista para una misma cohorte', async () => {
+      const id = await crearCohorte();
+      obtenerNarrativa.mockResolvedValueOnce(actualizado(id, narrativa));
+      await consultarVista(id, 'narrativa').expect(200);
+      obtenerNotificaciones.mockResolvedValueOnce({
+        id_cohorte: id,
+        estado: 'NO_DISPONIBLE',
+      });
+      expect(
+        (await consultarVista(id, 'notificaciones').expect(503)).body,
+      ).toMatchObject({
+        id_cohorte: id,
+        estado: 'NO_DISPONIBLE',
+        estado_agregacion: 'ERROR_ACTUALIZACION',
+        datos: null,
+      });
+
+      obtenerNarrativa.mockRejectedValueOnce(new Error('M06 de prueba'));
+      obtenerNotificaciones.mockResolvedValueOnce(
+        actualizado(id, notificaciones),
+      );
+      const [desactualizada, disponible] = await Promise.all([
+        consultarVista(id, 'narrativa').expect(503),
+        consultarVista(id, 'notificaciones').expect(200),
+      ]);
+      expect(desactualizada.body).toMatchObject({
+        estado: 'DESACTUALIZADA',
+        ultimo_timestamp_disponible: '2026-11-15T05:00:00.000Z',
+        datos: narrativa,
+      });
+      expect(disponible.body).toMatchObject({
+        estado: 'DISPONIBLE',
+        datos: notificaciones,
+      });
+
+      obtenerNarrativa.mockResolvedValueOnce(actualizado(id, narrativa));
+      obtenerNotificaciones.mockRejectedValueOnce(new Error('M07 de prueba'));
+      const [nueva, respaldo] = await Promise.all([
+        consultarVista(id, 'narrativa').expect(200),
+        consultarVista(id, 'notificaciones').expect(503),
+      ]);
+      expect(nueva.body).toMatchObject({
+        estado: 'DISPONIBLE',
+        datos: narrativa,
+      });
+      expect(respaldo.body).toMatchObject({
+        estado: 'DESACTUALIZADA',
+        datos: notificaciones,
+      });
+      expect(
+        await prisma.$queryRaw<{ recurso_afectado: string }[]>`
+        SELECT DISTINCT recurso_afectado FROM administrativo.bitacora_auditoria
+        WHERE id_recurso = ${id}::uuid AND accion = 'CONSULTA_AGREGADA'
+          AND estado_accion = 'EXITOSA'
+        ORDER BY recurso_afectado
+      `,
+      ).toEqual([
+        { recurso_afectado: 'VISTA_AGREGADA_NARRATIVA' },
+        { recurso_afectado: 'VISTA_AGREGADA_NOTIFICACIONES' },
+      ]);
+    });
+
+    it('bloquea la entrega del respaldo si falla la auditoría', async () => {
+      const id = await crearCohorte();
+      obtenerNarrativa.mockResolvedValueOnce(actualizado(id, narrativa));
+      await consultarVista(id, 'narrativa').expect(200);
+
+      await prisma.$executeRaw`
+          CREATE FUNCTION administrativo.fn_prueba_fallar_respaldo_rf133() RETURNS trigger
+          LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Fallo de auditoría RF-133'; END $$
+        `;
+      await prisma.$executeRaw`
+          CREATE TRIGGER trg_prueba_fallar_respaldo_rf133
+          BEFORE INSERT ON administrativo.bitacora_auditoria FOR EACH ROW
+          WHEN (NEW.recurso_afectado = 'VISTA_AGREGADA_NARRATIVA' AND NEW.estado_accion = 'FALLIDA')
+          EXECUTE FUNCTION administrativo.fn_prueba_fallar_respaldo_rf133()
+        `;
+      try {
+        obtenerNarrativa.mockRejectedValueOnce(new Error('M06 de prueba'));
+        const respuesta = await consultarVista(id, 'narrativa').expect(500);
+        expect(respuesta.body).toMatchObject({
+          codigo: 'ERROR_REGISTRO_AUDITORIA',
+        });
+        expect(respuesta.body).not.toHaveProperty('datos');
+      } finally {
+        await prisma.$executeRaw`DROP TRIGGER trg_prueba_fallar_respaldo_rf133 ON administrativo.bitacora_auditoria`;
+        await prisma.$executeRaw`DROP FUNCTION administrativo.fn_prueba_fallar_respaldo_rf133()`;
+      }
+    });
+
+    it.each(['narrativa', 'notificaciones'] as const)(
+      'protege la consulta de %s y rechaza resultados de otra cohorte',
+      async (vista) => {
+        const id = await crearCohorte();
+        const ruta = rutaVista(id, vista);
+        const fuente =
+          vista === 'narrativa' ? obtenerNarrativa : obtenerNotificaciones;
+        await request(servidor()).get(ruta).expect(401);
+        await request(servidor())
+          .get(ruta)
+          .set('Cookie', estudiante.cookie)
+          .expect(403);
+        await consultarVista('uuid-invalido', vista).expect(400);
+        await consultarVista(await crearCohorte('BORRADOR'), vista).expect(404);
+        expect(fuente).not.toHaveBeenCalled();
+
+        fuente.mockResolvedValueOnce(actualizado(randomUUID(), narrativa));
+        const error = await consultarVista(id, vista).expect(500);
+        expect(error.body).toMatchObject({
+          codigo: 'ERROR_CONSULTA_VISTA_AGREGADA',
+        });
+        expect(error.body).not.toHaveProperty('datos');
+        expect(
+          await prisma.$queryRaw`
+          SELECT vista FROM administrativo.snapshots_vista WHERE id_cohorte = ${id}::uuid
+        `,
+        ).toEqual([]);
+      },
+    );
   });
 });
