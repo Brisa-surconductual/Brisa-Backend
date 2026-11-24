@@ -29,6 +29,10 @@ interface DefinicionVista<T extends DatosVistaAgregada> {
   proyectar(valor: unknown): T | null;
 }
 
+export interface OpcionesConsultaAgregada {
+  conservarVistaDegradada?: boolean;
+}
+
 function errorConsulta(mensaje: string, cause?: unknown) {
   return new InternalServerErrorException(
     {
@@ -52,6 +56,7 @@ export class ConsultarVistaAgregadaUseCase {
     idCohorte: string,
     fuente: FuenteVistaAgregada,
     definicion: DefinicionVista<T>,
+    opciones: OpcionesConsultaAgregada = {},
   ): Promise<VistaAgregada<T>> {
     try {
       const vista = await this.auditoria.ejecutar<VistaAgregada<T>>(
@@ -157,7 +162,10 @@ export class ConsultarVistaAgregadaUseCase {
             ? 'FALLIDA'
             : 'EXITOSA',
       );
-      if (vista.estado_agregacion === 'ERROR_ACTUALIZACION') {
+      if (
+        vista.estado_agregacion === 'ERROR_ACTUALIZACION' &&
+        !opciones.conservarVistaDegradada
+      ) {
         throw new ServiceUnavailableException(vista);
       }
       return vista;

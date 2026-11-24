@@ -23,6 +23,7 @@ import { SeguimientoAgregadoPort } from './application/ports/seguimiento-agregad
 import { VistasAgregadasRepository } from './application/ports/vistas-agregadas.repository';
 import { ConsultarBitacoraUseCase } from './application/use-cases/consultar-bitacora.use-case';
 import { ConsultarCohortesUseCase } from './application/use-cases/consultar-cohortes.use-case';
+import { ConsultarDashboardPrincipalUseCase } from './application/use-cases/consultar-dashboard-principal.use-case';
 import { ConsultarEvolucionTemporalUseCase } from './application/use-cases/consultar-evolucion-temporal.use-case';
 import { ConsultarVistaAgregadaUseCase } from './application/use-cases/consultar-vista-agregada.use-case';
 import { ConsultarVistaNarrativaUseCase } from './application/use-cases/consultar-vista-narrativa.use-case';
@@ -37,6 +38,7 @@ import { PrismaParticipantesCohorteRepository } from './infrastructure/persisten
 import { PrismaVistasAgregadasRepository } from './infrastructure/persistence/prisma-vistas-agregadas.repository';
 import { BitacoraController } from './presentation/controllers/bitacora.controller';
 import { CohortesController } from './presentation/controllers/cohortes.controller';
+import { DashboardPrincipalController } from './presentation/controllers/dashboard-principal.controller';
 import { EvolucionTemporalController } from './presentation/controllers/evolucion-temporal.controller';
 import { ParticipantesCohorteController } from './presentation/controllers/participantes-cohorte.controller';
 import { VistaConductualController } from './presentation/controllers/vista-conductual.controller';
@@ -49,6 +51,7 @@ import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/so
   controllers: [
     BitacoraController,
     CohortesController,
+    DashboardPrincipalController,
     EvolucionTemporalController,
     ParticipantesCohorteController,
     VistaConductualController,
@@ -58,6 +61,7 @@ import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/so
     AuditoriaService,
     ConsultarBitacoraUseCase,
     ConsultarCohortesUseCase,
+    ConsultarDashboardPrincipalUseCase,
     ConsultarEvolucionTemporalUseCase,
     ConsultarVistaAgregadaUseCase,
     ConsultarVistaConductualUseCase,

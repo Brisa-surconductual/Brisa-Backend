@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrismaService } from '../../../../../prisma/prisma.service';
 import { VistasAgregadasRepository } from '../../application/ports/vistas-agregadas.repository';
 import type {
   DatosVistaAgregada,
@@ -8,6 +9,22 @@ import type {
 
 @Injectable()
 export class PrismaVistasAgregadasRepository implements VistasAgregadasRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async identificarCohortesActivas(tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    const bloqueo = tx ? Prisma.sql`FOR SHARE OF c` : Prisma.empty;
+    const filas = await db.$queryRaw<{ id_cohorte: string }[]>`
+      SELECT c.id_cohorte
+      FROM administrativo.cohortes c
+      JOIN cronograma.cronogramas cr USING (id_cronograma)
+      WHERE c.fecha_eliminacion IS NULL AND c.estado = 'ACTIVA' AND cr.estado = 'ACTIVO'
+      ORDER BY c.id_cohorte
+      LIMIT 2 ${bloqueo}
+    `;
+    return filas.map(({ id_cohorte }) => id_cohorte);
+  }
+
   async obtenerCronogramaCohorteActiva(
     tx: Prisma.TransactionClient,
     idCohorte: string,
