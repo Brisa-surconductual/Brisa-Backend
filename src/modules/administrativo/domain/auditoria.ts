@@ -4,6 +4,7 @@ import type { OperacionParticipanteCohorte } from './participante-cohorte';
 export type AccionAdministrativa =
   | 'ACCESO_MODULO'
   | 'CONSULTA_PARTICIPANTE'
+  | 'CONSULTA_AGREGADA'
   | 'EXPORTACION_DATOS'
   | 'CONFIGURACION_UMBRALES'
   | 'INTENTO_ESCRITURA_BLOQUEADO'
