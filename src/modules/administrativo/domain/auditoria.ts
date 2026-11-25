@@ -21,6 +21,7 @@ export interface ContextoAuditoria {
 
 type DetalleAuditoria =
   | { metodo: string; uri: string }
+  | { nombre_archivo: string | null; tamano_bytes: number | null }
   | { operacion: OperacionCohorte | OperacionParticipanteCohorte };
 
 export interface AccionAuditable {

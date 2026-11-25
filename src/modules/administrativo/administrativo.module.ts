@@ -30,6 +30,7 @@ import { ConsultarVistaNarrativaUseCase } from './application/use-cases/consulta
 import { ConsultarVistaNotificacionesUseCase } from './application/use-cases/consultar-vista-notificaciones.use-case';
 import { ConsultarVistaConductualUseCase } from './application/use-cases/consultar-vista-conductual.use-case';
 import { GestionarCohortesUseCase } from './application/use-cases/gestionar-cohortes.use-case';
+import { ExportarIndicadoresCohorteUseCase } from './application/use-cases/exportar-indicadores-cohorte.use-case';
 import { GestionarParticipantesCohorteUseCase } from './application/use-cases/gestionar-participantes-cohorte.use-case';
 import { BullMqAuditoriaAdapter } from './infrastructure/messaging/bullmq-auditoria.adapter';
 import { PrismaBitacoraRepository } from './infrastructure/persistence/prisma-bitacora.repository';
@@ -40,10 +41,12 @@ import { BitacoraController } from './presentation/controllers/bitacora.controll
 import { CohortesController } from './presentation/controllers/cohortes.controller';
 import { DashboardPrincipalController } from './presentation/controllers/dashboard-principal.controller';
 import { EvolucionTemporalController } from './presentation/controllers/evolucion-temporal.controller';
+import { ExportacionCsvCohorteController } from './presentation/controllers/exportacion-csv-cohorte.controller';
 import { ParticipantesCohorteController } from './presentation/controllers/participantes-cohorte.controller';
 import { VistaConductualController } from './presentation/controllers/vista-conductual.controller';
 import { VistasAgregadasController } from './presentation/controllers/vistas-agregadas.controller';
 import { AccesoBitacoraGuard } from './presentation/guards/acceso-bitacora.guard';
+import { AuditarAccesoExportacionCsvFilter } from './presentation/filters/auditar-acceso-exportacion-csv.filter';
 import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/solo-lectura-participantes.middleware';
 
 @Module({
@@ -53,6 +56,7 @@ import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/so
     CohortesController,
     DashboardPrincipalController,
     EvolucionTemporalController,
+    ExportacionCsvCohorteController,
     ParticipantesCohorteController,
     VistaConductualController,
     VistasAgregadasController,
@@ -67,9 +71,11 @@ import { SoloLecturaParticipantesMiddleware } from './presentation/middleware/so
     ConsultarVistaConductualUseCase,
     ConsultarVistaNarrativaUseCase,
     ConsultarVistaNotificacionesUseCase,
+    ExportarIndicadoresCohorteUseCase,
     GestionarCohortesUseCase,
     GestionarParticipantesCohorteUseCase,
     AccesoBitacoraGuard,
+    AuditarAccesoExportacionCsvFilter,
     RolesGuard,
     { provide: BitacoraRepository, useClass: PrismaBitacoraRepository },
     { provide: CohortesRepository, useClass: PrismaCohortesRepository },
