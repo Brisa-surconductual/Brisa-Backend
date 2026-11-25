@@ -5,6 +5,8 @@ import type { OperacionParticipanteCohorte } from '../enums/operacion-participan
 import type { OperacionPermisoIndividual } from '../enums/operacion-permiso-individual.enum';
 import type { SeveridadAuditoria } from '../enums/severidad-auditoria.enum';
 import type { TipoParametroNotificacion } from '../enums/tipo-parametro-notificacion.enum';
+import type { AccionContenidoNarrativo } from './contenido-narrativo';
+import type { AccionMensajeNotificacion } from './mensajes-notificacion';
 import type { ValorConfiguracion } from './valor-configuracion';
 
 /** Consultas individuales de un participante (RF-128 a RF-131). */
@@ -36,6 +38,14 @@ export type DetalleAuditoria =
     }
   | { motivo: string; alcance: string; uri: string }
   | {
+      // RF-138 / RF-139: gestión del banco de mensajes y del contenido narrativo.
+      accion_solicitada: AccionContenidoNarrativo | AccionMensajeNotificacion;
+      justificacion_cambio?: string;
+      nivel_gamificacion?: number;
+      resultado_validacion_terminos?: true;
+    }
+  | {
+      // RF-128 a RF-131: consultas individuales de un participante.
       consulta: ConsultaIndividual;
       codigo_participante: string;
       fecha_inicio?: string | null;

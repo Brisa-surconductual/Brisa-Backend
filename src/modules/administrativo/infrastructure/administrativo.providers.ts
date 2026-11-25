@@ -1,4 +1,5 @@
 import type { Provider } from '@nestjs/common';
+import { GestionContenidoInfrastructureProviders } from './gestion-contenido.providers';
 import {
   BitacoraRepository,
   ColaAuditoriaPort,
@@ -36,6 +37,7 @@ import { MockUmbralesSeguimientoAdapter } from './seguimiento/mock-umbrales-segu
 
 /** Liga los puertos de dominio y aplicación con sus implementaciones concretas. */
 export const AdministrativoInfrastructureProviders: Provider[] = [
+  ...GestionContenidoInfrastructureProviders,
   { provide: BitacoraRepository, useClass: PrismaBitacoraRepository },
   { provide: CohortesRepository, useClass: PrismaCohortesRepository },
   {

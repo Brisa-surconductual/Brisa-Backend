@@ -1,6 +1,8 @@
 import type { Provider, Type } from '@nestjs/common';
 import { RolesGuard } from '../../../shared/presentation/guards/role-guard';
 import { BitacoraController } from './controllers/bitacora.controller';
+import { ContenidoNarrativoController } from './controllers/contenido-narrativo.controller';
+import { MensajesNotificacionController } from './controllers/mensajes-notificacion.controller';
 import { CohortesController } from './controllers/cohortes.controller';
 import { ConfiguracionNotificacionesController } from './controllers/configuracion/configuracion-notificaciones.controller';
 import { ConfiguracionUmbralesController } from './controllers/configuracion/configuracion-umbrales.controller';
@@ -27,6 +29,8 @@ export const AdministrativoPresentationControllers: Type[] = [
   CohortesController,
   ConfiguracionUmbralesController,
   ConfiguracionNotificacionesController,
+  ContenidoNarrativoController,
+  MensajesNotificacionController,
   DashboardPrincipalController,
   EvolucionTemporalController,
   ExportacionCsvCohorteController,

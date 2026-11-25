@@ -1,6 +1,12 @@
-import { HttpException, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+} from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import { setTimeout as esperar } from 'node:timers/promises';
 import type { RegistroAuditoria } from '../../domain/entities/auditoria/registro-auditoria.entity';
 import { EstadoAccion } from '../../domain/enums/estado-accion.enum';
 import { ModoRegistroAuditoria } from '../../domain/enums/modo-registro-auditoria.enum';
@@ -24,7 +30,8 @@ export type ResultadoRegistroDiferido =
   'ENCOLADO' | 'REGISTRADO_DIRECTO' | 'PENDIENTE';
 
 @Injectable()
-export class AuditoriaService {
+export class AuditoriaService implements OnModuleDestroy {
+  private readonly cierre = new AbortController();
   private readonly logger = new Logger(AuditoriaService.name);
 
   constructor(
@@ -47,6 +54,60 @@ export class AuditoriaService {
       throw new RegistroAuditoriaException();
     }
     return registro.id_auditoria;
+  }
+
+  /** Audita un cambio ya confirmado por otro módulo (RF-138 y RF-139). */
+  async ejecutarDiferido<T>(
+    ctx: ContextoAuditoria,
+    operacion: () => Promise<T>,
+    accion: (resultado: T) => AccionAuditable,
+  ): Promise<T> {
+    const resultado = await operacion();
+    const registro = this.construirRegistro(ctx, {
+      ...accion(resultado),
+      estado: EstadoAccion.EXITOSA,
+    });
+    try {
+      await this.cola.encolar(registro);
+    } catch {
+      this.logger.warn(
+        'La acción se aplicó. Se reintentará la auditoría ' +
+          registro.id_auditoria,
+      );
+      void this.reintentarRegistro(registro);
+    }
+    return resultado;
+  }
+
+  onModuleDestroy(): void {
+    this.cierre.abort();
+  }
+
+  private async reintentarRegistro(registro: RegistroAuditoria): Promise<void> {
+    const signal = this.cierre.signal;
+    for (const demora of [1000, 2000, 4000, 8000, 16000]) {
+      await esperar(demora, undefined, { ref: false, signal }).catch(
+        () => undefined,
+      );
+      if (signal.aborted) return;
+      try {
+        await this.cola.encolar(registro);
+        return;
+      } catch {
+        try {
+          // La misma clave evita duplicados si Redis llegó a aceptar el evento.
+          await this.bitacora.enTransaccion((tx) =>
+            this.bitacora.insertar(tx, registro, true),
+          );
+          return;
+        } catch {
+          continue;
+        }
+      }
+    }
+    this.logger.error(
+      'No se pudo persistir la auditoría diferida ' + registro.id_auditoria,
+    );
   }
 
   async ejecutar<T>(
