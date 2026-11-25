@@ -6,7 +6,9 @@ import {
 import { EvolucionSeguimientoPort } from '../application/ports/evolucion-seguimiento.port';
 import { fuenteAgregadaNoDisponible } from '../application/ports/fuente-vista-agregada.port';
 import { NarrativaAgregadaPort } from '../application/ports/narrativa-agregada.port';
+import { NarrativaIndividualPort } from '../application/ports/narrativa-individual.port';
 import { NotificacionesAgregadasPort } from '../application/ports/notificaciones-agregadas.port';
+import { NotificacionesIndividualPort } from '../application/ports/notificaciones-individual.port';
 import { SeguimientoAgregadoPort } from '../application/ports/seguimiento-agregado.port';
 import { SeguimientoIndividualPort } from '../application/ports/seguimiento-individual.port';
 import { EstadoFuenteAgregada } from '../domain/enums/estado-fuente-agregada.enum';
@@ -17,6 +19,8 @@ import { PermisosIndividualesRepository } from '../domain/repositories/permisos-
 import { SeguimientoIndividualRepository } from '../domain/repositories/seguimiento-individual.repository';
 import { VistasAgregadasRepository } from '../domain/repositories/vistas-agregadas.repository';
 import { BullMqAuditoriaAdapter } from './messaging/bullmq-auditoria.adapter';
+import { MockNarrativaIndividualAdapter } from './narrativa/mock-narrativa-individual.adapter';
+import { MockNotificacionesIndividualAdapter } from './notificaciones/mock-notificaciones-individual.adapter';
 import { PrismaAlertasGestionRepository } from './persistence/prisma-alertas-gestion.repository';
 import { PrismaBitacoraRepository } from './persistence/prisma-bitacora.repository';
 import { PrismaCohortesRepository } from './persistence/prisma-cohortes.repository';
@@ -50,6 +54,16 @@ export const AdministrativoInfrastructureProviders: Provider[] = [
     provide: SeguimientoIndividualPort,
     // Reemplazar por el adaptador real cuando M05 publique RF-77 / RF-63 / RF-68.
     useClass: MockSeguimientoIndividualAdapter,
+  },
+  {
+    provide: NarrativaIndividualPort,
+    // Reemplazar por el adaptador real cuando M06 publique RF-116.
+    useClass: MockNarrativaIndividualAdapter,
+  },
+  {
+    provide: NotificacionesIndividualPort,
+    // Reemplazar por el adaptador real cuando M07 publique RF-98 / RF-100.
+    useClass: MockNotificacionesIndividualAdapter,
   },
   {
     provide: VistasAgregadasRepository,

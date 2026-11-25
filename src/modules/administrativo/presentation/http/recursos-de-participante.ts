@@ -25,16 +25,50 @@ const ESCRITURAS_ADMINISTRATIVAS_PERMITIDAS = [
   /^\/admin\/participantes\/[^/]+\/alertas\/[^/]+\/atender\/?$/u,
 ] as const;
 
+/**
+ * RF-130 / RF-131: vistas individuales de solo lectura con su propio mensaje
+ * para el 403 (flujo alterno "Intento de modificación desde modo solo lectura").
+ */
+const VISTAS_INDIVIDUALES_SOLO_LECTURA = [
+  {
+    patron: /^\/admin\/participantes\/[^/]+\/progresion-narrativa(?:\/.*)?$/u,
+    recurso: 'GAMIFICACION',
+    mensaje:
+      'La consulta de progresión narrativa individual es de solo lectura.',
+  },
+  {
+    patron:
+      /^\/admin\/participantes\/[^/]+\/interaccion-notificaciones(?:\/.*)?$/u,
+    recurso: 'NOTIFICACIONES',
+    mensaje:
+      'La consulta del historial de interacción con notificaciones es de solo lectura.',
+  },
+] as const;
+
+export interface RecursoParticipante {
+  recurso: string;
+  idRecurso: string | null;
+  /** Mensaje propio del 403; si falta, el middleware usa el genérico. */
+  mensaje?: string;
+}
+
 export function esMetodoDeEscritura(metodo: string): boolean {
   return METODOS_ESCRITURA.has(metodo);
 }
 
-export function identificarRecursoParticipante(ruta: string) {
+export function identificarRecursoParticipante(
+  ruta: string,
+): RecursoParticipante | null {
   const rutaNormalizada = ruta.toLowerCase();
   if (
     ESCRITURAS_ADMINISTRATIVAS_PERMITIDAS.some((p) => p.test(rutaNormalizada))
   )
     return null;
+  const vista = VISTAS_INDIVIDUALES_SOLO_LECTURA.find(({ patron }) =>
+    patron.test(rutaNormalizada),
+  );
+  if (vista)
+    return { recurso: vista.recurso, idRecurso: null, mensaje: vista.mensaje };
   const coincidencia = RECURSOS_DE_PARTICIPANTE.find(
     ({ ruta: prefijo }) =>
       rutaNormalizada === prefijo || rutaNormalizada.startsWith(prefijo + '/'),

@@ -44,9 +44,16 @@ export class SeguimientoIndividualService {
     return atendidas.has(idAlerta);
   }
 
-  /** Bloquea la vista si M05 devolvió datos de otro participante (409). */
-  validarPertenencia(codigoRespuesta: string, codigoSolicitado: string): void {
-    if (codigoRespuesta !== codigoSolicitado)
+  /**
+   * Bloquea la vista si el módulo fuente devolvió datos de otro participante
+   * (409). Compara el código de M05 o el `id_usuario` de M06 / M07, sin
+   * distinguir mayúsculas (los UUID pueden llegar en cualquiera de las dos).
+   */
+  validarPertenencia(idRespuesta: string, idSolicitado: string): void {
+    if (
+      typeof idRespuesta !== 'string' ||
+      idRespuesta.toLowerCase() !== idSolicitado.toLowerCase()
+    )
       throw new SeguimientoIndividualException('INCONSISTENCIA_PARTICIPANTE');
   }
 

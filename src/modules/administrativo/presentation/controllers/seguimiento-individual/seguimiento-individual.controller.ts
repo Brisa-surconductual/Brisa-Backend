@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Header,
-  HttpStatus,
   Param,
   Query,
   Req,
@@ -31,6 +30,7 @@ import { ConsultarPerfilSeguimientoUseCase } from '../../../application/use-case
 import { AlcancePermiso } from '../../../domain/enums/alcance-permiso.enum';
 import { RequierePermisoIndividual } from '../../decorators/requiere-permiso-individual.decorator';
 import { contextoAuditoria } from '../../http/contexto-auditoria';
+import { responderSinContenido } from '../../http/responder-sin-contenido';
 
 export const MENSAJE_SIN_PERMISO_SEGUIMIENTO =
   'No tiene permisos para consultar perfiles de seguimiento individuales.';
@@ -63,7 +63,7 @@ export class SeguimientoIndividualController {
       contextoAuditoria(request),
       params.codigo_participante,
     );
-    return this.responder(response, perfil);
+    return responderSinContenido(response, perfil);
   }
 
   @Get('alertas')
@@ -82,15 +82,6 @@ export class SeguimientoIndividualController {
       params.codigo_participante,
       { offset: consulta.offset, limit: consulta.limit },
     );
-    return this.responder(response, historial);
-  }
-
-  /** Sin datos de M05: 204 sin cuerpo. */
-  private responder<T>(response: Response, datos: T | null): T | undefined {
-    if (datos === null) {
-      response.status(HttpStatus.NO_CONTENT);
-      return undefined;
-    }
-    return datos;
+    return responderSinContenido(response, historial);
   }
 }

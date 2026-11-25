@@ -8,6 +8,8 @@ import { ExportacionCsvCohorteController } from './controllers/exportacion-csv-c
 import { GestionAlertasController } from './controllers/gestion-alertas/gestion-alertas.controller';
 import { ParticipantesCohorteController } from './controllers/participantes-cohorte.controller';
 import { PermisosIndividualesController } from './controllers/permisos-individuales/permisos-individuales.controller';
+import { InteraccionNotificacionesController } from './controllers/seguimiento-individual/interaccion-notificaciones.controller';
+import { ProgresionNarrativaController } from './controllers/seguimiento-individual/progresion-narrativa.controller';
 import { SeguimientoIndividualController } from './controllers/seguimiento-individual/seguimiento-individual.controller';
 import { VistaConductualController } from './controllers/vista-conductual.controller';
 import { VistasAgregadasController } from './controllers/vistas-agregadas.controller';
@@ -26,6 +28,8 @@ export const AdministrativoPresentationControllers: Type[] = [
   ParticipantesCohorteController,
   PermisosIndividualesController,
   SeguimientoIndividualController,
+  ProgresionNarrativaController,
+  InteraccionNotificacionesController,
   VistaConductualController,
   VistasAgregadasController,
 ];

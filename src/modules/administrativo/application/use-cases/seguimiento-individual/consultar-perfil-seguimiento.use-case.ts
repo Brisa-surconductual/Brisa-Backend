@@ -35,6 +35,7 @@ export class ConsultarPerfilSeguimientoUseCase {
       PerfilSeguimientoDto,
       PerfilSeguimientoDtoResponse
     >(this.auditoria, this.repositorio, ctx, codigoParticipante, {
+      fuente: 'M05',
       recurso: RecursoAuditado.PERFIL_SEGUIMIENTO_INDIVIDUAL,
       consulta: 'PERFIL_SEGUIMIENTO',
       obtener: () =>

@@ -7,11 +7,10 @@ import {
   type PerfilSeguimientoDto,
   SeguimientoIndividualPort,
 } from '../../application/ports/seguimiento-individual.port';
+import { flagActivo, simularLlamada } from '../simulacion/simular-modulo';
 
 /** Código ajeno que se devuelve al simular una inconsistencia de M05. */
 export const CODIGO_INCONSISTENTE_M05 = 'P-00000000';
-
-const RETARDO_POR_OMISION_MS = 150;
 
 /** Alertas de muestra de los contratos de RF-128 y RF-129 (sin id). */
 const ALERTAS_MUESTRA: (Omit<AlertaM05, 'id_alerta'> & { clave: string })[] = [
@@ -32,9 +31,6 @@ const ALERTAS_MUESTRA: (Omit<AlertaM05, 'id_alerta'> & { clave: string })[] = [
     fecha_resolucion: '2026-11-13T09:00:00Z',
   },
 ];
-
-const activo = (variable: string) =>
-  process.env[variable]?.toLowerCase() === 'true';
 
 /**
  * Id de alerta estable y propio de cada participante. En M05 cada alerta tiene
@@ -74,7 +70,7 @@ export class MockSeguimientoIndividualAdapter implements SeguimientoIndividualPo
     codigoParticipante: string,
   ): Promise<PerfilSeguimientoDto | null> {
     await this.simularRed();
-    if (activo('SIMULAR_M5_SIN_DATOS')) return null;
+    if (flagActivo('SIMULAR_M5_SIN_DATOS')) return null;
     const [inactividad] = alertasDe(codigoParticipante);
     return {
       codigo_participante: this.codigoRespuesta(codigoParticipante),
@@ -102,7 +98,7 @@ export class MockSeguimientoIndividualAdapter implements SeguimientoIndividualPo
     limit: number,
   ): Promise<ListaAlertasDto | null> {
     await this.simularRed();
-    if (activo('SIMULAR_M5_SIN_DATOS')) return null;
+    if (flagActivo('SIMULAR_M5_SIN_DATOS')) return null;
     const alertas = alertasDe(codigoParticipante);
     return {
       codigo_participante: this.codigoRespuesta(codigoParticipante),
@@ -116,7 +112,7 @@ export class MockSeguimientoIndividualAdapter implements SeguimientoIndividualPo
     idAlerta: string,
   ): Promise<AlertaParticipanteM05 | null> {
     await this.simularRed();
-    if (activo('SIMULAR_M5_SIN_DATOS')) return null;
+    if (flagActivo('SIMULAR_M5_SIN_DATOS')) return null;
     const alerta = alertasDe(codigoParticipante).find(
       (candidata) => candidata.id_alerta === idAlerta.toLowerCase(),
     );
@@ -129,20 +125,16 @@ export class MockSeguimientoIndividualAdapter implements SeguimientoIndividualPo
   }
 
   private codigoRespuesta(codigoParticipante: string): string {
-    return activo('SIMULAR_INCONSISTENCIA_M5')
+    return flagActivo('SIMULAR_INCONSISTENCIA_M5')
       ? CODIGO_INCONSISTENTE_M05
       : codigoParticipante;
   }
 
-  private async simularRed(): Promise<void> {
-    const configurado = Number(process.env.MOCK_M5_DELAY_MS);
-    const retardo =
-      Number.isFinite(configurado) && configurado >= 0
-        ? configurado
-        : RETARDO_POR_OMISION_MS;
-    if (retardo > 0)
-      await new Promise((resolve) => setTimeout(resolve, retardo));
-    if (activo('SIMULAR_M5_CAIDO'))
-      throw new Error('M05 no disponible (simulado).');
+  private simularRed(): Promise<void> {
+    return simularLlamada({
+      variableRetardo: 'MOCK_M5_DELAY_MS',
+      variableCaido: 'SIMULAR_M5_CAIDO',
+      modulo: 'M05',
+    });
   }
 }

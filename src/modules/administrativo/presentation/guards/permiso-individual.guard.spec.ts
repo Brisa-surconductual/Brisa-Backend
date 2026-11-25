@@ -6,6 +6,7 @@ import type { VerificarPermisoIndividualUseCase } from '../../application/use-ca
 import { AlcancePermiso } from '../../domain/enums/alcance-permiso.enum';
 import {
   ALCANCE_PERMISO_KEY,
+  CODIGO_PERMISO_KEY,
   MENSAJE_PERMISO_KEY,
   MENSAJE_SIN_PERMISO_INDIVIDUAL,
   PermisoIndividualGuard,
@@ -17,6 +18,8 @@ describe('PermisoIndividualGuard', () => {
   let auditoria: { registrarIntento: jest.Mock };
   let guard: PermisoIndividualGuard;
   let mensajeConfigurado: string | undefined;
+  let codigoConfigurado: string | undefined;
+  let alcanceConfigurado: AlcancePermiso;
 
   const contexto = (
     rol: string,
@@ -46,13 +49,15 @@ describe('PermisoIndividualGuard', () => {
     verificar = { execute: jest.fn().mockResolvedValue(true) };
     auditoria = { registrarIntento: jest.fn().mockResolvedValue(undefined) };
     mensajeConfigurado = undefined;
+    codigoConfigurado = undefined;
+    alcanceConfigurado = AlcancePermiso.ACCESO_INDIVIDUAL;
     const reflector = new Reflector();
     jest
       .spyOn(reflector, 'getAllAndOverride')
       .mockImplementation((clave: unknown) => {
-        if (clave === ALCANCE_PERMISO_KEY)
-          return AlcancePermiso.ACCESO_INDIVIDUAL;
+        if (clave === ALCANCE_PERMISO_KEY) return alcanceConfigurado;
         if (clave === MENSAJE_PERMISO_KEY) return mensajeConfigurado;
+        if (clave === CODIGO_PERMISO_KEY) return codigoConfigurado;
         return undefined;
       });
     guard = new PermisoIndividualGuard(
@@ -149,6 +154,41 @@ describe('PermisoIndividualGuard', () => {
       codigo: 'SIN_PERMISO_INDIVIDUAL',
       mensaje: 'Mensaje propio de la ruta.',
     });
+  });
+
+  it('usa el código configurado y verifica el alcance declarado (RF-130)', async () => {
+    verificar.execute.mockResolvedValue(false);
+    alcanceConfigurado = AlcancePermiso.PROGRESION_NARRATIVA;
+    codigoConfigurado = 'SIN_PERMISO_NARRATIVA';
+    mensajeConfigurado =
+      'Se requiere permiso explícito para consultar la progresión narrativa individual.';
+    const error = await guard
+      .canActivate(
+        contexto(Rol.ADMINISTRATIVO, {
+          params: { codigo_participante: 'P-1' },
+        }),
+      )
+      .catch((e: unknown) => e);
+    expect(verificar.execute).toHaveBeenCalledWith(
+      idUsuario,
+      { codigo: 'P-1' },
+      AlcancePermiso.PROGRESION_NARRATIVA,
+    );
+    expect((error as ForbiddenException).getResponse()).toEqual({
+      status: 403,
+      codigo: 'SIN_PERMISO_NARRATIVA',
+      mensaje:
+        'Se requiere permiso explícito para consultar la progresión narrativa individual.',
+    });
+    expect(auditoria.registrarIntento).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        detalle: expect.objectContaining({
+          alcance: 'PROGRESION_NARRATIVA',
+        }) as unknown,
+      }),
+      'DENEGADA',
+    );
   });
 
   it('niega si no se puede identificar al participante', async () => {

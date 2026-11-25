@@ -41,6 +41,7 @@ export class ConsultarHistorialAlertasUseCase {
       ListaAlertasDto,
       HistorialAlertasDtoResponse
     >(this.auditoria, this.repositorio, ctx, codigoParticipante, {
+      fuente: 'M05',
       recurso: RecursoAuditado.HISTORIAL_ALERTAS_PARTICIPANTE,
       consulta: 'HISTORIAL_ALERTAS',
       obtener: () =>

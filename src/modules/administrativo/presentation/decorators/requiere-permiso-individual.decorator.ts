@@ -2,11 +2,14 @@ import { applyDecorators, SetMetadata, UseGuards } from '@nestjs/common';
 import type { AlcancePermiso } from '../../domain/enums/alcance-permiso.enum';
 import {
   ALCANCE_PERMISO_KEY,
+  CODIGO_PERMISO_KEY,
   MENSAJE_PERMISO_KEY,
   PermisoIndividualGuard,
 } from '../guards/permiso-individual.guard';
 
 export interface OpcionesPermisoIndividual {
+  /** Código del 403; por omisión, `SIN_PERMISO_INDIVIDUAL`. */
+  codigo?: string;
   /** Mensaje del 403; por omisión, el de RF-03. */
   mensaje?: string;
 }
@@ -23,5 +26,6 @@ export const RequierePermisoIndividual = (
   applyDecorators(
     SetMetadata(ALCANCE_PERMISO_KEY, alcance),
     SetMetadata(MENSAJE_PERMISO_KEY, opciones.mensaje),
+    SetMetadata(CODIGO_PERMISO_KEY, opciones.codigo),
     UseGuards(PermisoIndividualGuard),
   );
