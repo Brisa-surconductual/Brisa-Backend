@@ -5,7 +5,6 @@ import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
-
 dotenv.config({ path: './config/.env' });
 
 async function bootstrap() {
@@ -33,7 +32,7 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'X-Request-Id'],
-    exposedHeaders: ['X-Request-Id', 'Retry-After'],
+    exposedHeaders: ['X-Request-Id', 'Retry-After', 'Content-Disposition'],
   });
 
   if (process.env.TRUST_PROXY) {
