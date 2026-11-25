@@ -1,8 +1,6 @@
 import type { Prisma } from '@prisma/client';
-import type {
-  EntradaBitacora,
-  RegistroAuditoria,
-} from '../../domain/auditoria';
+import type { RegistroAuditoria } from '../../domain/entities/auditoria/registro-auditoria.entity';
+import type { EntradaBitacora } from '../../domain/results/entrada-bitacora';
 
 export abstract class BitacoraRepository {
   abstract enTransaccion<T>(

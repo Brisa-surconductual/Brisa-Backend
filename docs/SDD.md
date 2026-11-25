@@ -104,6 +104,7 @@ modules/<modulo>/
 │   ├── exceptions/*.exception.ts
 │   ├── policies/*.policy.ts
 │   ├── repositories/*.repository.ts        # puertos de persistencia (interfaces)
+│   ├── results/*.ts                         # interfaces que no son contratos (contextos, envolturas, modelos de lectura)
 │   └── value-objects/*.vo.ts
 ├── application/
 │   ├── dto/<feature>/*.dto-request.ts
@@ -183,7 +184,7 @@ El relevamiento de `src/` muestra que módulos más antiguos (`cronograma`, `usu
 | Desviación encontrada | Canónico | Dónde aparece la desviación |
 | --- | --- | --- |
 | `domain/exeption` (singular, mal escrito) | `domain/exceptions` | `cronograma`, `usuarios` |
-| `infraestructre` (typo) | `infrastructure` | `administrativo` (módulo aún sin implementar, solo tiene `domain/` e `infraestructre/` vacíos) |
+| `domain/*.ts` plano (enums, results, entidades y reglas mezclados) | `domain/{entities,enums,exceptions,results,value-objects}` | `administrativo`: **corregido** en `fix/RefactorizarModuloAdministrativo` ([`M08_DOMINIO_DECISIONES_TECNICAS.md`](M08_DOMINIO_DECISIONES_TECNICAS.md)); pendiente la capa de aplicación |
 | `application/service` (singular) | `application/services` | `cronograma` |
 | `users.module.ts` (nombre en inglés) | `<modulo>.module.ts` → `usuarios.module.ts` | `usuarios` |
 | Controladores planos en `presentation/*.controller.ts` | `presentation/controllers/<feature>/*.controller.ts` | `cronograma` |
@@ -301,6 +302,7 @@ No todas las secciones aplican a toda spec (p. ej. una regla de negocio interna 
 | [`CONTRATO_RF141_EVOLUCION_TEMPORAL.md`](CONTRATO_RF141_EVOLUCION_TEMPORAL.md) | RF-141 (con RF-55, RF-78, RF-122, RF-123, RF-124 y RF-135) | M-8 (Administrativo) | IMPLEMENTADA en M08, proveedor temporal y filtros pendientes | Series por unidad con vacíos y auditoría |
 | [`CONTRATO_RF144_EXPORTACION_CSV_COHORTE.md`](CONTRATO_RF144_EXPORTACION_CSV_COHORTE.md) | RF-144 (con RF-122 a RF-124, RF-132 y RF-134) | M-8 (Administrativo) | IMPLEMENTADA en M08, proveedores reales e integración frontend pendientes | Descarga agregada, lista blanca y auditoría síncrona |
 | [`RF25B_DECISIONES_TECNICAS.md`](RF25B_DECISIONES_TECNICAS.md) | RF-25B | Por confirmar | N/A (decisión técnica) | No es contrato de comportamiento |
+| [`M08_DOMINIO_DECISIONES_TECNICAS.md`](M08_DOMINIO_DECISIONES_TECNICAS.md) | RF-123 a RF-148 (sin cambio de contrato) | M-8 (Administrativo) | N/A (decisión técnica) | Reorganización del dominio en `entities/enums/exceptions/results/value-objects` (`fix/RefactorizarModuloAdministrativo`); pendientes de la capa de aplicación listados en el documento |
 
 > Esta tabla se mantiene al día en esta misma sesión y en las siguientes: cada spec nueva o cambio de estado se refleja aquí.
 

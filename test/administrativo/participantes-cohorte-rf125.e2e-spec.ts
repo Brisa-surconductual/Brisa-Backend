@@ -6,7 +6,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AdministrativoModule } from '../../src/modules/administrativo/administrativo.module';
-import type { ParticipanteCohorte } from '../../src/modules/administrativo/domain/participante-cohorte';
+import type { ParticipanteCohorte } from '../../src/modules/administrativo/domain/entities/participante-cohorte/participante-cohorte.entity';
 import { SessionCookieConfig } from '../../src/modules/usuarios/application/ports/session-cookie-config';
 
 const urlLocal = process.env.RF125_TEST_DATABASE_URL;

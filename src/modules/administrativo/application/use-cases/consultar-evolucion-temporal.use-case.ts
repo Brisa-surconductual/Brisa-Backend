@@ -1,30 +1,21 @@
-import {
-  HttpException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { CronogramaPort } from '../../../cronograma/application/ports/cronograma.port';
-import type { ContextoAuditoria } from '../../domain/auditoria';
-import { construirEvolucionTemporal } from '../../domain/evolucion-temporal';
-import type { EvolucionTemporal } from '../../domain/evolucion-temporal';
+import { construirEvolucionTemporal } from '../../domain/entities/evolucion-temporal/evolucion-temporal.entity';
+import { AccionAdministrativa } from '../../domain/enums/accion-administrativa.enum';
+import { EstadoFuenteAgregada } from '../../domain/enums/estado-fuente-agregada.enum';
+import { RecursoAuditado } from '../../domain/enums/recurso-auditado.enum';
+import { VistasAgregadasRepository } from '../../domain/repositories/vistas-agregadas.repository';
+import type { ContextoAuditoria } from '../../domain/results/contexto-auditoria';
+import type { EvolucionTemporal } from '../../domain/results/evolucion-temporal';
+import { CohorteActivaNoEncontradaException } from '../exceptions/cohorte-activa-no-encontrada.exception';
+import { ConstruccionSerieTemporalException } from '../exceptions/construccion-serie-temporal.exception';
+import { SeguimientoNoDisponibleException } from '../exceptions/seguimiento-no-disponible.exception';
 import { EvolucionSeguimientoPort } from '../ports/evolucion-seguimiento.port';
-import { VistasAgregadasRepository } from '../ports/vistas-agregadas.repository';
 import { AuditoriaService } from '../services/auditoria.service';
 import { consultarFuenteConLimite } from '../services/consultar-fuente-con-limite';
 
-function errorSerie(cause?: unknown) {
-  return new InternalServerErrorException(
-    {
-      statusCode: 500,
-      codigo: 'ERROR_CONSTRUCCION_SERIE_TEMPORAL',
-      mensaje:
-        'No fue posible construir la evolución temporal de indicadores en este momento. Intente nuevamente más tarde.',
-    },
-    { cause },
-  );
-}
+const MENSAJE_COHORTE_NO_ENCONTRADA =
+  'No existe una cohorte activa disponible para mostrar la evolución temporal de indicadores.';
 
 @Injectable()
 export class ConsultarEvolucionTemporalUseCase {
@@ -43,36 +34,31 @@ export class ConsultarEvolucionTemporalUseCase {
       return await this.auditoria.ejecutar(
         ctx,
         {
-          accion: 'CONSULTA_AGREGADA',
-          recurso: 'EVOLUCION_TEMPORAL_COHORTE',
+          accion: AccionAdministrativa.CONSULTA_AGREGADA,
+          recurso: RecursoAuditado.EVOLUCION_TEMPORAL_COHORTE,
           idRecurso: idCohorte,
         },
         async (tx) => {
           const idCronograma =
             await this.cohortes.obtenerCronogramaCohorteActiva(tx, idCohorte);
-          if (!idCronograma) {
-            throw new NotFoundException({
-              statusCode: 404,
-              codigo: 'COHORTE_ACTIVA_NO_ENCONTRADA',
-              mensaje:
-                'No existe una cohorte activa disponible para mostrar la evolución temporal de indicadores.',
-            });
-          }
+          if (!idCronograma)
+            throw new CohorteActivaNoEncontradaException(
+              MENSAJE_COHORTE_NO_ENCONTRADA,
+            );
 
           const resultado = await consultarFuenteConLimite(
             () => this.seguimiento.obtener(idCohorte),
-            { id_cohorte: idCohorte, estado: 'NO_DISPONIBLE' },
+            {
+              id_cohorte: idCohorte,
+              estado: EstadoFuenteAgregada.NO_DISPONIBLE,
+            },
           );
-          if (resultado?.id_cohorte !== idCohorte) throw errorSerie();
-          if (resultado.estado === 'NO_DISPONIBLE') {
-            throw new ServiceUnavailableException({
-              statusCode: 503,
-              codigo: 'SEGUIMIENTO_NO_DISPONIBLE',
-              mensaje:
-                'El módulo de seguimiento no está disponible en este momento. No es posible construir la evolución temporal de indicadores. Intente nuevamente más tarde.',
-            });
-          }
-          if (resultado.estado !== 'ACTUALIZADO') throw errorSerie();
+          if (resultado?.id_cohorte !== idCohorte)
+            throw new ConstruccionSerieTemporalException();
+          if (resultado.estado === EstadoFuenteAgregada.NO_DISPONIBLE)
+            throw new SeguimientoNoDisponibleException();
+          if (resultado.estado !== EstadoFuenteAgregada.ACTUALIZADO)
+            throw new ConstruccionSerieTemporalException();
 
           const catalogo = await this.cronograma.listarIdsUnidadesEnOrden(
             tx,
@@ -83,13 +69,13 @@ export class ConsultarEvolucionTemporalUseCase {
             catalogo,
             resultado.datos,
           );
-          if (!evolucion) throw errorSerie();
+          if (!evolucion) throw new ConstruccionSerieTemporalException();
           return evolucion;
         },
       );
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw errorSerie(error);
+      throw new ConstruccionSerieTemporalException(error);
     }
   }
 }

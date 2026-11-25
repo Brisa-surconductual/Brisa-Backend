@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { CodigoErrorCohorte } from '../../application/cohorte.errors';
-import { errorCohorte } from '../../application/cohorte.errors';
-import { CohortesRepository } from '../../application/ports/cohortes.repository';
+import type { CodigoErrorCohorte } from '../../application/exceptions/cohorte.exception';
+import { CohorteException } from '../../application/exceptions/cohorte.exception';
+import { CohortesRepository } from '../../domain/repositories/cohortes.repository';
 import type {
   Cohorte,
-  CohorteConsultada,
   DatosCohorte,
-} from '../../domain/cohorte';
-import { errorSqlPrisma } from './error-sql-prisma';
+} from '../../domain/entities/cohorte/cohorte.entity';
+import type { CohorteConsultada } from '../../domain/results/cohorte-consultada';
+import { errorSqlPrisma } from '../expetions/error-sql-prisma';
 
 type FilaCohorte = Omit<Cohorte, 'fecha_actualizacion'> & {
   fecha_actualizacion: Date;
@@ -96,7 +96,7 @@ export class PrismaCohortesRepository implements CohortesRepository {
       RETURNING ${CAMPOS_COHORTE}
     `,
     );
-    if (!cohorte) throw errorCohorte('ERROR_PERSISTENCIA_COHORTE');
+    if (!cohorte) throw new CohorteException('ERROR_PERSISTENCIA_COHORTE');
     return cohorte;
   }
 
@@ -119,7 +119,7 @@ export class PrismaCohortesRepository implements CohortesRepository {
       RETURNING ${CAMPOS_COHORTE}
     `,
     );
-    if (!actualizada) throw errorCohorte('COHORTE_NO_ENCONTRADA');
+    if (!actualizada) throw new CohorteException('COHORTE_NO_ENCONTRADA');
     return actualizada;
   }
 
@@ -139,10 +139,10 @@ export class PrismaCohortesRepository implements CohortesRepository {
       if (db && typeof db.mensaje === 'string') {
         for (const [token, [estado, codigo]] of Object.entries(ERRORES_SQL)) {
           if (estado === db.estado && db.mensaje.includes(token))
-            throw errorCohorte(codigo);
+            throw new CohorteException(codigo);
         }
       }
-      throw errorCohorte(codigoFallo, error);
+      throw new CohorteException(codigoFallo, error);
     }
   }
 }

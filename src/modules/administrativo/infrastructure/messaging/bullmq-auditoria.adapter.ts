@@ -9,7 +9,7 @@ import {
   BitacoraRepository,
   ColaAuditoriaPort,
 } from '../../application/ports/auditoria.port';
-import type { RegistroAuditoria } from '../../domain/auditoria';
+import type { RegistroAuditoria } from '../../domain/entities/auditoria/registro-auditoria.entity';
 
 const COLA_AUDITORIA = 'auditoria-diferida';
 

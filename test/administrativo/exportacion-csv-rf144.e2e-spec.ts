@@ -11,7 +11,7 @@ import { BitacoraRepository } from '../../src/modules/administrativo/application
 import type { ResultadoFuenteAgregada } from '../../src/modules/administrativo/application/ports/fuente-vista-agregada.port';
 import { NotificacionesAgregadasPort } from '../../src/modules/administrativo/application/ports/notificaciones-agregadas.port';
 import { SeguimientoAgregadoPort } from '../../src/modules/administrativo/application/ports/seguimiento-agregado.port';
-import { COLUMNAS_EXPORTACION_COHORTE } from '../../src/modules/administrativo/domain/exportacion-cohorte';
+import { COLUMNAS_EXPORTACION_COHORTE } from '../../src/modules/administrativo/domain/enums/columna-exportacion-cohorte.enum';
 import { crearActorConSesion } from './fixtures/actor-con-sesion';
 
 const urlPruebas = process.env.RF144_TEST_DATABASE_URL;

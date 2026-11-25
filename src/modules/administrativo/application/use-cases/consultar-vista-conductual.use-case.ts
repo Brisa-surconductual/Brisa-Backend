@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { ContextoAuditoria } from '../../domain/auditoria';
-import { proyectarDatosConductuales } from '../../domain/vista-conductual';
+import { proyectarDatosConductuales } from '../../domain/entities/vistas-agregadas/vista-conductual.entity';
+import { RecursoAuditado } from '../../domain/enums/recurso-auditado.enum';
+import { TipoVistaAgregada } from '../../domain/enums/tipo-vista-agregada.enum';
+import type { ContextoAuditoria } from '../../domain/results/contexto-auditoria';
 import { SeguimientoAgregadoPort } from '../ports/seguimiento-agregado.port';
 import { ConsultarVistaAgregadaUseCase } from './consultar-vista-agregada.use-case';
 import type { OpcionesConsultaAgregada } from './consultar-vista-agregada.use-case';
@@ -22,8 +24,8 @@ export class ConsultarVistaConductualUseCase {
       idCohorte,
       this.seguimiento,
       {
-        tipo: 'CONDUCTUAL',
-        recurso: 'VISTA_AGREGADA_CONDUCTUAL',
+        tipo: TipoVistaAgregada.CONDUCTUAL,
+        recurso: RecursoAuditado.VISTA_AGREGADA_CONDUCTUAL,
         mensajeNoEncontrada:
           'No existe una cohorte activa disponible para mostrar la vista agregada.',
         mensajeError:

@@ -1,20 +1,23 @@
-import {
-  HttpException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-  ServiceUnavailableException,
-} from '@nestjs/common';
-import type { ContextoAuditoria } from '../../domain/auditoria';
-import { esSnapshotSuprimido } from '../../domain/vista-agregada';
+import { HttpException, Injectable } from '@nestjs/common';
+import { AccionAdministrativa } from '../../domain/enums/accion-administrativa.enum';
+import { EstadoAccion } from '../../domain/enums/estado-accion.enum';
+import { EstadoAgregacion } from '../../domain/enums/estado-agregacion.enum';
+import { EstadoFuenteAgregada } from '../../domain/enums/estado-fuente-agregada.enum';
+import { EstadoVistaAgregada } from '../../domain/enums/estado-vista-agregada.enum';
+import { MotivoSinDatos } from '../../domain/enums/motivo-sin-datos.enum';
+import type { TipoVistaAgregada } from '../../domain/enums/tipo-vista-agregada.enum';
+import { VistasAgregadasRepository } from '../../domain/repositories/vistas-agregadas.repository';
+import type { ContextoAuditoria } from '../../domain/results/contexto-auditoria';
 import type {
   DatosVistaAgregada,
-  TipoVistaAgregada,
   VistaAgregada,
-} from '../../domain/vista-agregada';
+} from '../../domain/results/vista-agregada';
+import { esSnapshotSuprimido } from '../../domain/value-objects/snapshot-agregado.vo';
+import { CohorteActivaNoEncontradaException } from '../exceptions/cohorte-activa-no-encontrada.exception';
+import { ConsultaVistaAgregadaException } from '../exceptions/consulta-vista-agregada.exception';
+import { VistaAgregadaNoDisponibleException } from '../exceptions/vista-agregada-no-disponible.exception';
 import { fuenteAgregadaNoDisponible } from '../ports/fuente-vista-agregada.port';
 import type { FuenteVistaAgregada } from '../ports/fuente-vista-agregada.port';
-import { VistasAgregadasRepository } from '../ports/vistas-agregadas.repository';
 import { AuditoriaService } from '../services/auditoria.service';
 import { consultarFuenteConLimite } from '../services/consultar-fuente-con-limite';
 
@@ -31,17 +34,6 @@ interface DefinicionVista<T extends DatosVistaAgregada> {
 
 export interface OpcionesConsultaAgregada {
   conservarVistaDegradada?: boolean;
-}
-
-function errorConsulta(mensaje: string, cause?: unknown) {
-  return new InternalServerErrorException(
-    {
-      statusCode: 500,
-      codigo: 'ERROR_CONSULTA_VISTA_AGREGADA',
-      mensaje,
-    },
-    { cause },
-  );
 }
 
 @Injectable()
@@ -62,7 +54,7 @@ export class ConsultarVistaAgregadaUseCase {
       const vista = await this.auditoria.ejecutar<VistaAgregada<T>>(
         ctx,
         {
-          accion: 'CONSULTA_AGREGADA',
+          accion: AccionAdministrativa.CONSULTA_AGREGADA,
           recurso: definicion.recurso,
           idRecurso: idCohorte,
         },
@@ -70,11 +62,9 @@ export class ConsultarVistaAgregadaUseCase {
           if (
             !(await this.vistas.obtenerCronogramaCohorteActiva(tx, idCohorte))
           ) {
-            throw new NotFoundException({
-              statusCode: 404,
-              codigo: 'COHORTE_ACTIVA_NO_ENCONTRADA',
-              mensaje: definicion.mensajeNoEncontrada,
-            });
+            throw new CohorteActivaNoEncontradaException(
+              definicion.mensajeNoEncontrada,
+            );
           }
 
           const resultado = await consultarFuenteConLimite(
@@ -82,12 +72,12 @@ export class ConsultarVistaAgregadaUseCase {
             fuenteAgregadaNoDisponible(idCohorte),
           );
           if (resultado?.id_cohorte !== idCohorte)
-            throw errorConsulta(definicion.mensajeError);
+            throw new ConsultaVistaAgregadaException(definicion.mensajeError);
 
           const vista: VistaAgregada<T> = {
             id_cohorte: idCohorte,
-            estado: 'NO_DISPONIBLE',
-            estado_agregacion: 'ACTUALIZADO',
+            estado: EstadoVistaAgregada.NO_DISPONIBLE,
+            estado_agregacion: EstadoAgregacion.ACTUALIZADO,
             ultimo_timestamp_disponible: null,
             motivo_sin_datos: null,
             mensaje: null,
@@ -95,9 +85,12 @@ export class ConsultarVistaAgregadaUseCase {
           };
 
           switch (resultado.estado) {
-            case 'ACTUALIZADO': {
+            case EstadoFuenteAgregada.ACTUALIZADO: {
               let datos = definicion.proyectar(resultado.datos);
-              if (!datos) throw errorConsulta(definicion.mensajeError);
+              if (!datos)
+                throw new ConsultaVistaAgregadaException(
+                  definicion.mensajeError,
+                );
               if (
                 !(await this.vistas.guardar(
                   tx,
@@ -112,38 +105,49 @@ export class ConsultarVistaAgregadaUseCase {
                   definicion.tipo,
                 );
                 if (esSnapshotSuprimido(ultimo))
-                  return { ...vista, motivo_sin_datos: 'AGREGADO_SUPRIMIDO' };
+                  return {
+                    ...vista,
+                    motivo_sin_datos: MotivoSinDatos.AGREGADO_SUPRIMIDO,
+                  };
                 datos = definicion.proyectar(ultimo);
-                if (!datos) throw errorConsulta(definicion.mensajeError);
+                if (!datos)
+                  throw new ConsultaVistaAgregadaException(
+                    definicion.mensajeError,
+                  );
               }
               return {
                 ...vista,
-                estado: 'DISPONIBLE',
+                estado: EstadoVistaAgregada.DISPONIBLE,
                 ultimo_timestamp_disponible: new Date(
                   datos.fecha_actualizacion,
                 ).toISOString(),
                 datos,
               };
             }
-            case 'PENDIENTE':
+            case EstadoFuenteAgregada.PENDIENTE:
               return {
                 ...vista,
                 estado: definicion.estadoPendiente ?? vista.estado,
-                estado_agregacion: 'PENDIENTE',
-                motivo_sin_datos: 'SIN_CONSOLIDAR',
+                estado_agregacion: EstadoAgregacion.PENDIENTE,
+                motivo_sin_datos: MotivoSinDatos.SIN_CONSOLIDAR,
                 mensaje: definicion.mensajePendiente,
               };
-            case 'SUPRIMIDO':
+            case EstadoFuenteAgregada.SUPRIMIDO:
               await this.vistas.suprimir(tx, idCohorte, definicion.tipo);
-              return { ...vista, motivo_sin_datos: 'AGREGADO_SUPRIMIDO' };
-            case 'NO_DISPONIBLE': {
+              return {
+                ...vista,
+                motivo_sin_datos: MotivoSinDatos.AGREGADO_SUPRIMIDO,
+              };
+            case EstadoFuenteAgregada.NO_DISPONIBLE: {
               const datos = definicion.proyectar(
                 await this.vistas.obtenerUltimo(tx, idCohorte, definicion.tipo),
               );
               return {
                 ...vista,
-                estado: datos ? 'DESACTUALIZADA' : 'NO_DISPONIBLE',
-                estado_agregacion: 'ERROR_ACTUALIZACION',
+                estado: datos
+                  ? EstadoVistaAgregada.DESACTUALIZADA
+                  : EstadoVistaAgregada.NO_DISPONIBLE,
+                estado_agregacion: EstadoAgregacion.ERROR_ACTUALIZACION,
                 ultimo_timestamp_disponible: datos
                   ? new Date(datos.fecha_actualizacion).toISOString()
                   : null,
@@ -154,24 +158,24 @@ export class ConsultarVistaAgregadaUseCase {
               };
             }
             default:
-              throw errorConsulta(definicion.mensajeError);
+              throw new ConsultaVistaAgregadaException(definicion.mensajeError);
           }
         },
         (respuesta) =>
-          respuesta.estado_agregacion === 'ERROR_ACTUALIZACION'
-            ? 'FALLIDA'
-            : 'EXITOSA',
+          respuesta.estado_agregacion === EstadoAgregacion.ERROR_ACTUALIZACION
+            ? EstadoAccion.FALLIDA
+            : EstadoAccion.EXITOSA,
       );
       if (
-        vista.estado_agregacion === 'ERROR_ACTUALIZACION' &&
+        vista.estado_agregacion === EstadoAgregacion.ERROR_ACTUALIZACION &&
         !opciones.conservarVistaDegradada
       ) {
-        throw new ServiceUnavailableException(vista);
+        throw new VistaAgregadaNoDisponibleException(vista);
       }
       return vista;
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw errorConsulta(definicion.mensajeError, error);
+      throw new ConsultaVistaAgregadaException(definicion.mensajeError, error);
     }
   }
 }

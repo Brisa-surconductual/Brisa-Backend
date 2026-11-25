@@ -1,9 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
-import type {
-  AccionAuditable,
-  ContextoAuditoria,
-} from '../../domain/auditoria';
+import type { AccionAuditable } from '../../domain/results/accion-auditable';
+import type { ContextoAuditoria } from '../../domain/results/contexto-auditoria';
+import { CursorBitacoraInvalidoException } from '../exceptions/cursor-bitacora-invalido.exception';
+import { LimiteBitacoraInvalidoException } from '../exceptions/limite-bitacora-invalido.exception';
 import { BitacoraRepository } from '../ports/auditoria.port';
 import { AuditoriaService } from '../services/auditoria.service';
 
@@ -25,7 +25,7 @@ export class ConsultarBitacoraUseCase {
         cursor !== undefined &&
         (typeof cursor !== 'string' || !isUUID(cursor))
       )
-        throw new BadRequestException('El cursor debe ser un UUID.');
+        throw new CursorBitacoraInvalidoException();
       const maximo =
         limite === undefined
           ? 20
@@ -33,7 +33,7 @@ export class ConsultarBitacoraUseCase {
             ? Number(limite)
             : NaN;
       if (!Number.isInteger(maximo) || maximo < 1 || maximo > 100)
-        throw new BadRequestException('El límite debe estar entre 1 y 100.');
+        throw new LimiteBitacoraInvalidoException();
 
       const filas = await this.bitacora.listar(tx, cursor ?? null, maximo + 1);
       const data = filas.slice(0, maximo);

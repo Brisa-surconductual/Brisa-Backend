@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { ContextoAuditoria } from '../../domain/auditoria';
-import { proyectarDatosNarrativos } from '../../domain/vista-narrativa';
+import { proyectarDatosNarrativos } from '../../domain/entities/vistas-agregadas/vista-narrativa.entity';
+import { RecursoAuditado } from '../../domain/enums/recurso-auditado.enum';
+import { TipoVistaAgregada } from '../../domain/enums/tipo-vista-agregada.enum';
+import type { ContextoAuditoria } from '../../domain/results/contexto-auditoria';
 import { NarrativaAgregadaPort } from '../ports/narrativa-agregada.port';
 import { ConsultarVistaAgregadaUseCase } from './consultar-vista-agregada.use-case';
 import type { OpcionesConsultaAgregada } from './consultar-vista-agregada.use-case';
@@ -22,8 +24,8 @@ export class ConsultarVistaNarrativaUseCase {
       idCohorte,
       this.narrativa,
       {
-        tipo: 'NARRATIVA',
-        recurso: 'VISTA_AGREGADA_NARRATIVA',
+        tipo: TipoVistaAgregada.NARRATIVA,
+        recurso: RecursoAuditado.VISTA_AGREGADA_NARRATIVA,
         mensajeNoEncontrada:
           'No existe una cohorte activa disponible para mostrar la progresión narrativa agregada.',
         mensajeError:

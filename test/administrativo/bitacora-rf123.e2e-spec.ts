@@ -12,7 +12,7 @@ import request from 'supertest';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AdministrativoModule } from '../../src/modules/administrativo/administrativo.module';
 import { AuditoriaService } from '../../src/modules/administrativo/application/services/auditoria.service';
-import type { ContextoAuditoria } from '../../src/modules/administrativo/domain/auditoria';
+import type { ContextoAuditoria } from '../../src/modules/administrativo/domain/results/contexto-auditoria';
 import { SessionAuthGuard } from '../../src/modules/usuarios/presentation/guards/session-auth.guard';
 
 const baseLocal = process.env.RF123_TEST_DATABASE_URL;

@@ -1,0 +1,14 @@
+/** Acciones del rol administrativo que se registran en la bitácora (RF-123). */
+export const AccionAdministrativa = {
+  ACCESO_MODULO: 'ACCESO_MODULO',
+  CONSULTA_PARTICIPANTE: 'CONSULTA_PARTICIPANTE',
+  CONSULTA_AGREGADA: 'CONSULTA_AGREGADA',
+  EXPORTACION_DATOS: 'EXPORTACION_DATOS',
+  CONFIGURACION_UMBRALES: 'CONFIGURACION_UMBRALES',
+  INTENTO_ESCRITURA_BLOQUEADO: 'INTENTO_ESCRITURA_BLOQUEADO',
+  GESTION_COHORTE: 'GESTION_COHORTE',
+  GESTION_PARTICIPANTE_COHORTE: 'GESTION_PARTICIPANTE_COHORTE',
+} as const;
+
+export type AccionAdministrativa =
+  (typeof AccionAdministrativa)[keyof typeof AccionAdministrativa];

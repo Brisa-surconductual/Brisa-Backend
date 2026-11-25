@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { ContextoAuditoria } from '../../domain/auditoria';
-import { errorCohorte } from '../cohorte.errors';
-import { CohortesRepository } from '../ports/cohortes.repository';
+import { AccionAdministrativa } from '../../domain/enums/accion-administrativa.enum';
+import { RecursoAuditado } from '../../domain/enums/recurso-auditado.enum';
+import { CohortesRepository } from '../../domain/repositories/cohortes.repository';
+import type { ContextoAuditoria } from '../../domain/results/contexto-auditoria';
+import { CohorteException } from '../exceptions/cohorte.exception';
 import { AuditoriaService } from '../services/auditoria.service';
 
 @Injectable()
@@ -14,7 +16,10 @@ export class ConsultarCohortesUseCase {
   listar(ctx: ContextoAuditoria) {
     return this.auditoria.ejecutar(
       ctx,
-      { accion: 'ACCESO_MODULO', recurso: 'COHORTES' },
+      {
+        accion: AccionAdministrativa.ACCESO_MODULO,
+        recurso: RecursoAuditado.COHORTES,
+      },
       (tx) => this.cohortes.consultarVigentes(tx),
     );
   }
@@ -22,10 +27,14 @@ export class ConsultarCohortesUseCase {
   obtener(ctx: ContextoAuditoria, id: string) {
     return this.auditoria.ejecutar(
       ctx,
-      { accion: 'ACCESO_MODULO', recurso: 'COHORTE', idRecurso: id },
+      {
+        accion: AccionAdministrativa.ACCESO_MODULO,
+        recurso: RecursoAuditado.COHORTE,
+        idRecurso: id,
+      },
       async (tx) => {
         const [cohorte] = await this.cohortes.consultarVigentes(tx, id);
-        if (!cohorte) throw errorCohorte('COHORTE_NO_ENCONTRADA');
+        if (!cohorte) throw new CohorteException('COHORTE_NO_ENCONTRADA');
         return cohorte;
       },
     );

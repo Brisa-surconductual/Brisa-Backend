@@ -9,8 +9,9 @@ import {
   MaxLength,
   ValidateIf,
 } from 'class-validator';
-import { ESTADOS_COHORTE } from '../../domain/cohorte';
-import type { DatosCohorte, EstadoCohorte } from '../../domain/cohorte';
+import type { DatosCohorte } from '../../domain/entities/cohorte/cohorte.entity';
+import { ESTADOS_COHORTE } from '../../domain/enums/estado-cohorte.enum';
+import type { EstadoCohorte } from '../../domain/enums/estado-cohorte.enum';
 
 const FECHA_CALENDARIO = /^(?!0000)\d{4}-\d{2}-\d{2}$/u;
 const recortarNombre = ({ value }: { value: unknown }) =>

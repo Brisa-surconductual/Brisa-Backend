@@ -2,10 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
 import { BitacoraRepository } from '../../application/ports/auditoria.port';
-import type {
-  EntradaBitacora,
-  RegistroAuditoria,
-} from '../../domain/auditoria';
+import type { RegistroAuditoria } from '../../domain/entities/auditoria/registro-auditoria.entity';
+import type { EntradaBitacora } from '../../domain/results/entrada-bitacora';
 
 @Injectable()
 export class PrismaBitacoraRepository implements BitacoraRepository {

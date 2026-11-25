@@ -5,20 +5,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import type { ContextoAuditoria } from '../../domain/auditoria';
 import {
   accionExportacionCohorte,
   generarCsvCohorte,
-  nombreArchivoCohorte,
-} from '../../domain/exportacion-cohorte';
-import { errorExportacionCsv } from '../exportacion-csv.errors';
+} from '../../domain/entities/exportacion-cohorte/exportacion-cohorte.entity';
+import { EstadoAccion } from '../../domain/enums/estado-accion.enum';
+import { EstadoAgregacion } from '../../domain/enums/estado-agregacion.enum';
+import { CohortesRepository } from '../../domain/repositories/cohortes.repository';
+import { VistasAgregadasRepository } from '../../domain/repositories/vistas-agregadas.repository';
+import type { ContextoAuditoria } from '../../domain/results/contexto-auditoria';
+import { nombreArchivoCohorte } from '../../domain/value-objects/nombre-archivo-exportacion.vo';
+import { ExportacionCsvException } from '../exceptions/exportacion-csv.exception';
+import { RegistroAuditoriaException } from '../exceptions/registro-auditoria.exception';
 import { BitacoraRepository } from '../ports/auditoria.port';
-import { CohortesRepository } from '../ports/cohortes.repository';
-import { VistasAgregadasRepository } from '../ports/vistas-agregadas.repository';
-import {
-  AuditoriaService,
-  RegistroAuditoriaException,
-} from '../services/auditoria.service';
+import { AuditoriaService } from '../services/auditoria.service';
 import { ConsultarVistaConductualUseCase } from './consultar-vista-conductual.use-case';
 import { ConsultarVistaNotificacionesUseCase } from './consultar-vista-notificaciones.use-case';
 
@@ -61,7 +61,7 @@ export class ExportarIndicadoresCohorteUseCase {
       return await this.auditoria.ejecutar(ctx, accion, async (tx) => {
         await this.verificarCohorteActiva(tx, idCohorte);
         const [cohorte] = await this.cohortes.consultarVigentes(tx, idCohorte);
-        if (!cohorte) throw errorExportacionCsv('COHORTE_NO_ACTIVA');
+        if (!cohorte) throw new ExportacionCsvException('COHORTE_NO_ACTIVA');
 
         const nombre = nombreArchivoCohorte();
         const contenido = Buffer.from(
@@ -76,13 +76,17 @@ export class ExportarIndicadoresCohorteUseCase {
       });
     } catch (error) {
       if (!registrandoExportacion)
-        await this.auditoria.registrarIntento(ctx, accion, 'FALLIDA');
+        await this.auditoria.registrarIntento(
+          ctx,
+          accion,
+          EstadoAccion.FALLIDA,
+        );
       if (
         error instanceof RegistroAuditoriaException ||
         (error instanceof HttpException && error.getStatus() === 422)
       )
         throw error;
-      throw errorExportacionCsv('ERROR_GENERACION_CSV', error);
+      throw new ExportacionCsvException('ERROR_GENERACION_CSV', error);
     }
   }
 
@@ -91,7 +95,7 @@ export class ExportarIndicadoresCohorteUseCase {
     idCohorte: string,
   ) {
     if (!(await this.vistas.obtenerCronogramaCohorteActiva(tx, idCohorte)))
-      throw errorExportacionCsv('COHORTE_NO_ACTIVA');
+      throw new ExportacionCsvException('COHORTE_NO_ACTIVA');
   }
 
   private async consultarVistas(ctx: ContextoAuditoria, idCohorte: string) {
@@ -109,14 +113,14 @@ export class ExportarIndicadoresCohorteUseCase {
     }
     if (conductual.status === 'rejected') {
       if (conductual.reason instanceof NotFoundException)
-        throw errorExportacionCsv('COHORTE_NO_ACTIVA');
-      throw errorExportacionCsv('ERROR_GENERACION_CSV');
+        throw new ExportacionCsvException('COHORTE_NO_ACTIVA');
+      throw new ExportacionCsvException('ERROR_GENERACION_CSV');
     }
     const vista = conductual.value;
     if (!vista.datos) {
-      if (vista.estado_agregacion === 'ERROR_ACTUALIZACION')
-        throw errorExportacionCsv('ERROR_GENERACION_CSV');
-      throw errorExportacionCsv('SIN_INDICADORES_CONSOLIDADOS');
+      if (vista.estado_agregacion === EstadoAgregacion.ERROR_ACTUALIZACION)
+        throw new ExportacionCsvException('ERROR_GENERACION_CSV');
+      throw new ExportacionCsvException('SIN_INDICADORES_CONSOLIDADOS');
     }
 
     return {
