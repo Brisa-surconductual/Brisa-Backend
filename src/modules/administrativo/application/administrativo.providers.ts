@@ -1,5 +1,9 @@
 import type { Provider } from '@nestjs/common';
 import { AuditoriaService } from './services/auditoria.service';
+import { SeguimientoIndividualService } from './services/seguimiento-individual.service';
+import { MarcarAlertaAtendidaUseCase } from './use-cases/gestion-alertas/marcar-alerta-atendida.use-case';
+import { ConsultarHistorialAlertasUseCase } from './use-cases/seguimiento-individual/consultar-historial-alertas.use-case';
+import { ConsultarPerfilSeguimientoUseCase } from './use-cases/seguimiento-individual/consultar-perfil-seguimiento.use-case';
 import { ConsultarBitacoraUseCase } from './use-cases/consultar-bitacora.use-case';
 import { ConsultarCohortesUseCase } from './use-cases/consultar-cohortes.use-case';
 import { ConsultarDashboardPrincipalUseCase } from './use-cases/consultar-dashboard-principal.use-case';
@@ -18,6 +22,10 @@ import { VerificarPermisoIndividualUseCase } from './use-cases/permisos-individu
 
 export const AdministrativoApplicationProviders: Provider[] = [
   AuditoriaService,
+  SeguimientoIndividualService,
+  MarcarAlertaAtendidaUseCase,
+  ConsultarHistorialAlertasUseCase,
+  ConsultarPerfilSeguimientoUseCase,
   ConsultarBitacoraUseCase,
   ConsultarCohortesUseCase,
   ConsultarDashboardPrincipalUseCase,

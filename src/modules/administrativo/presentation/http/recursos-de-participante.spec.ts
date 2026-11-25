@@ -16,6 +16,7 @@ describe('Recursos de participante RF-148', () => {
   it.each([
     ['/diario', 'DIARIO'],
     ['/seguimiento', 'SEGUIMIENTO'],
+    ['/admin/participantes/P-7F3A91C2/alertas', 'SEGUIMIENTO'],
     ['/gamificacion', 'GAMIFICACION'],
     ['/notificaciones', 'NOTIFICACIONES'],
     ['/chat/sesiones/iniciar', 'CHAT_SESION'],
@@ -48,5 +49,21 @@ describe('Recursos de participante RF-148', () => {
     '/cronograma/crear',
   ])('mantiene fuera del bloqueo %s', (ruta) => {
     expect(identificarRecursoParticipante(ruta)).toBeNull();
+  });
+
+  it('permite la acción administrativa de RF-147 sobre una alerta', () => {
+    expect(
+      identificarRecursoParticipante(
+        '/admin/participantes/P-7F3A91C2/alertas/1c9e7a2b-3d4f-4a5b-8c6d-7e8f9a0b1c2d/atender',
+      ),
+    ).toBeNull();
+  });
+
+  it('sigue protegiendo las demás rutas de seguimiento individual', () => {
+    expect(
+      identificarRecursoParticipante(
+        '/admin/participantes/P-7F3A91C2/alertas/1c9e7a2b-3d4f-4a5b-8c6d-7e8f9a0b1c2d',
+      ),
+    ).toEqual({ recurso: 'SEGUIMIENTO', idRecurso: null });
   });
 });

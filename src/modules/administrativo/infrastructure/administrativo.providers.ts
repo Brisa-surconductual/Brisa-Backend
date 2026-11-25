@@ -8,17 +8,23 @@ import { fuenteAgregadaNoDisponible } from '../application/ports/fuente-vista-ag
 import { NarrativaAgregadaPort } from '../application/ports/narrativa-agregada.port';
 import { NotificacionesAgregadasPort } from '../application/ports/notificaciones-agregadas.port';
 import { SeguimientoAgregadoPort } from '../application/ports/seguimiento-agregado.port';
+import { SeguimientoIndividualPort } from '../application/ports/seguimiento-individual.port';
 import { EstadoFuenteAgregada } from '../domain/enums/estado-fuente-agregada.enum';
 import { CohortesRepository } from '../domain/repositories/cohortes.repository';
 import { ParticipantesCohorteRepository } from '../domain/repositories/participantes-cohorte.repository';
+import { AlertasGestionRepository } from '../domain/repositories/alertas-gestion.repository';
 import { PermisosIndividualesRepository } from '../domain/repositories/permisos-individuales.repository';
+import { SeguimientoIndividualRepository } from '../domain/repositories/seguimiento-individual.repository';
 import { VistasAgregadasRepository } from '../domain/repositories/vistas-agregadas.repository';
 import { BullMqAuditoriaAdapter } from './messaging/bullmq-auditoria.adapter';
+import { PrismaAlertasGestionRepository } from './persistence/prisma-alertas-gestion.repository';
 import { PrismaBitacoraRepository } from './persistence/prisma-bitacora.repository';
 import { PrismaCohortesRepository } from './persistence/prisma-cohortes.repository';
 import { PrismaParticipantesCohorteRepository } from './persistence/prisma-participantes-cohorte.repository';
 import { PrismaPermisosIndividualesRepository } from './persistence/prisma-permisos-individuales.repository';
+import { PrismaSeguimientoIndividualRepository } from './persistence/prisma-seguimiento-individual.repository';
 import { PrismaVistasAgregadasRepository } from './persistence/prisma-vistas-agregadas.repository';
+import { MockSeguimientoIndividualAdapter } from './seguimiento/mock-seguimiento-individual.adapter';
 
 /** Liga los puertos de dominio y aplicación con sus implementaciones concretas. */
 export const AdministrativoInfrastructureProviders: Provider[] = [
@@ -31,6 +37,19 @@ export const AdministrativoInfrastructureProviders: Provider[] = [
   {
     provide: PermisosIndividualesRepository,
     useClass: PrismaPermisosIndividualesRepository,
+  },
+  {
+    provide: AlertasGestionRepository,
+    useClass: PrismaAlertasGestionRepository,
+  },
+  {
+    provide: SeguimientoIndividualRepository,
+    useClass: PrismaSeguimientoIndividualRepository,
+  },
+  {
+    provide: SeguimientoIndividualPort,
+    // Reemplazar por el adaptador real cuando M05 publique RF-77 / RF-63 / RF-68.
+    useClass: MockSeguimientoIndividualAdapter,
   },
   {
     provide: VistasAgregadasRepository,

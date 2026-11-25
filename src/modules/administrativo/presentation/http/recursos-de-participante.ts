@@ -10,8 +10,19 @@ const RECURSOS_DE_PARTICIPANTE = [
   { ruta: '/chat/sos', recurso: 'CHAT_SOS', recursoEnRuta: true },
   { ruta: '/chat/errores-cliente', recurso: 'CHAT_ERRORES_CLIENTE' },
   { ruta: '/seguimiento', recurso: 'SEGUIMIENTO' },
+  // RF-128 / RF-129: el seguimiento individual en M-8 es de solo lectura.
+  { ruta: '/admin/participantes', recurso: 'SEGUIMIENTO' },
   { ruta: '/gamificacion', recurso: 'GAMIFICACION' },
   { ruta: '/notificaciones', recurso: 'NOTIFICACIONES' },
+] as const;
+
+/**
+ * Escrituras administrativas permitidas dentro de un recurso de participante.
+ * RF-147: marcar una alerta como atendida es un metadato administrativo de M-8;
+ * no modifica los datos del participante en M05.
+ */
+const ESCRITURAS_ADMINISTRATIVAS_PERMITIDAS = [
+  /^\/admin\/participantes\/[^/]+\/alertas\/[^/]+\/atender\/?$/u,
 ] as const;
 
 export function esMetodoDeEscritura(metodo: string): boolean {
@@ -20,6 +31,10 @@ export function esMetodoDeEscritura(metodo: string): boolean {
 
 export function identificarRecursoParticipante(ruta: string) {
   const rutaNormalizada = ruta.toLowerCase();
+  if (
+    ESCRITURAS_ADMINISTRATIVAS_PERMITIDAS.some((p) => p.test(rutaNormalizada))
+  )
+    return null;
   const coincidencia = RECURSOS_DE_PARTICIPANTE.find(
     ({ ruta: prefijo }) =>
       rutaNormalizada === prefijo || rutaNormalizada.startsWith(prefijo + '/'),

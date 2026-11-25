@@ -17,7 +17,16 @@ export type DetalleAuditoria =
       id_usuario_beneficiario?: string;
       fecha_fin_vigencia?: string | null;
     }
-  | { motivo: string; alcance: string; uri: string };
+  | { motivo: string; alcance: string; uri: string }
+  | {
+      consulta: 'PERFIL_SEGUIMIENTO' | 'HISTORIAL_ALERTAS';
+      codigo_participante: string;
+    }
+  | {
+      operacion: 'MARCAR_ATENDIDA';
+      id_alerta: string;
+      codigo_participante: string;
+    };
 
 /** Qué se va a auditar, antes de conocer el resultado de la acción. */
 export interface AccionAuditable {
