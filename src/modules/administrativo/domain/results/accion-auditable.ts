@@ -5,6 +5,8 @@ import type { OperacionParticipanteCohorte } from '../enums/operacion-participan
 import type { OperacionPermisoIndividual } from '../enums/operacion-permiso-individual.enum';
 import type { SeveridadAuditoria } from '../enums/severidad-auditoria.enum';
 
+import type { AccionContenidoNarrativo } from './contenido-narrativo';
+import type { AccionMensajeNotificacion } from './mensajes-notificacion';
 /** Consultas individuales de un participante (RF-128 a RF-131). */
 export type ConsultaIndividual =
   | 'PERFIL_SEGUIMIENTO'
@@ -26,6 +28,10 @@ export type DetalleAuditoria =
     }
   | { motivo: string; alcance: string; uri: string }
   | {
+      accion_solicitada: AccionContenidoNarrativo | AccionMensajeNotificacion;
+      justificacion_cambio?: string;
+      nivel_gamificacion?: number;
+      resultado_validacion_terminos?: true;
       consulta: ConsultaIndividual;
       codigo_participante: string;
       fecha_inicio?: string | null;
