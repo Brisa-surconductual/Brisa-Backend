@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import {
+  type AlertaActivaParticipanteM05,
   type AlertaM05,
   type AlertaParticipanteM05,
   type IndicadoresParticipanteM05,
@@ -27,18 +28,27 @@ const UNIDADES_POR_NIVEL: Record<NivelProgreso, number> = {
 
 const TENDENCIAS: TendenciaConsumo[] = ['REDUCCION', 'ESTABLE', 'INCREMENTO'];
 
+const CODIGO_REAL = /^P-[0-9A-F]{8}$/iu;
+
 /**
  * Id de alerta estable y propio de cada participante. En M05 cada alerta tiene
  * un id único; si el mock repitiera los mismos ids para todos, atender una
  * alerta de un participante (índice único `uq_alerta_externo`) bloquearía la
  * misma alerta de muestra en todos los demás.
+ *
+ * Con un código real (`P-` + 8 hexadecimales) el primer segmento del UUID es
+ * el propio código: así `buscarAlerta(id)` (RF-147) puede reconstruir a qué
+ * participante pertenece sin que el cliente lo diga, como hará M05.
  */
 export function idAlertaMuestra(codigoParticipante: string, clave: string) {
   const h = createHash('sha256')
     .update(`${codigoParticipante}:${clave}`)
     .digest('hex');
+  const inicio = CODIGO_REAL.test(codigoParticipante)
+    ? codigoParticipante.slice(2).toLowerCase()
+    : h.slice(0, 8);
   const variante = ((parseInt(h[16], 16) & 0x3) | 0x8).toString(16);
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${variante}${h.slice(17, 20)}-${h.slice(20, 32)}`;
+  return `${inicio}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${variante}${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
 
 /** Datos de muestra de un participante, iguales en todas las consultas. */
@@ -105,7 +115,7 @@ const activas = (alertas: AlertaM05[]) =>
 /**
  * Sustituto de M05 mientras no exponga RF-77 / RF-63 / RF-68. Devuelve, para
  * cada participante, los datos deterministas de `muestraParticipante`, con la
- * forma de los contratos de RF-128, RF-129, RF-147 y RF-142.
+ * forma de los contratos de RF-128, RF-129, RF-142, RF-146 y RF-147.
  *
  * Variables de entorno (se leen en cada llamada, para poder probar):
  * - `SIMULAR_M5_CAIDO=true`: M05 no responde (503).
@@ -157,21 +167,34 @@ export class MockSeguimientoIndividualAdapter implements SeguimientoIndividualPo
     };
   }
 
-  async obtenerAlerta(
-    codigoParticipante: string,
-    idAlerta: string,
-  ): Promise<AlertaParticipanteM05 | null> {
+  async buscarAlerta(idAlerta: string): Promise<AlertaParticipanteM05 | null> {
     await this.simularRed();
     if (flagActivo('SIMULAR_M5_SIN_DATOS')) return null;
-    const alerta = muestraParticipante(codigoParticipante).alertas.find(
-      (candidata) => candidata.id_alerta === idAlerta.toLowerCase(),
+    const id = idAlerta.toLowerCase();
+    const codigo = `P-${id.slice(0, 8).toUpperCase()}`;
+    const alerta = muestraParticipante(codigo).alertas.find(
+      (candidata) => candidata.id_alerta === id,
     );
     return alerta
-      ? {
-          codigo_participante: this.codigoRespuesta(codigoParticipante),
-          alerta,
-        }
+      ? { codigo_participante: this.codigoRespuesta(codigo), alerta }
       : null;
+  }
+
+  async obtenerAlertasActivasLote(
+    codigosParticipante: string[],
+  ): Promise<AlertaActivaParticipanteM05[]> {
+    // Una sola espera de red para todo el lote.
+    await this.simularRed();
+    if (flagActivo('SIMULAR_M5_SIN_DATOS')) return [];
+    return codigosParticipante.flatMap((codigo) =>
+      activas(muestraParticipante(codigo).alertas).map((alerta) => ({
+        codigo_participante: this.codigoRespuesta(codigo),
+        id_alerta: alerta.id_alerta,
+        tipo_alerta: alerta.tipo_alerta,
+        fecha_generacion: alerta.fecha_generacion,
+        estado_resolucion: alerta.estado_resolucion,
+      })),
+    );
   }
 
   async obtenerIndicadoresLote(

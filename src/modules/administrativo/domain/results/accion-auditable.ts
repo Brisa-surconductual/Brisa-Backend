@@ -57,7 +57,7 @@ export type DetalleAuditoria =
       codigo_participante: string;
     }
   | {
-      consulta: 'LISTADO_INDICADORES';
+      consulta: 'LISTADO_INDICADORES' | 'ALERTAS_PENDIENTES';
       filtros: Record<string, string | number | boolean>;
     }
   | { campos_descartados: string[] }

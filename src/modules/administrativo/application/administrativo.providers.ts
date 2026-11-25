@@ -8,6 +8,7 @@ import { ConsultarUmbralesUseCase } from './use-cases/configuracion/consultar-um
 import { CompararCohortesUseCase } from './use-cases/comparar-cohortes.use-case';
 import { ConsultarVistasFiltradasUseCase } from './use-cases/consultar-vistas-filtradas.use-case';
 import { SeguimientoIndividualService } from './services/seguimiento-individual.service';
+import { ListarAlertasPendientesUseCase } from './use-cases/gestion-alertas/listar-alertas-pendientes.use-case';
 import { MarcarAlertaAtendidaUseCase } from './use-cases/gestion-alertas/marcar-alerta-atendida.use-case';
 import { ConsultarHistorialAlertasUseCase } from './use-cases/seguimiento-individual/consultar-historial-alertas.use-case';
 import { ConsultarInteraccionNotificacionesUseCase } from './use-cases/seguimiento-individual/consultar-interaccion-notificaciones.use-case';
@@ -42,6 +43,7 @@ export const AdministrativoApplicationProviders: Provider[] = [
   ConsultarVistasFiltradasUseCase,
   SeguimientoIndividualService,
   MarcarAlertaAtendidaUseCase,
+  ListarAlertasPendientesUseCase,
   ConsultarHistorialAlertasUseCase,
   ConsultarPerfilSeguimientoUseCase,
   ConsultarProgresionNarrativaUseCase,

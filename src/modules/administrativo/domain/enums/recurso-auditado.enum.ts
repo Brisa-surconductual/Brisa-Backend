@@ -34,6 +34,8 @@ export const RecursoAuditado = {
   PARAMETRO_NOTIFICACION: 'PARAMETRO_NOTIFICACION',
   // RF-142: listado de indicadores de los participantes de una cohorte.
   INDICADORES_PARTICIPANTES_COHORTE: 'INDICADORES_PARTICIPANTES_COHORTE',
+  // RF-146: bandeja de alertas pendientes de una cohorte.
+  ALERTAS_PENDIENTES_COHORTE: 'ALERTAS_PENDIENTES_COHORTE',
   // RF-148: recursos de participante protegidos frente a escrituras.
   DIARIO: 'DIARIO',
   CHAT_SESION: 'CHAT_SESION',

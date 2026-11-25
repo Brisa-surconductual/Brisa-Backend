@@ -1,28 +1,22 @@
 import { Transform } from 'class-transformer';
-import { IsString, IsUUID, Length, Matches } from 'class-validator';
+import { IsIn, IsString, Length } from 'class-validator';
 import {
   LONGITUD_MAXIMA_MOTIVO,
   LONGITUD_MINIMA_MOTIVO,
 } from '../../../domain/value-objects/motivo-atencion.vo';
-import {
-  CODIGO_PARTICIPANTE,
-  normalizarCodigo,
-} from '../permisos-individuales/otorgar-permiso-individual.dto-request';
 
-/** Ruta `/admin/participantes/:codigo_participante/alertas/:id_alerta/atender`. */
-export class AlertaParticipanteDtoRequest {
-  @Transform(normalizarCodigo)
-  @IsString()
-  @Length(1, 16)
-  @Matches(CODIGO_PARTICIPANTE)
-  codigo_participante!: string;
+export const ACCION_MARCAR_ATENDIDA = 'MARCAR_ATENDIDA';
 
-  @IsUUID()
-  id_alerta!: string;
-}
-
-/** Body de la acción "marcar como atendida" (RF-147): el motivo es obligatorio. */
+/**
+ * Body de `POST /admin/alertas/:id_alerta/atender` (RF-147). El tipo y el
+ * participante no se reciben: se piden a M05. El motivo es obligatorio.
+ */
 export class MarcarAlertaAtendidaDtoRequest {
+  @IsIn([ACCION_MARCAR_ATENDIDA], {
+    message: `accion debe ser ${ACCION_MARCAR_ATENDIDA}.`,
+  })
+  accion!: typeof ACCION_MARCAR_ATENDIDA;
+
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )

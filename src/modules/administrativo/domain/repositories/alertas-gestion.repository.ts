@@ -9,7 +9,7 @@ export interface NuevaAtencionAlerta {
   motivo: string;
 }
 
-/** Gestión administrativa en M-8 de las alertas generadas por M05 (RF-147). */
+/** Gestión administrativa en M-8 de las alertas generadas por M05 (RF-146, RF-147). */
 export abstract class AlertasGestionRepository {
   /**
    * Registra la alerta como ATENDIDA, con su motivo y su bitácora, en la misma
@@ -20,4 +20,14 @@ export abstract class AlertasGestionRepository {
     atencion: NuevaAtencionAlerta,
     actor: ContextoAuditoria,
   ): Promise<{ id_alerta_gestion: string; fecha_atencion: Date }>;
+
+  /**
+   * RF-146: de esas alertas de M05, las que **no** tienen registro en
+   * `alertas_gestion_admin` (anti-join por lote, una sola consulta). Devuelve
+   * los ids en minúsculas.
+   */
+  abstract filtrarNoAtendidas(
+    tx: Prisma.TransactionClient,
+    idsAlerta: string[],
+  ): Promise<Set<string>>;
 }

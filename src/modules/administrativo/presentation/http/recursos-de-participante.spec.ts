@@ -51,10 +51,18 @@ describe('Recursos de participante RF-148', () => {
     expect(identificarRecursoParticipante(ruta)).toBeNull();
   });
 
-  it('permite la acción administrativa de RF-147 sobre una alerta', () => {
+  it('la antigua ruta de atender bajo /admin/participantes vuelve a ser de solo lectura', () => {
     expect(
       identificarRecursoParticipante(
         '/admin/participantes/P-7F3A91C2/alertas/1c9e7a2b-3d4f-4a5b-8c6d-7e8f9a0b1c2d/atender',
+      ),
+    ).toEqual({ recurso: 'SEGUIMIENTO', idRecurso: null });
+  });
+
+  it('la atención de RF-147 en /admin/alertas no es un recurso de participante', () => {
+    expect(
+      identificarRecursoParticipante(
+        '/admin/alertas/1c9e7a2b-3d4f-4a5b-8c6d-7e8f9a0b1c2d/atender',
       ),
     ).toBeNull();
   });

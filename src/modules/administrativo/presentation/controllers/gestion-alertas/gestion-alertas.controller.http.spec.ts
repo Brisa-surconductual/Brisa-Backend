@@ -11,18 +11,15 @@ import { CsrfSessionGuard } from '../../../../usuarios/presentation/guards/csrf-
 import { SessionAuthGuard } from '../../../../usuarios/presentation/guards/session-auth.guard';
 import { SessionScopeGuard } from '../../../../usuarios/presentation/guards/session-scope.guard';
 import { GestionAlertaException } from '../../../application/exceptions/gestion-alerta.exception';
-import { AuditoriaService } from '../../../application/services/auditoria.service';
+import { ListarAlertasPendientesUseCase } from '../../../application/use-cases/gestion-alertas/listar-alertas-pendientes.use-case';
 import { MarcarAlertaAtendidaUseCase } from '../../../application/use-cases/gestion-alertas/marcar-alerta-atendida.use-case';
-import { VerificarPermisoIndividualUseCase } from '../../../application/use-cases/permisos-individuales/verificar-permiso-individual.use-case';
-import { PermisoIndividualGuard } from '../../guards/permiso-individual.guard';
-import {
-  GestionAlertasController,
-  MENSAJE_SIN_PERMISO_GESTION_ALERTAS,
-} from './gestion-alertas.controller';
+import { GestionAlertasController } from './gestion-alertas.controller';
 
 const ID_ADMIN = '00000000-0000-4000-8000-0000000000ad';
+const COHORTE = 'c0000000-0000-4000-8000-000000000001';
 const ID_ALERTA = '1c9e7a2b-3d4f-4a5b-8c6d-7e8f9a0b1c2d';
-const RUTA = `/admin/participantes/P-7F3A91C2/alertas/${ID_ALERTA}/atender`;
+const PENDIENTES = `/admin/cohortes/${COHORTE}/alertas/pendientes`;
+const ATENDER = `/admin/alertas/${ID_ALERTA}/atender`;
 const MOTIVO = 'Se contactó al participante y se agendó una sesión.';
 
 /** SessionAuthGuard simulado; el rol llega en la cabecera x-test-role. */
@@ -52,11 +49,24 @@ const csrf = (c: ExecutionContext): boolean =>
     ],
   );
 
-describe('POST /admin/participantes/:codigo/alertas/:id_alerta/atender (HTTP, RF-147)', () => {
+const bandeja = {
+  items: [
+    {
+      id_alerta: ID_ALERTA,
+      tipo_alerta: 'CRAVING_ELEVADO',
+      fecha_generacion: '2026-11-22T01:40:00Z',
+      codigo_participante: 'P-7F3A91C2',
+    },
+  ],
+  total: 1,
+  offset: 0,
+  limit: 20,
+};
+
+describe('Gestión de alertas RF-146 / RF-147 (HTTP)', () => {
   let app: INestApplication<App>;
+  const listar = jest.fn();
   const marcar = jest.fn();
-  const vigente = jest.fn();
-  const registrarIntento = jest.fn();
 
   beforeAll(async () => {
     const modulo = await Test.createTestingModule({
@@ -64,13 +74,11 @@ describe('POST /admin/participantes/:codigo/alertas/:id_alerta/atender (HTTP, RF
       providers: [
         RolesGuard,
         SessionScopeGuard,
-        PermisoIndividualGuard,
-        { provide: MarcarAlertaAtendidaUseCase, useValue: { execute: marcar } },
         {
-          provide: VerificarPermisoIndividualUseCase,
-          useValue: { execute: vigente },
+          provide: ListarAlertasPendientesUseCase,
+          useValue: { execute: listar },
         },
-        { provide: AuditoriaService, useValue: { registrarIntento } },
+        { provide: MarcarAlertaAtendidaUseCase, useValue: { execute: marcar } },
       ],
     })
       .overrideGuard(SessionAuthGuard)
@@ -90,99 +98,165 @@ describe('POST /admin/participantes/:codigo/alertas/:id_alerta/atender (HTTP, RF
   });
 
   beforeEach(() => {
+    listar.mockReset().mockResolvedValue(bandeja);
     marcar.mockReset().mockResolvedValue({
       id_alerta: ID_ALERTA,
-      tipo_alerta: 'INACTIVIDAD',
-      estado_resolucion: 'ATENDIDA',
-      fecha_resolucion: '2026-11-25T15:00:00.000Z',
-      motivo: MOTIVO,
+      estado: 'ATENDIDA',
+      fecha_atencion: '2026-11-23T03:20:00.000Z',
     });
-    vigente.mockReset().mockResolvedValue(true);
-    registrarIntento.mockReset().mockResolvedValue(undefined);
   });
 
   afterAll(() => app?.close());
 
-  const atender = (body: object = { motivo: MOTIVO }, ruta = RUTA) =>
-    request(app.getHttpServer())
-      .post(ruta)
-      .set('X-CSRF-Token', 'token')
-      .send(body);
+  const servidor = () => app.getHttpServer();
+  const atender = (
+    body: object = { accion: 'MARCAR_ATENDIDA', motivo: MOTIVO },
+    ruta = ATENDER,
+  ) => request(servidor()).post(ruta).set('X-CSRF-Token', 'token').send(body);
 
-  it('200 con la alerta atendida, normalizando el código', async () => {
-    const r = await atender(
-      { motivo: `  ${MOTIVO}  ` },
-      `/admin/participantes/p-7f3a91c2/alertas/${ID_ALERTA}/atender`,
-    )
-      .expect(200)
-      .expect('Cache-Control', 'no-store');
-    expect(r.body).toMatchObject({ estado_resolucion: 'ATENDIDA' });
-    expect(marcar).toHaveBeenCalledWith(
-      expect.objectContaining({ idUsuario: ID_ADMIN }),
-      'P-7F3A91C2',
-      ID_ALERTA,
-      MOTIVO,
+  describe('GET alertas pendientes (RF-146)', () => {
+    it('200 con el contrato, sin caché', async () => {
+      const r = await request(servidor())
+        .get(`${PENDIENTES}?tipo_alerta=CRAVING_ELEVADO&offset=0&limit=20`)
+        .expect(200)
+        .expect('Cache-Control', 'no-store');
+      expect(r.body).toEqual(bandeja);
+      expect(listar).toHaveBeenCalledWith(
+        expect.objectContaining({ idUsuario: ID_ADMIN }),
+        COHORTE,
+        { tipo_alerta: 'CRAVING_ELEVADO', offset: 0, limit: 20 },
+      );
+    });
+
+    it('valores por defecto de la paginación', async () => {
+      await request(servidor()).get(PENDIENTES).expect(200);
+      expect(listar).toHaveBeenCalledWith(expect.anything(), COHORTE, {
+        offset: 0,
+        limit: 20,
+      });
+    });
+
+    it('204 sin cuerpo si no hay pendientes', async () => {
+      listar.mockResolvedValue(null);
+      const r = await request(servidor()).get(PENDIENTES).expect(204);
+      expect(r.text).toBe('');
+    });
+
+    it.each([
+      ['tipo_alerta desconocido', '?tipo_alerta=OTRA'],
+      ['limit mayor que 100', '?limit=101'],
+      ['offset negativo', '?offset=-1'],
+    ])('400 con %s', async (_caso, query) => {
+      await request(servidor()).get(`${PENDIENTES}${query}`).expect(400);
+      expect(listar).not.toHaveBeenCalled();
+    });
+
+    it('400 si el id de la cohorte no es UUID', async () => {
+      await request(servidor())
+        .get('/admin/cohortes/123/alertas/pendientes')
+        .expect(400);
+    });
+
+    it.each([
+      ['M05_NO_DISPONIBLE' as const, 503],
+      ['COHORTE_NO_ENCONTRADA' as const, 404],
+    ])(
+      '%s responde %i con { status, codigo, mensaje }',
+      async (codigo, status) => {
+        listar.mockRejectedValue(new GestionAlertaException(codigo));
+        const r = await request(servidor()).get(PENDIENTES).expect(status);
+        expect(r.body).toMatchObject({ status, codigo });
+      },
     );
   });
 
-  it.each([
-    ['sin motivo', {}],
-    ['motivo vacío', { motivo: '   ' }],
-    ['motivo corto', { motivo: 'revisado' }],
-    ['motivo largo', { motivo: 'a'.repeat(501) }],
-    ['motivo no textual', { motivo: 42 }],
-    ['campos extra', { motivo: MOTIVO, estado: 'ACTIVA' }],
-  ])('400 %s, sin ejecutar la acción', async (_caso, body) => {
-    await atender(body).expect(400);
-    expect(marcar).not.toHaveBeenCalled();
-  });
-
-  it('400 si el id de la alerta no es un UUID', async () => {
-    await atender(
-      { motivo: MOTIVO },
-      '/admin/participantes/P-7F3A91C2/alertas/no-uuid/atender',
-    ).expect(400);
-  });
-
-  it('403 sin token CSRF', async () => {
-    await request(app.getHttpServer())
-      .post(RUTA)
-      .send({ motivo: MOTIVO })
-      .expect(403);
-    expect(marcar).not.toHaveBeenCalled();
-  });
-
-  it('403 SIN_PERMISO_INDIVIDUAL con el mensaje de RF-147 si el ADMINISTRATIVO no tiene permiso', async () => {
-    vigente.mockResolvedValue(false);
-    const r = await atender().expect(403);
-    expect(r.body).toEqual({
-      status: 403,
-      codigo: 'SIN_PERMISO_INDIVIDUAL',
-      mensaje: MENSAJE_SIN_PERMISO_GESTION_ALERTAS,
+  describe('POST atender (RF-147)', () => {
+    it('200 con el contrato; tipo y participante no se reciben del cliente', async () => {
+      const r = await atender({
+        accion: 'MARCAR_ATENDIDA',
+        motivo: `  ${MOTIVO}  `,
+      })
+        .expect(200)
+        .expect('Cache-Control', 'no-store');
+      expect(r.body).toEqual({
+        id_alerta: ID_ALERTA,
+        estado: 'ATENDIDA',
+        fecha_atencion: '2026-11-23T03:20:00.000Z',
+      });
+      expect(marcar).toHaveBeenCalledWith(
+        expect.objectContaining({ idUsuario: ID_ADMIN }),
+        ID_ALERTA,
+        MOTIVO,
+      );
     });
-    expect(marcar).not.toHaveBeenCalled();
-  });
 
-  it('COORDINADOR_PSI no necesita permiso individual', async () => {
-    await atender().set('x-test-role', 'COORDINADOR_PSI').expect(200);
-    expect(vigente).not.toHaveBeenCalled();
-  });
+    it.each([
+      ['sin motivo', { accion: 'MARCAR_ATENDIDA' }],
+      ['motivo corto', { accion: 'MARCAR_ATENDIDA', motivo: 'revisado' }],
+      ['sin accion', { motivo: MOTIVO }],
+      ['accion distinta', { accion: 'REVERTIR', motivo: MOTIVO }],
+      [
+        'tipo enviado por el cliente',
+        {
+          accion: 'MARCAR_ATENDIDA',
+          motivo: MOTIVO,
+          tipo_alerta: 'INACTIVIDAD',
+        },
+      ],
+      [
+        'participante enviado por el cliente',
+        {
+          accion: 'MARCAR_ATENDIDA',
+          motivo: MOTIVO,
+          codigo_participante: 'P-7F3A91C2',
+        },
+      ],
+    ])('400 %s, sin ejecutar la acción', async (_caso, body) => {
+      await atender(body).expect(400);
+      expect(marcar).not.toHaveBeenCalled();
+    });
 
-  it('403 para un estudiante', async () => {
-    await atender().set('x-test-role', 'ESTUDIANTE').expect(403);
-    expect(marcar).not.toHaveBeenCalled();
-  });
+    it('400 si el id de la alerta no es UUID', async () => {
+      await atender(undefined, '/admin/alertas/no-uuid/atender').expect(400);
+    });
 
-  it.each([
-    ['ALERTA_YA_ATENDIDA' as const, 409],
-    ['ALERTA_NO_ENCONTRADA' as const, 404],
-    ['ERROR_GESTION_ALERTA' as const, 500],
-  ])(
-    '%s responde %i con { status, codigo, mensaje }',
-    async (codigo, status) => {
-      marcar.mockRejectedValue(new GestionAlertaException(codigo));
+    it('403 sin token CSRF', async () => {
+      await request(servidor())
+        .post(ATENDER)
+        .send({ accion: 'MARCAR_ATENDIDA', motivo: MOTIVO })
+        .expect(403);
+      expect(marcar).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['ALERTA_NO_ENCONTRADA' as const, 404],
+      ['ALERTA_YA_ATENDIDA' as const, 409],
+      ['ERROR_TRANSACCION' as const, 500],
+    ])('%s responde %i con el cuerpo del contrato', async (codigo, status) => {
+      const error = new GestionAlertaException(codigo);
+      marcar.mockRejectedValue(error);
       const r = await atender().expect(status);
-      expect(r.body).toMatchObject({ status, codigo });
-    },
-  );
+      expect(r.body).toEqual(error.getResponse());
+    });
+  });
+
+  describe('acceso', () => {
+    it('ADMINISTRATIVO sin permiso individual y COORDINADOR_PSI pueden atender', async () => {
+      await atender().expect(200);
+      await atender().set('x-test-role', 'COORDINADOR_PSI').expect(200);
+    });
+
+    it.each([
+      ['GET', PENDIENTES],
+      ['POST', ATENDER],
+    ])('403 para un estudiante en %s %s', async (metodo, ruta) => {
+      const r =
+        metodo === 'GET'
+          ? request(servidor()).get(ruta)
+          : atender(undefined, ruta);
+      await r.set('x-test-role', 'ESTUDIANTE').expect(403);
+      expect(listar).not.toHaveBeenCalled();
+      expect(marcar).not.toHaveBeenCalled();
+    });
+  });
 });

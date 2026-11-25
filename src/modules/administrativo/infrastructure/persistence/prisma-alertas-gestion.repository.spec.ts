@@ -42,7 +42,8 @@ describe('PrismaAlertasGestionRepository', () => {
     ['23505', 'duplicate key value', 409, 'ALERTA_YA_ATENDIDA'],
     ['AD422', 'MOTIVO_OBLIGATORIO', 422, 'MOTIVO_INVALIDO'],
     ['23514', 'ck_alerta_motivo', 422, 'MOTIVO_INVALIDO'],
-    ['AD500', 'AUDITORIA_OBLIGATORIA_AUSENTE', 500, 'ERROR_GESTION_ALERTA'],
+    // El constraint trigger diferido: sin bitácora no se confirma la atención.
+    ['AD500', 'AUDITORIA_OBLIGATORIA_AUSENTE', 500, 'ERROR_TRANSACCION'],
   ])('traduce %s/%s a %i %s', async (estado, mensaje, status, codigo) => {
     const tx = {
       $queryRaw: jest.fn().mockRejectedValue(errorSql(estado, mensaje)),
@@ -53,5 +54,34 @@ describe('PrismaAlertasGestionRepository', () => {
     expect(error).toBeInstanceOf(GestionAlertaException);
     expect((error as GestionAlertaException).getStatus()).toBe(status);
     expect((error as GestionAlertaException).codigo).toBe(codigo);
+  });
+
+  describe('filtrarNoAtendidas (RF-146)', () => {
+    const A1 = '1c9e7a2b-3d4f-4a5b-8c6d-7e8f9a0b1c2d';
+    const A2 = '5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d';
+
+    it('hace un anti-join por lote en una sola consulta', async () => {
+      const $queryRaw = jest.fn().mockResolvedValue([{ id: A2 }]);
+      const tx = { $queryRaw } as unknown as Prisma.TransactionClient;
+      await expect(
+        repo.filtrarNoAtendidas(tx, [A1, A2.toUpperCase(), A1]),
+      ).resolves.toEqual(new Set([A2]));
+      expect($queryRaw).toHaveBeenCalledTimes(1);
+      const [plantilla, ids] = $queryRaw.mock.calls[0] as [
+        TemplateStringsArray,
+        string[],
+      ];
+      expect(plantilla.join('?')).toContain('NOT EXISTS');
+      expect(ids).toEqual([A1, A2]);
+    });
+
+    it('un id que no es UUID se considera no atendido sin consultar', async () => {
+      const $queryRaw = jest.fn();
+      const tx = { $queryRaw } as unknown as Prisma.TransactionClient;
+      await expect(repo.filtrarNoAtendidas(tx, ['ALR-1'])).resolves.toEqual(
+        new Set(['alr-1']),
+      );
+      expect($queryRaw).not.toHaveBeenCalled();
+    });
   });
 });

@@ -191,29 +191,66 @@ describe('MockSeguimientoIndividualAdapter', () => {
     expect(idAlertaMuestra('P-AAAAAAAA', 'craving')).not.toBe(a);
   });
 
-  it('obtenerAlerta (RF-147) devuelve la alerta de la muestra, sin distinguir mayúsculas en el id', async () => {
-    const [inactividad] = muestraParticipante('P-1').alertas;
-    await expect(
-      adaptador.obtenerAlerta('P-1', inactividad.id_alerta.toUpperCase()),
-    ).resolves.toEqual({ codigo_participante: 'P-1', alerta: inactividad });
+  it('con un código real, el id de la alerta empieza por el código (reversible)', () => {
+    const id = idAlertaMuestra('P-7F3A91C2', 'craving');
+    expect(isUUID(id)).toBe(true);
+    expect(id.slice(0, 8)).toBe('7f3a91c2');
   });
 
-  it('obtenerAlerta devuelve null para una alerta de otro participante o inexistente', async () => {
+  it('buscarAlerta (RF-147) encuentra la alerta solo con su id, sin distinguir mayúsculas', async () => {
+    const [, craving] = muestraParticipante('P-7F3A91C2').alertas;
     await expect(
-      adaptador.obtenerAlerta('P-1', idAlertaMuestra('P-2', 'inactividad')),
+      adaptador.buscarAlerta(craving.id_alerta.toUpperCase()),
+    ).resolves.toEqual({ codigo_participante: 'P-7F3A91C2', alerta: craving });
+  });
+
+  it('buscarAlerta devuelve null para un id inexistente o de un código no real', async () => {
+    await expect(
+      adaptador.buscarAlerta('7f3a91c2-0000-4000-8000-000000000000'),
     ).resolves.toBeNull();
     await expect(
-      adaptador.obtenerAlerta('P-1', '00000000-0000-4000-8000-000000000000'),
+      adaptador.buscarAlerta(idAlertaMuestra('P-1', 'inactividad')),
     ).resolves.toBeNull();
   });
 
-  it('obtenerAlerta respeta los flags de simulación', async () => {
-    const id = idAlertaMuestra('P-1', 'craving');
+  it('buscarAlerta respeta los flags de simulación', async () => {
+    const id = idAlertaMuestra('P-7F3A91C2', 'craving');
     process.env.SIMULAR_INCONSISTENCIA_M5 = 'true';
-    await expect(adaptador.obtenerAlerta('P-1', id)).resolves.toMatchObject({
+    await expect(adaptador.buscarAlerta(id)).resolves.toMatchObject({
       codigo_participante: CODIGO_INCONSISTENTE_M05,
     });
+    process.env.SIMULAR_M5_SIN_DATOS = 'true';
+    await expect(adaptador.buscarAlerta(id)).resolves.toBeNull();
     process.env.SIMULAR_M5_CAIDO = 'true';
-    await expect(adaptador.obtenerAlerta('P-1', id)).rejects.toThrow();
+    await expect(adaptador.buscarAlerta(id)).rejects.toThrow();
+  });
+
+  it('el lote de alertas activas (RF-146) coincide con las alertas activas del perfil', async () => {
+    const codigos = CODIGOS.slice(0, 8);
+    const lote = await adaptador.obtenerAlertasActivasLote(codigos);
+    for (const codigo of codigos) {
+      const perfil = await adaptador.obtenerPerfilSeguimiento(codigo);
+      expect(
+        lote
+          .filter((alerta) => alerta.codigo_participante === codigo)
+          .map((alerta) => [alerta.id_alerta, alerta.fecha_generacion]),
+      ).toEqual(
+        perfil?.alertas_activas.map((alerta) => [
+          alerta.id_alerta,
+          alerta.fecha_generacion,
+        ]),
+      );
+    }
+  });
+
+  it('el lote de alertas activas respeta los flags', async () => {
+    process.env.SIMULAR_M5_SIN_DATOS = 'true';
+    await expect(adaptador.obtenerAlertasActivasLote(CODIGOS)).resolves.toEqual(
+      [],
+    );
+    process.env.SIMULAR_M5_CAIDO = 'true';
+    await expect(
+      adaptador.obtenerAlertasActivasLote(CODIGOS),
+    ).rejects.toThrow();
   });
 });

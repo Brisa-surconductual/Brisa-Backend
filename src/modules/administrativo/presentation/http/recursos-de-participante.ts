@@ -17,15 +17,6 @@ const RECURSOS_DE_PARTICIPANTE = [
 ] as const;
 
 /**
- * Escrituras administrativas permitidas dentro de un recurso de participante.
- * RF-147: marcar una alerta como atendida es un metadato administrativo de M-8;
- * no modifica los datos del participante en M05.
- */
-const ESCRITURAS_ADMINISTRATIVAS_PERMITIDAS = [
-  /^\/admin\/participantes\/[^/]+\/alertas\/[^/]+\/atender\/?$/u,
-] as const;
-
-/**
  * RF-130 / RF-131: vistas individuales de solo lectura con su propio mensaje
  * para el 403 (flujo alterno "Intento de modificación desde modo solo lectura").
  */
@@ -60,10 +51,6 @@ export function identificarRecursoParticipante(
   ruta: string,
 ): RecursoParticipante | null {
   const rutaNormalizada = ruta.toLowerCase();
-  if (
-    ESCRITURAS_ADMINISTRATIVAS_PERMITIDAS.some((p) => p.test(rutaNormalizada))
-  )
-    return null;
   const vista = VISTAS_INDIVIDUALES_SOLO_LECTURA.find(({ patron }) =>
     patron.test(rutaNormalizada),
   );

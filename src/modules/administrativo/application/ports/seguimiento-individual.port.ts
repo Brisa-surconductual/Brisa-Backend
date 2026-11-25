@@ -54,6 +54,15 @@ export interface IndicadoresParticipanteM05 {
   >[];
 }
 
+/** Alerta abierta de un participante en la consulta por lote de M05 (RF-146). */
+export interface AlertaActivaParticipanteM05 {
+  codigo_participante: string;
+  id_alerta: string;
+  tipo_alerta: TipoAlerta;
+  fecha_generacion: string;
+  estado_resolucion?: EstadoResolucionAlerta | null;
+}
+
 /** Página del historial de alertas de un participante expuesta por M05. */
 export interface ListaAlertasDto {
   codigo_participante: string;
@@ -77,11 +86,22 @@ export abstract class SeguimientoIndividualPort {
     limit: number,
   ): Promise<ListaAlertasDto | null>;
 
-  /** Una alerta del participante, o null si M05 no la tiene (RF-147). */
-  abstract obtenerAlerta(
-    codigoParticipante: string,
+  /**
+   * RF-147: una alerta por su id, con el participante al que M05 la atribuye,
+   * o null si M05 no la conoce. M-8 no confía en el cliente para el tipo ni el
+   * participante: los toma de aquí.
+   */
+  abstract buscarAlerta(
     idAlerta: string,
   ): Promise<AlertaParticipanteM05 | null>;
+
+  /**
+   * RF-146: alertas abiertas (ACTIVA / PENDIENTE) de muchos participantes en
+   * una sola llamada (sin N+1).
+   */
+  abstract obtenerAlertasActivasLote(
+    codigosParticipante: string[],
+  ): Promise<AlertaActivaParticipanteM05[]>;
 
   /**
    * RF-142: indicadores de muchos participantes en una sola llamada (sin N+1).

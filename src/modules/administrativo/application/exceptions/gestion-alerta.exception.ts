@@ -18,9 +18,17 @@ const ERRORES_GESTION_ALERTA = {
     422,
     'El motivo es obligatorio y debe tener entre 10 y 500 caracteres.',
   ],
-  ERROR_GESTION_ALERTA: [
+  COHORTE_NO_ENCONTRADA: [
+    404,
+    'La cohorte solicitada no existe en el sistema.',
+  ],
+  M05_NO_DISPONIBLE: [
+    503,
+    'El módulo de seguimiento no se encuentra disponible en este momento.',
+  ],
+  ERROR_TRANSACCION: [
     500,
-    'Error al procesar la solicitud. La operación ha sido cancelada para garantizar la integridad de la auditoría. Por favor, intente nuevamente.',
+    'No fue posible registrar la acción. La alerta conserva su estado.',
   ],
 } as const;
 
@@ -29,7 +37,10 @@ export type CodigoErrorGestionAlerta = keyof typeof ERRORES_GESTION_ALERTA;
 const esCodigo = (codigo: string): codigo is CodigoErrorGestionAlerta =>
   codigo in ERRORES_GESTION_ALERTA;
 
-/** Errores de "marcar alerta como atendida" (RF-147), con cuerpo `{ status, codigo, mensaje }`. */
+/**
+ * Errores de la bandeja de alertas pendientes (RF-146) y de "marcar alerta
+ * como atendida" (RF-147), con cuerpo `{ status, codigo, mensaje }`.
+ */
 export class GestionAlertaException extends HttpException {
   constructor(
     readonly codigo: CodigoErrorGestionAlerta,
@@ -43,7 +54,7 @@ export class GestionAlertaException extends HttpException {
     error: AdministrativoDomainException,
   ): GestionAlertaException {
     return new GestionAlertaException(
-      esCodigo(error.codigo) ? error.codigo : 'ERROR_GESTION_ALERTA',
+      esCodigo(error.codigo) ? error.codigo : 'ERROR_TRANSACCION',
       { cause: error },
     );
   }

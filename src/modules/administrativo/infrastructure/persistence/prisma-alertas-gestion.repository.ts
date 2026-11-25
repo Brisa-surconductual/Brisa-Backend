@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { isUUID } from 'class-validator';
 import {
   type CodigoErrorGestionAlerta,
   GestionAlertaException,
@@ -22,6 +23,24 @@ const ERRORES_SQL: [string, string | null, CodigoErrorGestionAlerta][] = [
 
 @Injectable()
 export class PrismaAlertasGestionRepository implements AlertasGestionRepository {
+  async filtrarNoAtendidas(tx: Prisma.TransactionClient, idsAlerta: string[]) {
+    // Un id que no es UUID nunca se atendió en M-8 (y haría fallar el cast).
+    const candidatas = [...new Set(idsAlerta.map((id) => id.toLowerCase()))];
+    const validas = candidatas.filter((id) => isUUID(id));
+    const noAtendidas = new Set(candidatas.filter((id) => !isUUID(id)));
+    if (validas.length === 0) return noAtendidas;
+    const filas = await tx.$queryRaw<{ id: string }[]>`
+      SELECT a.id::text AS id
+      FROM unnest(${validas}::uuid[]) AS a(id)
+      WHERE NOT EXISTS (
+        SELECT 1 FROM administrativo.alertas_gestion_admin g
+        WHERE g.id_alerta_externo = a.id
+      )
+    `;
+    for (const fila of filas) noAtendidas.add(fila.id.toLowerCase());
+    return noAtendidas;
+  }
+
   async registrarAtencion(
     tx: Prisma.TransactionClient,
     atencion: NuevaAtencionAlerta,
@@ -42,7 +61,7 @@ export class PrismaAlertasGestionRepository implements AlertasGestionRepository 
           ${actor.direccionIp}::varchar
         )
       `;
-      if (!fila) throw new GestionAlertaException('ERROR_GESTION_ALERTA');
+      if (!fila) throw new GestionAlertaException('ERROR_TRANSACCION');
       return fila;
     } catch (error) {
       if (error instanceof GestionAlertaException) throw error;
@@ -51,7 +70,7 @@ export class PrismaAlertasGestionRepository implements AlertasGestionRepository 
         ([estado, mensaje]) =>
           db?.estado === estado && (mensaje === null || db.mensaje === mensaje),
       )?.[2];
-      throw new GestionAlertaException(codigo ?? 'ERROR_GESTION_ALERTA', {
+      throw new GestionAlertaException(codigo ?? 'ERROR_TRANSACCION', {
         cause: error,
       });
     }
