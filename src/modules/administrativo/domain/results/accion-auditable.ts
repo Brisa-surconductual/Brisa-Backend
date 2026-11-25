@@ -5,6 +5,9 @@ import type { OperacionParticipanteCohorte } from '../enums/operacion-participan
 import type { OperacionPermisoIndividual } from '../enums/operacion-permiso-individual.enum';
 import type { SeveridadAuditoria } from '../enums/severidad-auditoria.enum';
 
+import type { AccionContenidoNarrativo } from './contenido-narrativo';
+import type { AccionMensajeNotificacion } from './mensajes-notificacion';
+
 /** Detalle adicional que acompaña a un registro de bitácora según la acción. */
 export type DetalleAuditoria =
   | { metodo: string; uri: string }
@@ -17,7 +20,13 @@ export type DetalleAuditoria =
       id_usuario_beneficiario?: string;
       fecha_fin_vigencia?: string | null;
     }
-  | { motivo: string; alcance: string; uri: string };
+  | { motivo: string; alcance: string; uri: string }
+  | {
+      accion_solicitada: AccionContenidoNarrativo | AccionMensajeNotificacion;
+      justificacion_cambio?: string;
+      nivel_gamificacion?: number;
+      resultado_validacion_terminos?: true;
+    };
 
 /** Qué se va a auditar, antes de conocer el resultado de la acción. */
 export interface AccionAuditable {

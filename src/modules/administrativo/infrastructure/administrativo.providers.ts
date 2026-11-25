@@ -1,4 +1,5 @@
 import type { Provider } from '@nestjs/common';
+import { GestionContenidoInfrastructureProviders } from './gestion-contenido.providers';
 import {
   BitacoraRepository,
   ColaAuditoriaPort,
@@ -22,6 +23,7 @@ import { PrismaVistasAgregadasRepository } from './persistence/prisma-vistas-agr
 
 /** Liga los puertos de dominio y aplicación con sus implementaciones concretas. */
 export const AdministrativoInfrastructureProviders: Provider[] = [
+  ...GestionContenidoInfrastructureProviders,
   { provide: BitacoraRepository, useClass: PrismaBitacoraRepository },
   { provide: CohortesRepository, useClass: PrismaCohortesRepository },
   {

@@ -9,6 +9,8 @@ import { ConsultarVistaConductualUseCase } from './use-cases/consultar-vista-con
 import { ConsultarVistaNarrativaUseCase } from './use-cases/consultar-vista-narrativa.use-case';
 import { ConsultarVistaNotificacionesUseCase } from './use-cases/consultar-vista-notificaciones.use-case';
 import { ExportarIndicadoresCohorteUseCase } from './use-cases/exportar-indicadores-cohorte.use-case';
+import { GestionarContenidoNarrativoUseCase } from './use-cases/gestionar-contenido-narrativo.use-case';
+import { GestionarMensajesNotificacionUseCase } from './use-cases/gestionar-mensajes-notificacion.use-case';
 import { GestionarCohortesUseCase } from './use-cases/gestionar-cohortes.use-case';
 import { GestionarParticipantesCohorteUseCase } from './use-cases/gestionar-participantes-cohorte.use-case';
 import { ListarPermisosIndividualesUseCase } from './use-cases/permisos-individuales/listar-permisos-individuales.use-case';
@@ -28,6 +30,8 @@ export const AdministrativoApplicationProviders: Provider[] = [
   ConsultarVistaNotificacionesUseCase,
   ExportarIndicadoresCohorteUseCase,
   GestionarCohortesUseCase,
+  GestionarContenidoNarrativoUseCase,
+  GestionarMensajesNotificacionUseCase,
   GestionarParticipantesCohorteUseCase,
   ListarPermisosIndividualesUseCase,
   OtorgarPermisoIndividualUseCase,
