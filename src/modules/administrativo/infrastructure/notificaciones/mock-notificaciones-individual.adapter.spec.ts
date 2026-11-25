@@ -1,3 +1,4 @@
+import type { NotificacionesIndividualPort } from '../../application/ports/notificaciones-individual.port';
 import {
   ID_USUARIO_INCONSISTENTE_M07,
   MockNotificacionesIndividualAdapter,
@@ -7,7 +8,9 @@ const ID_USUARIO = 'e0000000-0000-4000-8000-000000000003';
 const PERIODO = { fecha_inicio: '2026-10-01', fecha_fin: '2026-11-22' };
 
 describe('MockNotificacionesIndividualAdapter', () => {
-  const adaptador = new MockNotificacionesIndividualAdapter();
+  // Por el puerto: el mock ignora el periodo, pero el contrato lo recibe.
+  const adaptador: NotificacionesIndividualPort =
+    new MockNotificacionesIndividualAdapter();
   const variables = [
     'SIMULAR_M7_CAIDO',
     'SIMULAR_INCONSISTENCIA_M7',

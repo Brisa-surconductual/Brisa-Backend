@@ -2,6 +2,8 @@ import type { Provider, Type } from '@nestjs/common';
 import { RolesGuard } from '../../../shared/presentation/guards/role-guard';
 import { BitacoraController } from './controllers/bitacora.controller';
 import { CohortesController } from './controllers/cohortes.controller';
+import { ConfiguracionNotificacionesController } from './controllers/configuracion/configuracion-notificaciones.controller';
+import { ConfiguracionUmbralesController } from './controllers/configuracion/configuracion-umbrales.controller';
 import { DashboardPrincipalController } from './controllers/dashboard-principal.controller';
 import { EvolucionTemporalController } from './controllers/evolucion-temporal.controller';
 import { ExportacionCsvCohorteController } from './controllers/exportacion-csv-cohorte.controller';
@@ -16,11 +18,14 @@ import { VistasAgregadasController } from './controllers/vistas-agregadas.contro
 import { AuditarAccesoExportacionCsvFilter } from './filters/auditar-acceso-exportacion-csv.filter';
 import { AccesoBitacoraGuard } from './guards/acceso-bitacora.guard';
 import { PermisoIndividualGuard } from './guards/permiso-individual.guard';
+import { ConfiguracionSoloGlobalInterceptor } from './interceptors/configuracion-solo-global.interceptor';
 
 /** Endpoints HTTP del módulo administrativo. */
 export const AdministrativoPresentationControllers: Type[] = [
   BitacoraController,
   CohortesController,
+  ConfiguracionUmbralesController,
+  ConfiguracionNotificacionesController,
   DashboardPrincipalController,
   EvolucionTemporalController,
   ExportacionCsvCohorteController,
@@ -38,6 +43,7 @@ export const AdministrativoPresentationControllers: Type[] = [
 export const AdministrativoPresentationProviders: Provider[] = [
   AccesoBitacoraGuard,
   AuditarAccesoExportacionCsvFilter,
+  ConfiguracionSoloGlobalInterceptor,
   PermisoIndividualGuard,
   RolesGuard,
 ];

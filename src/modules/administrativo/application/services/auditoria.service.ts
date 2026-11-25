@@ -19,6 +19,10 @@ type ModoRegistro =
     }
   | { modo: typeof ModoRegistroAuditoria.DIFERIDO };
 
+/** Cómo quedó un registro de auditoría diferida (RF-136, RF-137). */
+export type ResultadoRegistroDiferido =
+  'ENCOLADO' | 'REGISTRADO_DIRECTO' | 'PENDIENTE';
+
 @Injectable()
 export class AuditoriaService {
   private readonly logger = new Logger(AuditoriaService.name);
@@ -33,18 +37,7 @@ export class AuditoriaService {
     evento: EventoAuditoria,
     opciones: ModoRegistro,
   ): Promise<string> {
-    const registro: RegistroAuditoria = {
-      ...ctx,
-      id_auditoria: evento.idAuditoria ?? randomUUID(),
-      accion: evento.accion,
-      recurso_afectado: evento.recurso,
-      id_recurso: evento.idRecurso ?? null,
-      marca_temporal: new Date().toISOString(),
-      estado_accion: evento.estado,
-      ...(evento.detalle && { detalle: evento.detalle }),
-      ...(evento.severidad && { severidad: evento.severidad }),
-      ...(evento.idParticipante && { id_participante: evento.idParticipante }),
-    };
+    const registro = this.construirRegistro(ctx, evento);
 
     try {
       if (opciones.modo === ModoRegistroAuditoria.SINCRONO)
@@ -88,6 +81,40 @@ export class AuditoriaService {
     }
   }
 
+  /**
+   * Auditoría diferida que nunca bloquea una operación ya aplicada (RF-136,
+   * RF-137). Si Redis está disponible, encola el registro y BullMQ reintenta la
+   * escritura con backoff si la bitácora falla. Si no se puede encolar, lo
+   * inserta directo (idempotente por `id_auditoria`). Si eso también falla, lo
+   * deja en el log de errores para reprocesarlo. Nunca lanza.
+   */
+  async registrarDiferido(
+    ctx: ContextoAuditoria,
+    evento: EventoAuditoria,
+  ): Promise<ResultadoRegistroDiferido> {
+    const registro = this.construirRegistro(ctx, evento);
+    try {
+      await this.cola.encolar(registro);
+      return 'ENCOLADO';
+    } catch {
+      this.logger.warn(
+        `Cola de auditoría no disponible; se registra directo ${registro.accion} ${registro.id_auditoria}.`,
+      );
+    }
+    try {
+      await this.bitacora.enTransaccion((tx) =>
+        this.bitacora.insertar(tx, registro, true),
+      );
+      return 'REGISTRADO_DIRECTO';
+    } catch {
+      this.logger.error(
+        // Sin el id de sesión: el log está menos protegido que la bitácora.
+        `Auditoría pendiente de registrar; reprocesar: ${JSON.stringify({ ...registro, idSesion: undefined })}`,
+      );
+      return 'PENDIENTE';
+    }
+  }
+
   async registrarIntento(
     ctx: ContextoAuditoria,
     accion: AccionAuditable,
@@ -106,5 +133,23 @@ export class AuditoriaService {
         'No se pudo conservar el intento de una acción administrativa.',
       );
     }
+  }
+
+  private construirRegistro(
+    ctx: ContextoAuditoria,
+    evento: EventoAuditoria,
+  ): RegistroAuditoria {
+    return {
+      ...ctx,
+      id_auditoria: evento.idAuditoria ?? randomUUID(),
+      accion: evento.accion,
+      recurso_afectado: evento.recurso,
+      id_recurso: evento.idRecurso ?? null,
+      marca_temporal: new Date().toISOString(),
+      estado_accion: evento.estado,
+      ...(evento.detalle && { detalle: evento.detalle }),
+      ...(evento.severidad && { severidad: evento.severidad }),
+      ...(evento.idParticipante && { id_participante: evento.idParticipante }),
+    };
   }
 }

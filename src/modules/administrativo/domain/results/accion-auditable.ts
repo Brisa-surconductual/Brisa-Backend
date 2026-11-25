@@ -4,6 +4,8 @@ import type { OperacionCohorte } from '../enums/operacion-cohorte.enum';
 import type { OperacionParticipanteCohorte } from '../enums/operacion-participante-cohorte.enum';
 import type { OperacionPermisoIndividual } from '../enums/operacion-permiso-individual.enum';
 import type { SeveridadAuditoria } from '../enums/severidad-auditoria.enum';
+import type { TipoParametroNotificacion } from '../enums/tipo-parametro-notificacion.enum';
+import type { ValorConfiguracion } from './valor-configuracion';
 
 /** Consultas individuales de un participante (RF-128 a RF-131). */
 export type ConsultaIndividual =
@@ -11,6 +13,14 @@ export type ConsultaIndividual =
   | 'HISTORIAL_ALERTAS'
   | 'PROGRESION_NARRATIVA'
   | 'INTERACCION_NOTIFICACIONES';
+
+/** Cambio efectivo de una configuración global (RF-136, RF-137). */
+interface CambioConfiguracion {
+  valor_anterior: ValorConfiguracion;
+  valor_nuevo: ValorConfiguracion;
+  unidad_medida: string;
+  justificacion_cambio: string | null;
+}
 
 /** Detalle adicional que acompaña a un registro de bitácora según la acción. */
 export type DetalleAuditoria =
@@ -35,7 +45,9 @@ export type DetalleAuditoria =
       operacion: 'MARCAR_ATENDIDA';
       id_alerta: string;
       codigo_participante: string;
-    };
+    }
+  | (CambioConfiguracion & { tipo_umbral: string })
+  | (CambioConfiguracion & { tipo_parametro: TipoParametroNotificacion });
 
 /** Qué se va a auditar, antes de conocer el resultado de la acción. */
 export interface AccionAuditable {

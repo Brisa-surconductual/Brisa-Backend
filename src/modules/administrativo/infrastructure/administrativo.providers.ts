@@ -9,8 +9,10 @@ import { NarrativaAgregadaPort } from '../application/ports/narrativa-agregada.p
 import { NarrativaIndividualPort } from '../application/ports/narrativa-individual.port';
 import { NotificacionesAgregadasPort } from '../application/ports/notificaciones-agregadas.port';
 import { NotificacionesIndividualPort } from '../application/ports/notificaciones-individual.port';
+import { ParametrosNotificacionPort } from '../application/ports/parametros-notificacion.port';
 import { SeguimientoAgregadoPort } from '../application/ports/seguimiento-agregado.port';
 import { SeguimientoIndividualPort } from '../application/ports/seguimiento-individual.port';
+import { UmbralesSeguimientoPort } from '../application/ports/umbrales-seguimiento.port';
 import { EstadoFuenteAgregada } from '../domain/enums/estado-fuente-agregada.enum';
 import { CohortesRepository } from '../domain/repositories/cohortes.repository';
 import { ParticipantesCohorteRepository } from '../domain/repositories/participantes-cohorte.repository';
@@ -21,6 +23,7 @@ import { VistasAgregadasRepository } from '../domain/repositories/vistas-agregad
 import { BullMqAuditoriaAdapter } from './messaging/bullmq-auditoria.adapter';
 import { MockNarrativaIndividualAdapter } from './narrativa/mock-narrativa-individual.adapter';
 import { MockNotificacionesIndividualAdapter } from './notificaciones/mock-notificaciones-individual.adapter';
+import { MockParametrosNotificacionAdapter } from './notificaciones/mock-parametros-notificacion.adapter';
 import { PrismaAlertasGestionRepository } from './persistence/prisma-alertas-gestion.repository';
 import { PrismaBitacoraRepository } from './persistence/prisma-bitacora.repository';
 import { PrismaCohortesRepository } from './persistence/prisma-cohortes.repository';
@@ -29,6 +32,7 @@ import { PrismaPermisosIndividualesRepository } from './persistence/prisma-permi
 import { PrismaSeguimientoIndividualRepository } from './persistence/prisma-seguimiento-individual.repository';
 import { PrismaVistasAgregadasRepository } from './persistence/prisma-vistas-agregadas.repository';
 import { MockSeguimientoIndividualAdapter } from './seguimiento/mock-seguimiento-individual.adapter';
+import { MockUmbralesSeguimientoAdapter } from './seguimiento/mock-umbrales-seguimiento.adapter';
 
 /** Liga los puertos de dominio y aplicación con sus implementaciones concretas. */
 export const AdministrativoInfrastructureProviders: Provider[] = [
@@ -64,6 +68,16 @@ export const AdministrativoInfrastructureProviders: Provider[] = [
     provide: NotificacionesIndividualPort,
     // Reemplazar por el adaptador real cuando M07 publique RF-98 / RF-100.
     useClass: MockNotificacionesIndividualAdapter,
+  },
+  {
+    provide: UmbralesSeguimientoPort,
+    // Reemplazar por el adaptador real cuando M05 publique RF-79.
+    useClass: MockUmbralesSeguimientoAdapter,
+  },
+  {
+    provide: ParametrosNotificacionPort,
+    // Reemplazar por el adaptador real cuando M07 publique RF-87 / RF-88 / RF-89.
+    useClass: MockParametrosNotificacionAdapter,
   },
   {
     provide: VistasAgregadasRepository,
