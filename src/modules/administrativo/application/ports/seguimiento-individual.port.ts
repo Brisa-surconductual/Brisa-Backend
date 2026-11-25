@@ -63,6 +63,31 @@ export interface AlertaActivaParticipanteM05 {
   estado_resolucion?: EstadoResolucionAlerta | null;
 }
 
+/** Una unidad temporal del historial cuantitativo de M05 (RF-145). */
+export interface UnidadHistorialM05 {
+  orden_unidad_temporal: number;
+  nombre_unidad: string;
+  /** YYYY-MM-DD. */
+  fecha_inicio_unidad: string;
+  /** YYYY-MM-DD. */
+  fecha_fin_unidad: string;
+  nivel_progreso: NivelProgreso | null;
+  tasa_adherencia: number | null;
+  /** Promedio del nivel de craving (escala 1–5 de RF-103). */
+  craving_promedio: number | null;
+  /** Alertas generadas en la unidad, con el estado que informa M05. */
+  alertas: {
+    id_alerta: string;
+    estado_resolucion?: EstadoResolucionAlerta | null;
+  }[];
+}
+
+/** Historial cuantitativo por unidad temporal de un participante (RF-145). */
+export interface HistorialCuantitativoM05 {
+  codigo_participante: string;
+  unidades: UnidadHistorialM05[];
+}
+
 /** Página del historial de alertas de un participante expuesta por M05. */
 export interface ListaAlertasDto {
   codigo_participante: string;
@@ -102,6 +127,14 @@ export abstract class SeguimientoIndividualPort {
   abstract obtenerAlertasActivasLote(
     codigosParticipante: string[],
   ): Promise<AlertaActivaParticipanteM05[]>;
+
+  /**
+   * RF-145: historial cuantitativo por unidad temporal (sin texto de diario ni
+   * de chat), o null si M05 no tiene datos del participante.
+   */
+  abstract obtenerHistorialCuantitativo(
+    codigoParticipante: string,
+  ): Promise<HistorialCuantitativoM05 | null>;
 
   /**
    * RF-142: indicadores de muchos participantes en una sola llamada (sin N+1).

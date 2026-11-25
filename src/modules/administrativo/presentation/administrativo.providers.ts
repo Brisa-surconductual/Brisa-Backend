@@ -13,6 +13,7 @@ import { GestionAlertasController } from './controllers/gestion-alertas/gestion-
 import { IndicadoresParticipantesController } from './controllers/listado-indicadores/indicadores-participantes.controller';
 import { ParticipantesCohorteController } from './controllers/participantes-cohorte.controller';
 import { PermisosIndividualesController } from './controllers/permisos-individuales/permisos-individuales.controller';
+import { ExportacionIndividualController } from './controllers/seguimiento-individual/exportacion-individual.controller';
 import { InteraccionNotificacionesController } from './controllers/seguimiento-individual/interaccion-notificaciones.controller';
 import { ProgresionNarrativaController } from './controllers/seguimiento-individual/progresion-narrativa.controller';
 import { SeguimientoIndividualController } from './controllers/seguimiento-individual/seguimiento-individual.controller';
@@ -41,6 +42,7 @@ export const AdministrativoPresentationControllers: Type[] = [
   SeguimientoIndividualController,
   ProgresionNarrativaController,
   InteraccionNotificacionesController,
+  ExportacionIndividualController,
   VistaConductualController,
   VistasAgregadasController,
 ];

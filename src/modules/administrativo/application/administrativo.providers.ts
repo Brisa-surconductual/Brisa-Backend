@@ -14,6 +14,7 @@ import { ConsultarHistorialAlertasUseCase } from './use-cases/seguimiento-indivi
 import { ConsultarInteraccionNotificacionesUseCase } from './use-cases/seguimiento-individual/consultar-interaccion-notificaciones.use-case';
 import { ConsultarPerfilSeguimientoUseCase } from './use-cases/seguimiento-individual/consultar-perfil-seguimiento.use-case';
 import { ConsultarProgresionNarrativaUseCase } from './use-cases/seguimiento-individual/consultar-progresion-narrativa.use-case';
+import { ExportarSeguimientoIndividualUseCase } from './use-cases/seguimiento-individual/exportar-seguimiento-individual.use-case';
 import { ConsultarBitacoraUseCase } from './use-cases/consultar-bitacora.use-case';
 import { ConsultarCohortesUseCase } from './use-cases/consultar-cohortes.use-case';
 import { ConsultarDashboardPrincipalUseCase } from './use-cases/consultar-dashboard-principal.use-case';
@@ -47,6 +48,7 @@ export const AdministrativoApplicationProviders: Provider[] = [
   ConsultarHistorialAlertasUseCase,
   ConsultarPerfilSeguimientoUseCase,
   ConsultarProgresionNarrativaUseCase,
+  ExportarSeguimientoIndividualUseCase,
   ConsultarInteraccionNotificacionesUseCase,
   ConsultarBitacoraUseCase,
   ConsultarCohortesUseCase,

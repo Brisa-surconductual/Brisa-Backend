@@ -2,6 +2,7 @@ import { isUUID } from 'class-validator';
 import {
   CODIGO_INCONSISTENTE_M05,
   idAlertaMuestra,
+  historialMuestra,
   MockSeguimientoIndividualAdapter,
   muestraParticipante,
 } from './mock-seguimiento-individual.adapter';
@@ -252,5 +253,77 @@ describe('MockSeguimientoIndividualAdapter', () => {
     await expect(
       adaptador.obtenerAlertasActivasLote(CODIGOS),
     ).rejects.toThrow();
+  });
+  describe('historial cuantitativo (RF-145)', () => {
+    it('tiene tantas semanas como unidades completadas, con fechas semanales', async () => {
+      for (const codigo of CODIGOS.slice(0, 12)) {
+        const m = muestraParticipante(codigo);
+        const historial = await adaptador.obtenerHistorialCuantitativo(codigo);
+        expect(historial?.codigo_participante).toBe(codigo);
+        expect(historial?.unidades).toHaveLength(m.unidades_completadas);
+        historial?.unidades.forEach((unidad, i) => {
+          expect(unidad.orden_unidad_temporal).toBe(i + 1);
+          expect(unidad.nombre_unidad).toBe(`Semana ${i + 1}`);
+          const inicio = Date.parse(unidad.fecha_inicio_unidad);
+          expect(Date.parse(unidad.fecha_fin_unidad) - inicio).toBe(
+            6 * 86_400_000,
+          );
+          expect(unidad.tasa_adherencia).toBeGreaterThanOrEqual(0);
+          expect(unidad.tasa_adherencia).toBeLessThanOrEqual(1);
+          expect(unidad.craving_promedio).toBeGreaterThanOrEqual(1);
+          expect(unidad.craving_promedio).toBeLessThanOrEqual(5);
+        });
+        // El nivel termina en el nivel actual del participante.
+        expect(historial?.unidades.at(-1)?.nivel_progreso).toBe(
+          m.nivel_progreso,
+        );
+      }
+    });
+
+    it('es determinista y ubica las alertas de la muestra en las últimas semanas', () => {
+      const codigo = CODIGOS.find(
+        (c) => muestraParticipante(c).unidades_completadas >= 4,
+      ) as string;
+      const [inactividad, craving] = muestraParticipante(codigo).alertas;
+      const historial = historialMuestra(codigo);
+      expect(historialMuestra(codigo)).toEqual(historial);
+      expect(historial.at(-1)?.alertas.map((a) => a.id_alerta)).toContain(
+        inactividad.id_alerta,
+      );
+      expect(historial.at(-2)?.alertas.map((a) => a.id_alerta)).toContain(
+        craving.id_alerta,
+      );
+    });
+
+    it('solo expone métricas cuantitativas', async () => {
+      const historial = await adaptador.obtenerHistorialCuantitativo('P-1');
+      expect(Object.keys(historial?.unidades[0] ?? {}).sort()).toEqual([
+        'alertas',
+        'craving_promedio',
+        'fecha_fin_unidad',
+        'fecha_inicio_unidad',
+        'nivel_progreso',
+        'nombre_unidad',
+        'orden_unidad_temporal',
+        'tasa_adherencia',
+      ]);
+    });
+
+    it('respeta los flags de simulación', async () => {
+      process.env.SIMULAR_INCONSISTENCIA_M5 = 'true';
+      await expect(
+        adaptador.obtenerHistorialCuantitativo('P-1'),
+      ).resolves.toMatchObject({
+        codigo_participante: CODIGO_INCONSISTENTE_M05,
+      });
+      process.env.SIMULAR_M5_SIN_DATOS = 'true';
+      await expect(
+        adaptador.obtenerHistorialCuantitativo('P-1'),
+      ).resolves.toBeNull();
+      process.env.SIMULAR_M5_CAIDO = 'true';
+      await expect(
+        adaptador.obtenerHistorialCuantitativo('P-1'),
+      ).rejects.toThrow();
+    });
   });
 });

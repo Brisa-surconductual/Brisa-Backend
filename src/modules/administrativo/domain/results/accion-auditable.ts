@@ -61,6 +61,14 @@ export type DetalleAuditoria =
       filtros: Record<string, string | number | boolean>;
     }
   | { campos_descartados: string[] }
+  | {
+      // RF-145: exportación CSV individual.
+      tipo: 'EXPORTACION_INDIVIDUAL';
+      nombre_archivo?: string;
+      tamano_bytes?: number;
+      unidades_exportadas?: number;
+      campos_descartados?: string[];
+    }
   | (CambioConfiguracion & { tipo_umbral: string })
   | (CambioConfiguracion & { tipo_parametro: TipoParametroNotificacion });
 

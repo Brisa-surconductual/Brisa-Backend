@@ -4,6 +4,7 @@ import {
   type AlertaActivaParticipanteM05,
   type AlertaM05,
   type AlertaParticipanteM05,
+  type HistorialCuantitativoM05,
   type IndicadoresParticipanteM05,
   type ListaAlertasDto,
   type PerfilSeguimientoDto,
@@ -112,10 +113,55 @@ export function muestraParticipante(
 const activas = (alertas: AlertaM05[]) =>
   alertas.filter((alerta) => alerta.estado_resolucion === 'ACTIVA');
 
+/** Lunes de la primera semana del programa de muestra (UTC-5). */
+const INICIO_PROGRAMA = Date.UTC(2026, 8, 28);
+const DIA_MS = 86_400_000;
+
+const fechaIso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+/**
+ * Historial cuantitativo de muestra (RF-145), derivado de la muestra del
+ * participante: tantas semanas como unidades completadas, el nivel progresa
+ * hasta el actual y las alertas de la muestra caen en las últimas semanas
+ * (inactividad en la última, craving en la penúltima).
+ */
+export function historialMuestra(codigoParticipante: string) {
+  const muestra = muestraParticipante(codigoParticipante);
+  const total = muestra.unidades_completadas;
+  const nivelFinal = NIVELES_PROGRESO.indexOf(muestra.nivel_progreso);
+  const [inactividad, craving] = muestra.alertas;
+  return Array.from({ length: total }, (_, i) => {
+    const orden = i + 1;
+    const h = createHash('sha256')
+      .update(`historial:${codigoParticipante}:${orden}`)
+      .digest('hex');
+    const inicio = INICIO_PROGRAMA + i * 7 * DIA_MS;
+    const variacion = (parseInt(h.slice(0, 2), 16) / 255 - 0.5) * 0.3;
+    const alertas: AlertaM05[] = [];
+    if (orden === total) alertas.push(inactividad);
+    if (orden === Math.max(total - 1, 1)) alertas.push(craving);
+    return {
+      orden_unidad_temporal: orden,
+      nombre_unidad: `Semana ${orden}`,
+      fecha_inicio_unidad: fechaIso(inicio),
+      fecha_fin_unidad: fechaIso(inicio + 6 * DIA_MS),
+      nivel_progreso:
+        NIVELES_PROGRESO[Math.min(nivelFinal, Math.floor((i * 4) / total))],
+      tasa_adherencia:
+        Math.round(
+          Math.min(1, Math.max(0, muestra.tasa_adherencia + variacion)) * 100,
+        ) / 100,
+      craving_promedio:
+        Math.round((1 + (parseInt(h.slice(2, 4), 16) / 255) * 4) * 10) / 10,
+      alertas,
+    };
+  });
+}
+
 /**
  * Sustituto de M05 mientras no exponga RF-77 / RF-63 / RF-68. Devuelve, para
  * cada participante, los datos deterministas de `muestraParticipante`, con la
- * forma de los contratos de RF-128, RF-129, RF-142, RF-146 y RF-147.
+ * forma de los contratos de RF-128, RF-129, RF-142, RF-145, RF-146 y RF-147.
  *
  * Variables de entorno (se leen en cada llamada, para poder probar):
  * - `SIMULAR_M5_CAIDO=true`: M05 no responde (503).
@@ -216,6 +262,23 @@ export class MockSeguimientoIndividualAdapter implements SeguimientoIndividualPo
         })),
       };
     });
+  }
+
+  async obtenerHistorialCuantitativo(
+    codigoParticipante: string,
+  ): Promise<HistorialCuantitativoM05 | null> {
+    await this.simularRed();
+    if (flagActivo('SIMULAR_M5_SIN_DATOS')) return null;
+    return {
+      codigo_participante: this.codigoRespuesta(codigoParticipante),
+      unidades: historialMuestra(codigoParticipante).map((unidad) => ({
+        ...unidad,
+        alertas: unidad.alertas.map(({ id_alerta, estado_resolucion }) => ({
+          id_alerta,
+          estado_resolucion,
+        })),
+      })),
+    };
   }
 
   private codigoRespuesta(codigoParticipante: string): string {
