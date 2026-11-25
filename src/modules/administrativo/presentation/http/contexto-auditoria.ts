@@ -1,7 +1,7 @@
 import { isIP } from 'node:net';
 import type { Request } from 'express';
 import type { AuthenticatedSessionRequest } from '../../../usuarios/presentation/http/authenticated-session-request';
-import type { ContextoAuditoria } from '../../domain/auditoria';
+import type { ContextoAuditoria } from '../../domain/results/contexto-auditoria';
 
 export const ACCESO_BITACORA = {
   accion: 'ACCESO_MODULO',

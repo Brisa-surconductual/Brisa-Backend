@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../prisma/prisma.service';
-import { VistasAgregadasRepository } from '../../application/ports/vistas-agregadas.repository';
-import type {
-  DatosVistaAgregada,
-  TipoVistaAgregada,
-} from '../../domain/vista-agregada';
+import { VistasAgregadasRepository } from '../../domain/repositories/vistas-agregadas.repository';
+import type { TipoVistaAgregada } from '../../domain/enums/tipo-vista-agregada.enum';
+import type { DatosVistaAgregada } from '../../domain/results/vista-agregada';
 
 @Injectable()
 export class PrismaVistasAgregadasRepository implements VistasAgregadasRepository {

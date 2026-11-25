@@ -1,5 +1,8 @@
+import type { EstadoFuenteAgregada } from '../../domain/enums/estado-fuente-agregada.enum';
+
 export type ResultadoEvolucionSeguimiento = { id_cohorte: string } & (
-  { estado: 'ACTUALIZADO'; datos: unknown } | { estado: 'NO_DISPONIBLE' }
+  | { estado: typeof EstadoFuenteAgregada.ACTUALIZADO; datos: unknown }
+  | { estado: typeof EstadoFuenteAgregada.NO_DISPONIBLE }
 );
 
 /**

@@ -1,0 +1,66 @@
+import type { Provider } from '@nestjs/common';
+import {
+  BitacoraRepository,
+  ColaAuditoriaPort,
+} from '../application/ports/auditoria.port';
+import { EvolucionSeguimientoPort } from '../application/ports/evolucion-seguimiento.port';
+import { fuenteAgregadaNoDisponible } from '../application/ports/fuente-vista-agregada.port';
+import { NarrativaAgregadaPort } from '../application/ports/narrativa-agregada.port';
+import { NotificacionesAgregadasPort } from '../application/ports/notificaciones-agregadas.port';
+import { SeguimientoAgregadoPort } from '../application/ports/seguimiento-agregado.port';
+import { EstadoFuenteAgregada } from '../domain/enums/estado-fuente-agregada.enum';
+import { CohortesRepository } from '../domain/repositories/cohortes.repository';
+import { ParticipantesCohorteRepository } from '../domain/repositories/participantes-cohorte.repository';
+import { VistasAgregadasRepository } from '../domain/repositories/vistas-agregadas.repository';
+import { BullMqAuditoriaAdapter } from './messaging/bullmq-auditoria.adapter';
+import { PrismaBitacoraRepository } from './persistence/prisma-bitacora.repository';
+import { PrismaCohortesRepository } from './persistence/prisma-cohortes.repository';
+import { PrismaParticipantesCohorteRepository } from './persistence/prisma-participantes-cohorte.repository';
+import { PrismaVistasAgregadasRepository } from './persistence/prisma-vistas-agregadas.repository';
+
+/** Liga los puertos de dominio y aplicación con sus implementaciones concretas. */
+export const AdministrativoInfrastructureProviders: Provider[] = [
+  { provide: BitacoraRepository, useClass: PrismaBitacoraRepository },
+  { provide: CohortesRepository, useClass: PrismaCohortesRepository },
+  {
+    provide: ParticipantesCohorteRepository,
+    useClass: PrismaParticipantesCohorteRepository,
+  },
+  {
+    provide: VistasAgregadasRepository,
+    useClass: PrismaVistasAgregadasRepository,
+  },
+  { provide: ColaAuditoriaPort, useClass: BullMqAuditoriaAdapter },
+  {
+    provide: EvolucionSeguimientoPort,
+    // Sustituir al conectar la consulta temporal de RF-78.
+    useValue: {
+      obtener: (id_cohorte: string) =>
+        Promise.resolve({
+          id_cohorte,
+          estado: EstadoFuenteAgregada.NO_DISPONIBLE,
+        }),
+    } satisfies EvolucionSeguimientoPort,
+  },
+  {
+    provide: SeguimientoAgregadoPort,
+    // Reemplazar con el proveedor real cuando M05 publique RF-78.
+    useValue: {
+      obtener: (id: string) => Promise.resolve(fuenteAgregadaNoDisponible(id)),
+    } satisfies SeguimientoAgregadoPort,
+  },
+  {
+    provide: NarrativaAgregadaPort,
+    // Sustituir con el proveedor de M06 cuando se integre RF-117.
+    useValue: {
+      obtener: (id: string) => Promise.resolve(fuenteAgregadaNoDisponible(id)),
+    } satisfies NarrativaAgregadaPort,
+  },
+  {
+    provide: NotificacionesAgregadasPort,
+    // Sustituir con el proveedor de M07 cuando se integre RF-101.
+    useValue: {
+      obtener: (id: string) => Promise.resolve(fuenteAgregadaNoDisponible(id)),
+    } satisfies NotificacionesAgregadasPort,
+  },
+];

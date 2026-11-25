@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { errorCohorte } from '../../application/cohorte.errors';
-import { errorParticipanteCohorte } from '../../application/participante-cohorte.errors';
-import { ParticipantesCohorteRepository } from '../../application/ports/participantes-cohorte.repository';
-import type { ContextoAuditoria } from '../../domain/auditoria';
-import type { EstadoCohorte } from '../../domain/cohorte';
-import type { ParticipanteCohorte } from '../../domain/participante-cohorte';
-import { errorSqlPrisma } from './error-sql-prisma';
+import { CohorteException } from '../../application/exceptions/cohorte.exception';
+import { ParticipanteCohorteException } from '../../application/exceptions/participante-cohorte.exception';
+import { ParticipantesCohorteRepository } from '../../domain/repositories/participantes-cohorte.repository';
+import type { ParticipanteCohorte } from '../../domain/entities/participante-cohorte/participante-cohorte.entity';
+import type { EstadoCohorte } from '../../domain/enums/estado-cohorte.enum';
+import type { ContextoAuditoria } from '../../domain/results/contexto-auditoria';
+import { errorSqlPrisma } from '../expetions/error-sql-prisma';
 
 const ERRORES_SQL = {
   COHORTE_NO_ACTIVA: 'AD422',
@@ -98,7 +98,7 @@ export class PrismaParticipantesCohorteRepository implements ParticipantesCohort
     `,
     );
     if (participantes.length !== codigos.length) {
-      throw errorParticipanteCohorte('PARTICIPANTE_NO_ENCONTRADO');
+      throw new ParticipanteCohorteException('PARTICIPANTE_NO_ENCONTRADO');
     }
 
     // La función toma un bloqueo por usuario. El orden evita interbloqueos entre lotes.
@@ -117,7 +117,9 @@ export class PrismaParticipantesCohorteRepository implements ParticipantesCohort
     }
     const asignados = await this.listar(tx, cohorte, codigos);
     if (asignados.length !== codigos.length) {
-      throw errorParticipanteCohorte('ERROR_PERSISTENCIA_PARTICIPANTES');
+      throw new ParticipanteCohorteException(
+        'ERROR_PERSISTENCIA_PARTICIPANTES',
+      );
     }
     return asignados;
   }
@@ -139,7 +141,9 @@ export class PrismaParticipantesCohorteRepository implements ParticipantesCohort
     );
     const [retirado] = await this.listar(tx, cohorte, [codigo]);
     if (!retirado)
-      throw errorParticipanteCohorte('ERROR_PERSISTENCIA_PARTICIPANTES');
+      throw new ParticipanteCohorteException(
+        'ERROR_PERSISTENCIA_PARTICIPANTES',
+      );
     return retirado;
   }
 
@@ -153,18 +157,23 @@ export class PrismaParticipantesCohorteRepository implements ParticipantesCohort
     } catch (error) {
       const db = errorSqlPrisma(error);
       if (db?.estado === 'AD404' && db.mensaje === 'COHORTE_NO_ENCONTRADA') {
-        throw errorCohorte('COHORTE_NO_ENCONTRADA');
+        throw new CohorteException('COHORTE_NO_ENCONTRADA');
       }
       for (const [codigo, estado] of Object.entries(ERRORES_SQL) as [
         keyof typeof ERRORES_SQL,
         string,
       ][]) {
         if (db?.estado === estado && db.mensaje === codigo)
-          throw errorParticipanteCohorte(codigo, { codigoParticipante });
+          throw new ParticipanteCohorteException(codigo, {
+            codigoParticipante,
+          });
       }
-      throw errorParticipanteCohorte('ERROR_PERSISTENCIA_PARTICIPANTES', {
-        cause: error,
-      });
+      throw new ParticipanteCohorteException(
+        'ERROR_PERSISTENCIA_PARTICIPANTES',
+        {
+          cause: error,
+        },
+      );
     }
   }
 }

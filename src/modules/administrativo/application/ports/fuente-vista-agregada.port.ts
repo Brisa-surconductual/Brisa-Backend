@@ -1,6 +1,13 @@
+import { EstadoFuenteAgregada } from '../../domain/enums/estado-fuente-agregada.enum';
+
 export type ResultadoFuenteAgregada = { id_cohorte: string } & (
-  | { estado: 'ACTUALIZADO'; datos: unknown }
-  | { estado: 'PENDIENTE' | 'SUPRIMIDO' | 'NO_DISPONIBLE' }
+  | { estado: typeof EstadoFuenteAgregada.ACTUALIZADO; datos: unknown }
+  | {
+      estado: Exclude<
+        EstadoFuenteAgregada,
+        typeof EstadoFuenteAgregada.ACTUALIZADO
+      >;
+    }
 );
 
 export interface FuenteVistaAgregada {
@@ -10,5 +17,5 @@ export interface FuenteVistaAgregada {
 export function fuenteAgregadaNoDisponible(
   id_cohorte: string,
 ): ResultadoFuenteAgregada {
-  return { id_cohorte, estado: 'NO_DISPONIBLE' };
+  return { id_cohorte, estado: EstadoFuenteAgregada.NO_DISPONIBLE };
 }

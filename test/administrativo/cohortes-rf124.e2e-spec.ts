@@ -6,7 +6,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AdministrativoModule } from '../../src/modules/administrativo/administrativo.module';
-import type { Cohorte } from '../../src/modules/administrativo/domain/cohorte';
+import type { Cohorte } from '../../src/modules/administrativo/domain/entities/cohorte/cohorte.entity';
 import { PrismaCohortesRepository } from '../../src/modules/administrativo/infrastructure/persistence/prisma-cohortes.repository';
 import { SessionCookieConfig } from '../../src/modules/usuarios/application/ports/session-cookie-config';
 

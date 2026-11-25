@@ -1,33 +1,23 @@
-import {
-  HttpException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { HttpException, Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import type { RegistroAuditoria } from '../../domain/entities/auditoria/registro-auditoria.entity';
+import { EstadoAccion } from '../../domain/enums/estado-accion.enum';
+import { ModoRegistroAuditoria } from '../../domain/enums/modo-registro-auditoria.enum';
 import type {
   AccionAuditable,
-  ContextoAuditoria,
-  EstadoAccion,
   EventoAuditoria,
-  RegistroAuditoria,
-} from '../../domain/auditoria';
+} from '../../domain/results/accion-auditable';
+import type { ContextoAuditoria } from '../../domain/results/contexto-auditoria';
+import { RegistroAuditoriaException } from '../exceptions/registro-auditoria.exception';
 import { BitacoraRepository, ColaAuditoriaPort } from '../ports/auditoria.port';
 
 type ModoRegistro =
-  { modo: 'SINCRONO'; tx: Prisma.TransactionClient } | { modo: 'DIFERIDO' };
-
-export class RegistroAuditoriaException extends InternalServerErrorException {
-  constructor() {
-    super({
-      statusCode: 500,
-      codigo: 'ERROR_REGISTRO_AUDITORIA',
-      mensaje:
-        'No fue posible registrar la acción en la bitácora de auditoría.',
-    });
-  }
-}
+  | {
+      modo: typeof ModoRegistroAuditoria.SINCRONO;
+      tx: Prisma.TransactionClient;
+    }
+  | { modo: typeof ModoRegistroAuditoria.DIFERIDO };
 
 @Injectable()
 export class AuditoriaService {
@@ -55,7 +45,7 @@ export class AuditoriaService {
     };
 
     try {
-      if (opciones.modo === 'SINCRONO')
+      if (opciones.modo === ModoRegistroAuditoria.SINCRONO)
         await this.bitacora.insertar(opciones.tx, registro, false);
       else await this.cola.encolar(registro);
     } catch {
@@ -75,8 +65,11 @@ export class AuditoriaService {
         const resultado = await operacion(tx);
         await this.registrar(
           ctx,
-          { ...accion, estado: estadoResultado?.(resultado) ?? 'EXITOSA' },
-          { modo: 'SINCRONO', tx },
+          {
+            ...accion,
+            estado: estadoResultado?.(resultado) ?? EstadoAccion.EXITOSA,
+          },
+          { modo: ModoRegistroAuditoria.SINCRONO, tx },
         );
         return resultado;
       });
@@ -85,7 +78,9 @@ export class AuditoriaService {
       await this.registrarIntento(
         ctx,
         accion,
-        status === 401 || status === 403 ? 'DENEGADA' : 'FALLIDA',
+        status === 401 || status === 403
+          ? EstadoAccion.DENEGADA
+          : EstadoAccion.FALLIDA,
       );
       throw error;
     }
@@ -94,11 +89,15 @@ export class AuditoriaService {
   async registrarIntento(
     ctx: ContextoAuditoria,
     accion: AccionAuditable,
-    estado: Exclude<EstadoAccion, 'EXITOSA'>,
+    estado: Exclude<EstadoAccion, typeof EstadoAccion.EXITOSA>,
   ): Promise<void> {
     try {
       await this.bitacora.enTransaccion((tx) =>
-        this.registrar(ctx, { ...accion, estado }, { modo: 'SINCRONO', tx }),
+        this.registrar(
+          ctx,
+          { ...accion, estado },
+          { modo: ModoRegistroAuditoria.SINCRONO, tx },
+        ),
       );
     } catch {
       this.logger.error(

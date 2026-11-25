@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import { BaseExceptionFilter, HttpAdapterHost } from '@nestjs/core';
 import { isUUID } from 'class-validator';
-import { errorExportacionCsv } from '../../application/exportacion-csv.errors';
+import { ExportacionCsvException } from '../../application/exceptions/exportacion-csv.exception';
 import { AuditoriaService } from '../../application/services/auditoria.service';
-import { accionExportacionCohorte } from '../../domain/exportacion-cohorte';
+import { accionExportacionCohorte } from '../../domain/entities/exportacion-cohorte/exportacion-cohorte.entity';
 import type { AuthenticatedSessionRequest } from '../../../usuarios/presentation/http/authenticated-session-request';
 import { contextoAuditoria } from '../http/contexto-auditoria';
 
@@ -46,7 +46,9 @@ export class AuditarAccesoExportacionCsvFilter extends BaseExceptionFilter {
     }
 
     super.catch(
-      estado === 403 ? errorExportacionCsv('ACCESO_DENEGADO') : exception,
+      estado === 403
+        ? new ExportacionCsvException('ACCESO_DENEGADO')
+        : exception,
       host,
     );
   }
