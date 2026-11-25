@@ -11,7 +11,7 @@ import { ConsultarDashboardPrincipalUseCase } from '../../application/use-cases/
 import { contextoAuditoria } from '../http/contexto-auditoria';
 
 @Controller('admin/dashboard')
-@Roles(Rol.ADMINISTRATIVO)
+@Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
 @AlcancesSesion(AlcanceSesion.COMPLETA)
 @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
 export class DashboardPrincipalController {

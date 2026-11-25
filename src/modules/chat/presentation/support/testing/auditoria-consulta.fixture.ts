@@ -1,4 +1,7 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { AuditoriaService } from '../../../../administrativo/application/services/auditoria.service';
+import { VerificarPermisoIndividualUseCase } from '../../../../administrativo/application/use-cases/permisos-individuales/verificar-permiso-individual.use-case';
+import { PermisoIndividualGuard } from '../../../../administrativo/presentation/guards/permiso-individual.guard';
 import { EventoAuditoriaAdministrativa } from '../../../../../shared/application/ports/auditoria-administrativa.port';
 import { SeudonimoParticipantePort } from '../../../application/ports/seudonimo-participante.port';
 import { AuditarConsultaTrazabilidadService } from '../../../application/services/auditar-consulta-trazabilidad.service';
@@ -68,5 +71,32 @@ export function auditoriaPrueba() {
     },
     /** Eventos registrados en esta prueba. */
     eventos: () => registrar.mock.calls.map(([evento]) => evento),
+  };
+}
+
+/**
+ * Dependencias del guard de permisos individuales (RF-04). Por omisión el
+ * ADMINISTRATIVO tiene permiso vigente; `vigente` permite simular lo contrario.
+ */
+export function permisoIndividualPrueba() {
+  const vigente = jest.fn<Promise<boolean>, [string, unknown, string]>();
+  const registrarIntento = jest.fn<Promise<void>, unknown[]>();
+  const reiniciar = () => {
+    vigente.mockReset().mockResolvedValue(true);
+    registrarIntento.mockReset().mockResolvedValue(undefined);
+  };
+  reiniciar();
+  return {
+    vigente,
+    registrarIntento,
+    reiniciar,
+    providers: [
+      PermisoIndividualGuard,
+      {
+        provide: VerificarPermisoIndividualUseCase,
+        useValue: { execute: vigente },
+      },
+      { provide: AuditoriaService, useValue: { registrarIntento } },
+    ],
   };
 }

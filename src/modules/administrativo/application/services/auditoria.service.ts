@@ -42,6 +42,8 @@ export class AuditoriaService {
       marca_temporal: new Date().toISOString(),
       estado_accion: evento.estado,
       ...(evento.detalle && { detalle: evento.detalle }),
+      ...(evento.severidad && { severidad: evento.severidad }),
+      ...(evento.idParticipante && { id_participante: evento.idParticipante }),
     };
 
     try {

@@ -25,7 +25,7 @@ import { contextoAuditoria } from '../http/contexto-auditoria';
 const SELECTORES_COLUMNAS = ['fields', 'columns', 'columnas'];
 
 @Controller('admin/cohortes/:id_cohorte/exportacion.csv')
-@Roles(Rol.ADMINISTRATIVO)
+@Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
 @AlcancesSesion(AlcanceSesion.COMPLETA)
 @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
 @UseFilters(AuditarAccesoExportacionCsvFilter)

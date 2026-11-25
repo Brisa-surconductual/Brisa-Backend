@@ -12,6 +12,7 @@ import {
   ID_SESION_AUTENTICACION,
   ID_USUARIO_ADMIN,
   auditoriaPrueba,
+  permisoIndividualPrueba,
   autenticarPrueba,
 } from '../../support/testing/auditoria-consulta.fixture';
 import { instalarFiltroConversacionalPrueba } from '../../support/testing/filtro-error-conversacional.fixture';
@@ -43,6 +44,7 @@ describe('GET /chat/admin/sesiones/:id_sesion/trazabilidad (HTTP)', () => {
   let app: INestApplication<App>;
   const casoDeUso = { execute: jest.fn() };
   const auditoria = auditoriaPrueba();
+  const permiso = permisoIndividualPrueba();
 
   beforeAll(async () => {
     const modulo = await Test.createTestingModule({
@@ -50,6 +52,7 @@ describe('GET /chat/admin/sesiones/:id_sesion/trazabilidad (HTTP)', () => {
       providers: [
         RolesGuard,
         auditoria.provider,
+        ...permiso.providers,
         { provide: ConsultarTrazabilidadSesionUseCase, useValue: casoDeUso },
       ],
     })
@@ -70,6 +73,7 @@ describe('GET /chat/admin/sesiones/:id_sesion/trazabilidad (HTTP)', () => {
   beforeEach(() => {
     casoDeUso.execute.mockReset().mockResolvedValue(datos);
     auditoria.reiniciar();
+    permiso.reiniciar();
   });
   afterAll(() => app?.close());
 
@@ -368,6 +372,55 @@ describe('GET /chat/admin/sesiones/:id_sesion/trazabilidad (HTTP)', () => {
         .expect(401);
 
       expect(auditoria.registrar).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('permiso individual RF-04', () => {
+    const idSesion = '00000000-0000-4000-8000-0000000000aa';
+
+    it('sin codigo_participante: verifica el permiso sobre el participante de la sesión', async () => {
+      await request(app.getHttpServer())
+        .get(`/chat/admin/sesiones/${idSesion}/trazabilidad`)
+        .expect(200);
+
+      expect(permiso.vigente).toHaveBeenCalledWith(
+        ID_USUARIO_ADMIN,
+        { idSesion },
+        'ACCESO_INDIVIDUAL',
+      );
+    });
+
+    it('con codigo_participante: verifica el permiso sobre ese código', async () => {
+      await request(app.getHttpServer())
+        .get(
+          `/chat/admin/sesiones/${idSesion}/trazabilidad?codigo_participante=p-1a2b3c4d`,
+        )
+        .expect(200);
+
+      expect(permiso.vigente).toHaveBeenCalledWith(
+        ID_USUARIO_ADMIN,
+        { codigo: 'P-1A2B3C4D' },
+        'ACCESO_INDIVIDUAL',
+      );
+    });
+
+    it('ADMINISTRATIVO sin permiso vigente: 403 sin ejecutar la consulta', async () => {
+      permiso.vigente.mockResolvedValue(false);
+
+      await request(app.getHttpServer())
+        .get(`/chat/admin/sesiones/${idSesion}/trazabilidad`)
+        .expect(403);
+
+      expect(casoDeUso.execute).not.toHaveBeenCalled();
+    });
+
+    it('COORDINADOR_PSI no necesita permiso individual', async () => {
+      await request(app.getHttpServer())
+        .get(`/chat/admin/sesiones/${idSesion}/trazabilidad`)
+        .set('x-test-role', 'COORDINADOR_PSI')
+        .expect(200);
+
+      expect(permiso.vigente).not.toHaveBeenCalled();
     });
   });
 });

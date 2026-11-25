@@ -20,7 +20,7 @@ import { AuditoriaConsultaTrazabilidadInterceptor } from '../interceptors/audito
 export const AccesoAdministrativo = () =>
   applyDecorators(
     AlcancesSesion(AlcanceSesion.COMPLETA),
-    Roles(Rol.ADMINISTRATIVO),
+    Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI),
     UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard),
   );
 
@@ -35,7 +35,7 @@ export const AccesoAdministrativoAuditado = (
 ) =>
   applyDecorators(
     AlcancesSesion(AlcanceSesion.COMPLETA),
-    Roles(Rol.ADMINISTRATIVO),
+    Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI),
     SetMetadata(OPERACION_AUDITADA_KEY, operacion),
     UseGuards(SessionAuthGuard, AutorizacionAdministrativaAuditadaGuard),
     UseInterceptors(AuditoriaConsultaTrazabilidadInterceptor),

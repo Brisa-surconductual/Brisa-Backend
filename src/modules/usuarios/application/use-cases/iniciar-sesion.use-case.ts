@@ -7,6 +7,7 @@ import { SessionTokenGenerator } from '../ports/session-token-generator';
 import { SessionTokenHasher } from '../ports/session-token-hasher';
 import { CorreoElectronico } from '../../domain/value-objects/correo_electronico.vo';
 import { EstadoCuenta } from '../../domain/enums/estado-cuenta';
+import { Rol } from '../../domain/enums/rol.enum';
 import { EstadoRegistro } from '../../domain/enums/estado-registro.enum';
 import { Sesion } from '../../domain/entities/sesiones.entity';
 import { CredencialesInvalidasException } from '../../domain/exeption/credenciales-invalidas.exception';
@@ -56,7 +57,7 @@ export class IniciarSesionUseCase {
     }
 
     const rol = String(usuario.rol);
-    if (rol !== 'ESTUDIANTE' && rol !== 'ADMINISTRATIVO') {
+    if (!(Object.values(Rol) as string[]).includes(rol)) {
       throw new InternalServerErrorException(
         'Error en la configuración de roles del usuario. Contacte al administrador del sistema.',
       );

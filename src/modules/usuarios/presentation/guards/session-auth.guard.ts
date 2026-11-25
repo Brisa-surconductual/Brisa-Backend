@@ -11,6 +11,7 @@ import { SessionConfig } from '../../application/ports/session-config';
 import { SessionCookieConfig } from '../../application/ports/session-cookie-config';
 import { SessionTokenHasher } from '../../application/ports/session-token-hasher';
 import { EstadoCuenta } from '../../domain/enums/estado-cuenta';
+import { Rol } from '../../domain/enums/rol.enum';
 import { AuthenticatedSessionRequest } from '../http/authenticated-session-request';
 import type { Request } from 'express';
 
@@ -82,7 +83,7 @@ export class SessionAuthGuard implements CanActivate {
     }
 
     const rol = String(usuario.rol);
-    if (rol !== 'ESTUDIANTE' && rol !== 'ADMINISTRATIVO') {
+    if (!(Object.values(Rol) as string[]).includes(rol)) {
       throw new InternalServerErrorException(
         'Error en la configuración de roles del usuario. Contacte al administrador del sistema.',
       );

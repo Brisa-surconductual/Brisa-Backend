@@ -23,7 +23,7 @@ import { ConsultarContenidoVigenteUsuarioUseCase } from '../application/use-case
 
 @Controller('/cronograma/usuarios')
 @AlcancesSesion(AlcanceSesion.COMPLETA)
-@Roles(Rol.ADMINISTRATIVO)
+@Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
 @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
 export class ContenidoVigenteAdministrativoController {
   constructor(

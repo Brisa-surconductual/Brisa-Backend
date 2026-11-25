@@ -74,6 +74,26 @@ async function crearSesionChat(prisma, admin, estudiante) {
   return sesion;
 }
 
+// RF-04: la trazabilidad de chat exige un permiso individual vigente para el
+// ADMINISTRATIVO. Lo otorga un COORDINADOR_PSI, con su bitácora en la misma transacción.
+async function otorgarPermisoIndividual(prisma, coordinador, admin, estudiante) {
+  const permiso = randomUUID();
+  await prisma.$transaction([
+    prisma.$executeRaw`
+      INSERT INTO administrativo.permisos_acceso_individual
+        (id_permiso, id_usuario_administrativo, id_participante, alcance, otorgado_por)
+      VALUES (${permiso}::uuid, ${admin.idUsuario}::uuid, ${estudiante.idUsuario}::uuid,
+        'ACCESO_INDIVIDUAL', ${coordinador.idUsuario}::uuid)
+    `,
+    prisma.$queryRaw`
+      SELECT administrativo.fn_registrar_auditoria(
+        ${coordinador.idUsuario}::uuid, ${coordinador.idSesion}::uuid, 'GESTION_PERMISO_INDIVIDUAL',
+        'PERMISO_INDIVIDUAL', ${permiso}::uuid, ${estudiante.idUsuario}::uuid, '127.0.0.1',
+        'EXITOSA', 'ALTA', '{"operacion":"OTORGAR"}'::jsonb)::text
+    `,
+  ]);
+}
+
 function consultarDatosChat(prisma, idSesion) {
   return prisma.$queryRaw`
     SELECT s.id_nodo_actual, s.fecha_ultima_interaccion,
@@ -139,6 +159,8 @@ async function verificar() {
     const admin = await crearActor(prisma, hasher, 'ADMINISTRATIVO');
     const estudiante = await crearActor(prisma, hasher, 'ESTUDIANTE');
     const recursoChat = await crearSesionChat(prisma, admin, estudiante);
+    const coordinador = await crearActor(prisma, hasher, 'COORDINADOR_PSI');
+    await otorgarPermisoIndividual(prisma, coordinador, admin, estudiante);
     const variables = {
       baseUrl: await app.getUrl(),
       nombreCookie: app.get(SessionCookieConfig).obtenerNombreCookie(),

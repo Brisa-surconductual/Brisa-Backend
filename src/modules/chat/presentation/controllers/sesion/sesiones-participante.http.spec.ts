@@ -12,6 +12,7 @@ import {
   ID_SESION_AUTENTICACION,
   ID_USUARIO_ADMIN,
   auditoriaPrueba,
+  permisoIndividualPrueba,
   autenticarPrueba,
 } from '../../support/testing/auditoria-consulta.fixture';
 import { instalarFiltroConversacionalPrueba } from '../../support/testing/filtro-error-conversacional.fixture';
@@ -37,6 +38,7 @@ describe('GET /chat/admin/participantes/:codigo_participante/sesiones (HTTP)', (
   let app: INestApplication<App>;
   const casoDeUso = { execute: jest.fn() };
   const auditoria = auditoriaPrueba();
+  const permiso = permisoIndividualPrueba();
 
   beforeAll(async () => {
     const modulo = await Test.createTestingModule({
@@ -44,6 +46,7 @@ describe('GET /chat/admin/participantes/:codigo_participante/sesiones (HTTP)', (
       providers: [
         RolesGuard,
         auditoria.provider,
+        ...permiso.providers,
         { provide: ListarSesionesParticipanteUseCase, useValue: casoDeUso },
       ],
     })
@@ -64,6 +67,7 @@ describe('GET /chat/admin/participantes/:codigo_participante/sesiones (HTTP)', (
   beforeEach(() => {
     casoDeUso.execute.mockReset().mockResolvedValue(datos);
     auditoria.reiniciar();
+    permiso.reiniciar();
   });
   afterAll(() => app?.close());
 
@@ -326,6 +330,41 @@ describe('GET /chat/admin/participantes/:codigo_participante/sesiones (HTTP)', (
       await request(app.getHttpServer()).post(ruta).expect(404);
 
       expect(auditoria.registrar).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('permiso individual RF-04', () => {
+    it('ADMINISTRATIVO con permiso vigente: consulta el participante de la ruta', async () => {
+      await request(app.getHttpServer()).get(ruta).expect(200);
+
+      expect(permiso.vigente).toHaveBeenCalledWith(
+        ID_USUARIO_ADMIN,
+        { codigo: 'P-1A2B3C4D' },
+        'ACCESO_INDIVIDUAL',
+      );
+    });
+
+    it('ADMINISTRATIVO sin permiso vigente: 403 sin ejecutar la consulta y con intento auditado', async () => {
+      permiso.vigente.mockResolvedValue(false);
+
+      await request(app.getHttpServer()).get(ruta).expect(403);
+
+      expect(casoDeUso.execute).not.toHaveBeenCalled();
+      expect(permiso.registrarIntento).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ accion: 'INTENTO_ACCESO_NO_AUTORIZADO' }),
+        'DENEGADA',
+      );
+    });
+
+    it('COORDINADOR_PSI no necesita permiso individual', async () => {
+      await request(app.getHttpServer())
+        .get(ruta)
+        .set('x-test-role', 'COORDINADOR_PSI')
+        .expect(200);
+
+      expect(permiso.vigente).not.toHaveBeenCalled();
+      expect(casoDeUso.execute).toHaveBeenCalled();
     });
   });
 });
