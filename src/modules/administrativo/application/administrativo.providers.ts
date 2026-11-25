@@ -1,5 +1,7 @@
 import type { Provider } from '@nestjs/common';
 import { AuditoriaService } from './services/auditoria.service';
+import { CompararCohortesUseCase } from './use-cases/comparar-cohortes.use-case';
+import { ConsultarVistasFiltradasUseCase } from './use-cases/consultar-vistas-filtradas.use-case';
 import { ConsultarBitacoraUseCase } from './use-cases/consultar-bitacora.use-case';
 import { ConsultarCohortesUseCase } from './use-cases/consultar-cohortes.use-case';
 import { ConsultarDashboardPrincipalUseCase } from './use-cases/consultar-dashboard-principal.use-case';
@@ -18,6 +20,8 @@ import { VerificarPermisoIndividualUseCase } from './use-cases/permisos-individu
 
 export const AdministrativoApplicationProviders: Provider[] = [
   AuditoriaService,
+  CompararCohortesUseCase,
+  ConsultarVistasFiltradasUseCase,
   ConsultarBitacoraUseCase,
   ConsultarCohortesUseCase,
   ConsultarDashboardPrincipalUseCase,
