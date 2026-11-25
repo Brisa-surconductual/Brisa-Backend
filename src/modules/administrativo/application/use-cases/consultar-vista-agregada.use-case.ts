@@ -12,7 +12,6 @@ import type {
   DatosVistaAgregada,
   VistaAgregada,
 } from '../../domain/results/vista-agregada';
-import { esSnapshotSuprimido } from '../../domain/value-objects/snapshot-agregado.vo';
 import { CohorteActivaNoEncontradaException } from '../exceptions/cohorte-activa-no-encontrada.exception';
 import { ConsultaVistaAgregadaException } from '../exceptions/consulta-vista-agregada.exception';
 import { VistaAgregadaNoDisponibleException } from '../exceptions/vista-agregada-no-disponible.exception';
@@ -20,6 +19,7 @@ import { fuenteAgregadaNoDisponible } from '../ports/fuente-vista-agregada.port'
 import type { FuenteVistaAgregada } from '../ports/fuente-vista-agregada.port';
 import { AuditoriaService } from '../services/auditoria.service';
 import { consultarFuenteConLimite } from '../services/consultar-fuente-con-limite';
+import { resolverSnapshotAgregado } from '../services/resolver-snapshot-agregado';
 
 interface DefinicionVista<T extends DatosVistaAgregada> {
   tipo: TipoVistaAgregada;
@@ -29,7 +29,7 @@ interface DefinicionVista<T extends DatosVistaAgregada> {
   mensajePendiente: string;
   mensajeIndisponible: string;
   estadoPendiente?: VistaAgregada<T>['estado'];
-  proyectar(valor: unknown): T | null;
+  proyectar: (valor: unknown) => T | null;
 }
 
 export interface OpcionesConsultaAgregada {
@@ -91,30 +91,24 @@ export class ConsultarVistaAgregadaUseCase {
                 throw new ConsultaVistaAgregadaException(
                   definicion.mensajeError,
                 );
-              if (
-                !(await this.vistas.guardar(
-                  tx,
-                  idCohorte,
-                  definicion.tipo,
-                  datos,
-                ))
-              ) {
-                const ultimo = await this.vistas.obtenerUltimo(
-                  tx,
-                  idCohorte,
-                  definicion.tipo,
+              const snapshot = await resolverSnapshotAgregado(
+                this.vistas,
+                tx,
+                idCohorte,
+                definicion.tipo,
+                datos,
+                definicion.proyectar,
+              );
+              if (snapshot.suprimido)
+                return {
+                  ...vista,
+                  motivo_sin_datos: MotivoSinDatos.AGREGADO_SUPRIMIDO,
+                };
+              datos = snapshot.datos;
+              if (!datos)
+                throw new ConsultaVistaAgregadaException(
+                  definicion.mensajeError,
                 );
-                if (esSnapshotSuprimido(ultimo))
-                  return {
-                    ...vista,
-                    motivo_sin_datos: MotivoSinDatos.AGREGADO_SUPRIMIDO,
-                  };
-                datos = definicion.proyectar(ultimo);
-                if (!datos)
-                  throw new ConsultaVistaAgregadaException(
-                    definicion.mensajeError,
-                  );
-              }
               return {
                 ...vista,
                 estado: EstadoVistaAgregada.DISPONIBLE,

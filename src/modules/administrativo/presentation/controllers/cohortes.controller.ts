@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -19,6 +20,8 @@ import { CsrfSessionGuard } from '../../../usuarios/presentation/guards/csrf-ses
 import { SessionAuthGuard } from '../../../usuarios/presentation/guards/session-auth.guard';
 import { SessionScopeGuard } from '../../../usuarios/presentation/guards/session-scope.guard';
 import type { AuthenticatedSessionRequest } from '../../../usuarios/presentation/http/authenticated-session-request';
+import { CompararCohortesUseCase } from '../../application/use-cases/comparar-cohortes.use-case';
+import { leerComparacion } from '../http/filtros-agregados.query';
 import { GestionarCohortesUseCase } from '../../application/use-cases/gestionar-cohortes.use-case';
 import { ConsultarCohortesUseCase } from '../../application/use-cases/consultar-cohortes.use-case';
 import { ActualizarCohorteDto, CrearCohorteDto } from '../dto/cohorte.dto';
@@ -32,12 +35,25 @@ export class CohortesController {
   constructor(
     private readonly gestionar: GestionarCohortesUseCase,
     private readonly consultar: ConsultarCohortesUseCase,
+    private readonly comparar: CompararCohortesUseCase,
   ) {}
 
   @Get()
   @Header('Cache-Control', 'no-store')
   listar(@Req() request: AuthenticatedSessionRequest) {
     return this.consultar.listar(contextoAuditoria(request));
+  }
+
+  @Get('comparacion')
+  @Header('Cache-Control', 'no-store')
+  obtenerComparacion(
+    @Query() query: Record<string, unknown>,
+    @Req() request: AuthenticatedSessionRequest,
+  ) {
+    return this.comparar.ejecutar(
+      contextoAuditoria(request),
+      leerComparacion(query),
+    );
   }
 
   @Get(':id_cohorte')
