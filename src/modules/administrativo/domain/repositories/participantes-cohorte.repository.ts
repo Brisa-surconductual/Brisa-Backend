@@ -16,6 +16,15 @@ export abstract class ParticipantesCohorteRepository {
     codigos?: string[],
   ): Promise<ParticipanteCohorte[]>;
 
+  /**
+   * RF-142: membresías ACTIVO de la cohorte con su seudónimo, en una sola
+   * consulta (base del listado de indicadores, sin N+1).
+   */
+  abstract listarActivos(
+    tx: Prisma.TransactionClient,
+    cohorte: string,
+  ): Promise<{ id_usuario: string; codigo_participante: string }[]>;
+
   abstract listarElegibles(
     tx: Prisma.TransactionClient,
     cohorte: string,

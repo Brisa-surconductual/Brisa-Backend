@@ -27,6 +27,8 @@ export const RecursoAuditado = {
   // RF-136 / RF-137: configuración global de M05 y M07.
   UMBRAL_SEGUIMIENTO: 'UMBRAL_SEGUIMIENTO',
   PARAMETRO_NOTIFICACION: 'PARAMETRO_NOTIFICACION',
+  // RF-142: listado de indicadores de los participantes de una cohorte.
+  INDICADORES_PARTICIPANTES_COHORTE: 'INDICADORES_PARTICIPANTES_COHORTE',
   // RF-148: recursos de participante protegidos frente a escrituras.
   DIARIO: 'DIARIO',
   CHAT_SESION: 'CHAT_SESION',

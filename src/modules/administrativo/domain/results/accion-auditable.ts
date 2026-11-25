@@ -46,6 +46,11 @@ export type DetalleAuditoria =
       id_alerta: string;
       codigo_participante: string;
     }
+  | {
+      consulta: 'LISTADO_INDICADORES';
+      filtros: Record<string, string | number | boolean>;
+    }
+  | { campos_descartados: string[] }
   | (CambioConfiguracion & { tipo_umbral: string })
   | (CambioConfiguracion & { tipo_parametro: TipoParametroNotificacion });
 

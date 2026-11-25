@@ -1,4 +1,5 @@
 import type { EstadoResolucionAlerta } from '../../domain/enums/estado-resolucion-alerta.enum';
+import type { NivelProgreso } from '../../domain/enums/nivel-progreso.enum';
 import type { TendenciaConsumo } from '../../domain/enums/tendencia-consumo.enum';
 import type {
   FuenteAlerta,
@@ -41,6 +42,18 @@ export interface AlertaParticipanteM05 {
   alerta: AlertaM05;
 }
 
+/** Indicadores de un participante en la consulta por lote de M05 (RF-142). */
+export interface IndicadoresParticipanteM05 {
+  codigo_participante: string;
+  /** null si M05 aún no lo clasificó (p. ej. NO_CLASIFICABLE, RF-70). */
+  nivel_progreso: NivelProgreso | null;
+  tasa_adherencia: number | null;
+  alertas_activas: Pick<
+    AlertaActivaM05,
+    'id_alerta' | 'tipo_alerta' | 'estado_resolucion'
+  >[];
+}
+
 /** Página del historial de alertas de un participante expuesta por M05. */
 export interface ListaAlertasDto {
   codigo_participante: string;
@@ -69,4 +82,12 @@ export abstract class SeguimientoIndividualPort {
     codigoParticipante: string,
     idAlerta: string,
   ): Promise<AlertaParticipanteM05 | null>;
+
+  /**
+   * RF-142: indicadores de muchos participantes en una sola llamada (sin N+1).
+   * Omite a quien no tenga datos en M05.
+   */
+  abstract obtenerIndicadoresLote(
+    codigosParticipante: string[],
+  ): Promise<IndicadoresParticipanteM05[]>;
 }

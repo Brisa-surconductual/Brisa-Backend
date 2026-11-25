@@ -2,6 +2,7 @@ import type { Provider } from '@nestjs/common';
 import { AuditoriaService } from './services/auditoria.service';
 import { ActualizarParametroNotificacionUseCase } from './use-cases/configuracion/actualizar-parametro-notificacion.use-case';
 import { ActualizarUmbralUseCase } from './use-cases/configuracion/actualizar-umbral.use-case';
+import { ListarIndicadoresParticipantesUseCase } from './use-cases/listado-indicadores/listar-indicadores-participantes.use-case';
 import { ConsultarParametrosNotificacionUseCase } from './use-cases/configuracion/consultar-parametros-notificacion.use-case';
 import { ConsultarUmbralesUseCase } from './use-cases/configuracion/consultar-umbrales.use-case';
 import { CompararCohortesUseCase } from './use-cases/comparar-cohortes.use-case';
@@ -34,6 +35,7 @@ export const AdministrativoApplicationProviders: Provider[] = [
   ActualizarUmbralUseCase,
   ConsultarParametrosNotificacionUseCase,
   ActualizarParametroNotificacionUseCase,
+  ListarIndicadoresParticipantesUseCase,
   CompararCohortesUseCase,
   ConsultarVistasFiltradasUseCase,
   SeguimientoIndividualService,

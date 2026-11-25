@@ -8,6 +8,7 @@ import { DashboardPrincipalController } from './controllers/dashboard-principal.
 import { EvolucionTemporalController } from './controllers/evolucion-temporal.controller';
 import { ExportacionCsvCohorteController } from './controllers/exportacion-csv-cohorte.controller';
 import { GestionAlertasController } from './controllers/gestion-alertas/gestion-alertas.controller';
+import { IndicadoresParticipantesController } from './controllers/listado-indicadores/indicadores-participantes.controller';
 import { ParticipantesCohorteController } from './controllers/participantes-cohorte.controller';
 import { PermisosIndividualesController } from './controllers/permisos-individuales/permisos-individuales.controller';
 import { InteraccionNotificacionesController } from './controllers/seguimiento-individual/interaccion-notificaciones.controller';
@@ -30,6 +31,7 @@ export const AdministrativoPresentationControllers: Type[] = [
   EvolucionTemporalController,
   ExportacionCsvCohorteController,
   GestionAlertasController,
+  IndicadoresParticipantesController,
   ParticipantesCohorteController,
   PermisosIndividualesController,
   SeguimientoIndividualController,

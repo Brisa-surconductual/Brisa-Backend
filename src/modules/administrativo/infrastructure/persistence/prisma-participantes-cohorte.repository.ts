@@ -55,6 +55,21 @@ export class PrismaParticipantesCohorteRepository implements ParticipantesCohort
     );
   }
 
+  listarActivos(tx: Prisma.TransactionClient, cohorte: string) {
+    // Directo sobre las tablas (índice ix_membresia_cohorte_estado): la vista de
+    // validación calcula un LATERAL por fila que el listado no necesita.
+    return this.consultar<{ id_usuario: string; codigo_participante: string }>(
+      tx,
+      Prisma.sql`
+      SELECT cp.id_usuario::text AS id_usuario, s.codigo_participante
+      FROM administrativo.cohorte_participantes cp
+      JOIN administrativo.seudonimos_participante s ON s.id_usuario = cp.id_usuario
+      WHERE cp.id_cohorte = ${cohorte}::uuid AND cp.estado = 'ACTIVO'
+      ORDER BY s.codigo_participante
+    `,
+    );
+  }
+
   listarElegibles(tx: Prisma.TransactionClient, cohorte: string) {
     return this.consultar<{ codigo_participante: string }>(
       tx,

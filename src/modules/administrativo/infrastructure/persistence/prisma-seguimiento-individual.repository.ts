@@ -42,4 +42,34 @@ export class PrismaSeguimientoIndividualRepository implements SeguimientoIndivid
     }
     return atendidas;
   }
+
+  async buscarAlertasAtendidasLote(
+    tx: Prisma.TransactionClient,
+    idsParticipante: string[],
+    idsAlerta: string[],
+  ) {
+    // Un id que no es UUID no puede estar en la tabla y haría fallar el cast.
+    const participantes = [
+      ...new Set(idsParticipante.filter((id) => isUUID(id))),
+    ];
+    const alertas = [...new Set(idsAlerta.filter((id) => isUUID(id)))];
+    if (participantes.length === 0 || alertas.length === 0)
+      return new Set<string>();
+    const filas = await tx.$queryRaw<
+      { id_participante: string; id_alerta_externo: string }[]
+    >`
+      SELECT id_participante::text AS id_participante,
+             id_alerta_externo::text AS id_alerta_externo
+      FROM administrativo.alertas_gestion_admin
+      WHERE id_participante = ANY(${participantes}::uuid[])
+        AND id_alerta_externo = ANY(${alertas}::uuid[])
+        AND estado = 'ATENDIDA'
+    `;
+    return new Set(
+      filas.map(
+        (fila) =>
+          `${fila.id_participante.toLowerCase()}:${fila.id_alerta_externo.toLowerCase()}`,
+      ),
+    );
+  }
 }

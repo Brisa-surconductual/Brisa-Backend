@@ -17,4 +17,15 @@ export abstract class SeguimientoIndividualRepository {
     idParticipante: string,
     idsAlerta: string[],
   ): Promise<Map<string, Date>>;
+
+  /**
+   * RF-142: de esas alertas, las marcadas ATENDIDA en `alertas_gestion_admin`
+   * para cualquiera de esos participantes, en una sola consulta. Devuelve las
+   * claves `id_participante:id_alerta` en minúsculas.
+   */
+  abstract buscarAlertasAtendidasLote(
+    tx: Prisma.TransactionClient,
+    idsParticipante: string[],
+    idsAlerta: string[],
+  ): Promise<Set<string>>;
 }
