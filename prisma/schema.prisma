@@ -936,6 +936,7 @@ enum nivel_academico_enum {
 enum rol_enum {
   ESTUDIANTE
   ADMINISTRATIVO
+  COORDINADOR_PSI
 
   @@schema("usuario")
 }
