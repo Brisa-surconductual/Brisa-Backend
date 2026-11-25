@@ -4,6 +4,7 @@ import { PrismaModule } from '../../../prisma/prisma.module';
 import { RolesGuard } from '../../shared/presentation/guards/role-guard';
 import { UsersModule } from '../usuarios/users.module';
 import { CronogramaModule } from '../cronograma/cronograma.module';
+import { AdministrativoModule } from '../administrativo/administrativo.module';
 import { ChatApplicationProviders } from './application/chat.providers';
 import { PerfilClinicoVigentePort } from './application/ports/perfil-clinico-vigente.port';
 import { VariablesEtiquetadasPort } from './application/ports/variables-etiquetadas.port';
@@ -14,7 +15,8 @@ import { ErrorConversacionalFilter } from './presentation/filters/error-conversa
 import { ConsultarPublicadoPersonalizadoUseCase } from './application/use-cases/arbol-personalizado/consultar-publicado-personalizado.use-case';
 
 @Module({
-  imports: [PrismaModule, UsersModule, CronogramaModule],
+  // AdministrativoModule aporta el guard de permisos individuales (RF-04).
+  imports: [PrismaModule, UsersModule, CronogramaModule, AdministrativoModule],
   controllers: [...ChatPresentationProviders],
   providers: [
     ...ChatApplicationProviders,

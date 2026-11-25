@@ -20,7 +20,7 @@ import { ConsultarVistaNotificacionesUseCase } from '../../application/use-cases
 import { contextoAuditoria } from '../http/contexto-auditoria';
 
 @Controller('admin/cohortes/:id_cohorte/vistas')
-@Roles(Rol.ADMINISTRATIVO)
+@Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
 @AlcancesSesion(AlcanceSesion.COMPLETA)
 @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
 export class VistasAgregadasController {

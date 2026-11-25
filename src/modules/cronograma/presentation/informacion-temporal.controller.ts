@@ -21,7 +21,7 @@ export class InformacionTemporalController {
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async consultar(
     @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,

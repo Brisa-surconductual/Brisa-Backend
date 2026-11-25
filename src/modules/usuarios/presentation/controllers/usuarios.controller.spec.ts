@@ -25,7 +25,7 @@ describe('UsuariosController - creación administrativa', () => {
       RolesGuard,
       CsrfSessionGuard,
     ]);
-    expect(roles).toEqual([Rol.ADMINISTRATIVO]);
+    expect(roles).toEqual([Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI]);
     expect(alcances).toEqual([AlcanceSesion.COMPLETA]);
   });
 });

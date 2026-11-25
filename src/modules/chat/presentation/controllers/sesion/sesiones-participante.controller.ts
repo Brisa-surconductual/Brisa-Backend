@@ -1,3 +1,5 @@
+import { AlcancePermiso } from '../../../../administrativo/domain/enums/alcance-permiso.enum';
+import { RequierePermisoIndividual } from '../../../../administrativo/presentation/decorators/requiere-permiso-individual.decorator';
 import { Controller, Get, Header, Param, Query } from '@nestjs/common';
 import { ListarSesionesParticipanteDtoRequest } from '../../../application/dto/sesiones-participante.dto-request';
 import { SesionesParticipanteDtoResponse } from '../../../application/dto/sesiones-participante.dto-response';
@@ -21,6 +23,7 @@ export class SesionesParticipanteController {
   @Get('/:codigo_participante/sesiones')
   @Header('Cache-Control', 'no-store')
   @RespuestaHttp({ envolver: true })
+  @RequierePermisoIndividual(AlcancePermiso.ACCESO_INDIVIDUAL)
   consultar(
     @Param('codigo_participante', CodigoParticipantePipe) codigo: string,
     @Query() consulta: ListarSesionesParticipanteDtoRequest,

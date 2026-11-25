@@ -1,5 +1,6 @@
 import type { AccionAdministrativa } from '../../enums/accion-administrativa.enum';
 import type { EstadoAccion } from '../../enums/estado-accion.enum';
+import type { SeveridadAuditoria } from '../../enums/severidad-auditoria.enum';
 import type { DetalleAuditoria } from '../../results/accion-auditable';
 import type { ContextoAuditoria } from '../../results/contexto-auditoria';
 
@@ -12,4 +13,6 @@ export interface RegistroAuditoria extends ContextoAuditoria {
   marca_temporal: string;
   estado_accion: EstadoAccion;
   detalle?: DetalleAuditoria;
+  severidad?: SeveridadAuditoria;
+  id_participante?: string | null;
 }

@@ -38,20 +38,20 @@ Se manejan 3 ramas principales:
 Flujo estándar de un desarrollador:
 
 1. Crea su propia rama `feat/...` desde `develop`.
-2. Envía el PR apuntando a `test`.
-3. Se mergea a `test` y se evalúa ahí.
+2. Envía el PR apuntando a `develop`.
+3. Se mergea a `test`, cuando se vaya a integrar o probar.
 4. De `test` pasa a `develop`.
 5. De `develop` pasa finalmente a `master` (dispara el despliegue en Render).
 
 ### 2.2 Gestión de la base de datos (migraciones)
 
-La base de datos PostgreSQL vive en Supabase (instancia compartida) y el backend se conecta con el usuario `brisa_app`, que tiene permisos CRUD sobre registros (no DDL directo).
+La base de datos PostgreSQL vive en neon (instancia compartida) y el backend se conecta con el usuario `brisa_app`, que tiene permisos CRUD sobre registros (no DDL directo).
 
 Regla operativa: **la base de datos se gestiona siempre por migraciones, nunca editando `schema.prisma` a mano para luego aplicarlo directo.**
 
 1. Si se necesita un cambio en la base de datos, se crea una migración Prisma.
 2. Se envía un PR con esa migración.
-3. Al mergear el PR, un GitHub Action aplica la migración sobre la base de datos compartida en Supabase.
+3. Al mergear el PR, un GitHub Action aplica la migración sobre la base de datos compartida en neon.
 4. Cada desarrollador debe hacer `pull` y regenerar el cliente de Prisma localmente para quedar sincronizado.
 
 ### 2.3 Arquitectura
@@ -99,7 +99,7 @@ Todo módulo sigue las 4 capas de la arquitectura hexagonal, como subcarpetas de
 modules/<modulo>/
 ├── <modulo>.module.ts
 ├── domain/
-│   ├── entities/[<feature>/]*.entity.ts
+│   ├── entities/[<feature>/]*.entity.ts     #Objetos de dominio, casi siempre se  
 │   ├── enums/*.enum.ts
 │   ├── exceptions/*.exception.ts
 │   ├── policies/*.policy.ts

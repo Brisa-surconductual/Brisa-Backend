@@ -18,7 +18,7 @@ export class EstadisticasProgramaController {
   @Get()
   @Header('Cache-Control', 'no-store')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
   async obtener(): Promise<EstadisticasProgramaDtoResponse> {
     return this.consultar.execute();

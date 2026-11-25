@@ -1,3 +1,5 @@
+import { AlcancePermiso } from '../../../../administrativo/domain/enums/alcance-permiso.enum';
+import { RequierePermisoIndividual } from '../../../../administrativo/presentation/decorators/requiere-permiso-individual.decorator';
 import {
   Controller,
   Get,
@@ -26,6 +28,7 @@ export class TrazabilidadSesionController {
   @Get('/:id_sesion/trazabilidad')
   @Header('Cache-Control', 'no-store')
   @RespuestaHttp({ envolver: true })
+  @RequierePermisoIndividual(AlcancePermiso.ACCESO_INDIVIDUAL)
   consultar(
     @Param('id_sesion', new ParseUUIDPipe()) idSesion: string,
     @Query() consulta: ConsultarTrazabilidadSesionDtoRequest,

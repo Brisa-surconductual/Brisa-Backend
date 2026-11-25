@@ -22,6 +22,12 @@ function esConsultaConEscritura(request: Request): boolean {
   );
 }
 
+/** Roles con el alcance administrativo de solo lectura (RF-148). */
+const ROLES_SOLO_LECTURA: readonly Rol[] = [
+  Rol.ADMINISTRATIVO,
+  Rol.COORDINADOR_PSI,
+];
+
 @Injectable()
 export class SoloLecturaParticipantesMiddleware implements NestMiddleware {
   private readonly logger = new Logger(SoloLecturaParticipantesMiddleware.name);
@@ -41,7 +47,8 @@ export class SoloLecturaParticipantesMiddleware implements NestMiddleware {
     try {
       const autenticacion =
         await this.sessionAuth.verificarSinRegistrarActividad(request);
-      if (autenticacion.usuario.rol !== Rol.ADMINISTRATIVO) return next();
+      if (!ROLES_SOLO_LECTURA.includes(autenticacion.usuario.rol))
+        return next();
 
       this.logger.warn(
         `INTENTO_ESCRITURA_BLOQUEADO ${request.method} ${recurso.recurso}`,

@@ -14,7 +14,7 @@ export class BitacoraController {
 
   @Get()
   @Header('Cache-Control', 'no-store')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @AlcancesSesion(AlcanceSesion.COMPLETA)
   @UseGuards(AccesoBitacoraGuard)
   listar(

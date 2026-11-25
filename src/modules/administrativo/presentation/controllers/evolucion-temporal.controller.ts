@@ -21,7 +21,7 @@ import { ConsultarEvolucionTemporalUseCase } from '../../application/use-cases/c
 import { contextoAuditoria } from '../http/contexto-auditoria';
 
 @Controller('admin/cohortes/:id_cohorte/evolucion')
-@Roles(Rol.ADMINISTRATIVO)
+@Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
 @AlcancesSesion(AlcanceSesion.COMPLETA)
 @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
 export class EvolucionTemporalController {

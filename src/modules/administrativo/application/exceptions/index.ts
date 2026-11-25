@@ -13,3 +13,4 @@ export * from './participante-cohorte.exception';
 export * from './registro-auditoria.exception';
 export * from './seguimiento-no-disponible.exception';
 export * from './vista-agregada-no-disponible.exception';
+export * from './permiso-individual.exception';

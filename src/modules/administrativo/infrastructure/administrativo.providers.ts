@@ -11,11 +11,13 @@ import { SeguimientoAgregadoPort } from '../application/ports/seguimiento-agrega
 import { EstadoFuenteAgregada } from '../domain/enums/estado-fuente-agregada.enum';
 import { CohortesRepository } from '../domain/repositories/cohortes.repository';
 import { ParticipantesCohorteRepository } from '../domain/repositories/participantes-cohorte.repository';
+import { PermisosIndividualesRepository } from '../domain/repositories/permisos-individuales.repository';
 import { VistasAgregadasRepository } from '../domain/repositories/vistas-agregadas.repository';
 import { BullMqAuditoriaAdapter } from './messaging/bullmq-auditoria.adapter';
 import { PrismaBitacoraRepository } from './persistence/prisma-bitacora.repository';
 import { PrismaCohortesRepository } from './persistence/prisma-cohortes.repository';
 import { PrismaParticipantesCohorteRepository } from './persistence/prisma-participantes-cohorte.repository';
+import { PrismaPermisosIndividualesRepository } from './persistence/prisma-permisos-individuales.repository';
 import { PrismaVistasAgregadasRepository } from './persistence/prisma-vistas-agregadas.repository';
 
 /** Liga los puertos de dominio y aplicación con sus implementaciones concretas. */
@@ -25,6 +27,10 @@ export const AdministrativoInfrastructureProviders: Provider[] = [
   {
     provide: ParticipantesCohorteRepository,
     useClass: PrismaParticipantesCohorteRepository,
+  },
+  {
+    provide: PermisosIndividualesRepository,
+    useClass: PrismaPermisosIndividualesRepository,
   },
   {
     provide: VistasAgregadasRepository,

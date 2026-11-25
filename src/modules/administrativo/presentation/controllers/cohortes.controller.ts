@@ -25,7 +25,7 @@ import { ActualizarCohorteDto, CrearCohorteDto } from '../dto/cohorte.dto';
 import { contextoAuditoria } from '../http/contexto-auditoria';
 
 @Controller('admin/cohortes')
-@Roles(Rol.ADMINISTRATIVO)
+@Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
 @AlcancesSesion(AlcanceSesion.COMPLETA)
 @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
 export class CohortesController {

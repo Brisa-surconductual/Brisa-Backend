@@ -11,6 +11,10 @@ import { ConsultarVistaNotificacionesUseCase } from './use-cases/consultar-vista
 import { ExportarIndicadoresCohorteUseCase } from './use-cases/exportar-indicadores-cohorte.use-case';
 import { GestionarCohortesUseCase } from './use-cases/gestionar-cohortes.use-case';
 import { GestionarParticipantesCohorteUseCase } from './use-cases/gestionar-participantes-cohorte.use-case';
+import { ListarPermisosIndividualesUseCase } from './use-cases/permisos-individuales/listar-permisos-individuales.use-case';
+import { OtorgarPermisoIndividualUseCase } from './use-cases/permisos-individuales/otorgar-permiso-individual.use-case';
+import { RevocarPermisoIndividualUseCase } from './use-cases/permisos-individuales/revocar-permiso-individual.use-case';
+import { VerificarPermisoIndividualUseCase } from './use-cases/permisos-individuales/verificar-permiso-individual.use-case';
 
 export const AdministrativoApplicationProviders: Provider[] = [
   AuditoriaService,
@@ -25,4 +29,8 @@ export const AdministrativoApplicationProviders: Provider[] = [
   ExportarIndicadoresCohorteUseCase,
   GestionarCohortesUseCase,
   GestionarParticipantesCohorteUseCase,
+  ListarPermisosIndividualesUseCase,
+  OtorgarPermisoIndividualUseCase,
+  RevocarPermisoIndividualUseCase,
+  VerificarPermisoIndividualUseCase,
 ];
