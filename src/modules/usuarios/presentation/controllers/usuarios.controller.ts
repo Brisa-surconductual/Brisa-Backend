@@ -67,7 +67,7 @@ export class UsuariosController {
   @Post('/crear/administrativo')
   @HttpCode(HttpStatus.CREATED)
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
+  @Roles(Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async crearAdministrativo(
     @Body() dto: CreacionUsuarioAdminDtoRequest,
