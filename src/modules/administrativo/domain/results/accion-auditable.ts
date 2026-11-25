@@ -7,6 +7,12 @@ import type { SeveridadAuditoria } from '../enums/severidad-auditoria.enum';
 
 import type { AccionContenidoNarrativo } from './contenido-narrativo';
 import type { AccionMensajeNotificacion } from './mensajes-notificacion';
+/** Consultas individuales de un participante (RF-128 a RF-131). */
+export type ConsultaIndividual =
+  | 'PERFIL_SEGUIMIENTO'
+  | 'HISTORIAL_ALERTAS'
+  | 'PROGRESION_NARRATIVA'
+  | 'INTERACCION_NOTIFICACIONES';
 
 /** Detalle adicional que acompaña a un registro de bitácora según la acción. */
 export type DetalleAuditoria =
@@ -26,6 +32,15 @@ export type DetalleAuditoria =
       justificacion_cambio?: string;
       nivel_gamificacion?: number;
       resultado_validacion_terminos?: true;
+      consulta: ConsultaIndividual;
+      codigo_participante: string;
+      fecha_inicio?: string | null;
+      fecha_fin?: string | null;
+    }
+  | {
+      operacion: 'MARCAR_ATENDIDA';
+      id_alerta: string;
+      codigo_participante: string;
     };
 
 /** Qué se va a auditar, antes de conocer el resultado de la acción. */

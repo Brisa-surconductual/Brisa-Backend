@@ -41,8 +41,9 @@ export class SoloLecturaParticipantesMiddleware implements NestMiddleware {
     const escritura = esMetodoDeEscritura(request.method);
     if (!escritura && !esConsultaConEscritura(request)) return next();
 
-    const recurso = identificarRecursoParticipante(request.path);
-    if (!recurso) return next();
+    const identificado = identificarRecursoParticipante(request.path);
+    if (!identificado) return next();
+    const { mensaje, ...recurso } = identificado;
 
     try {
       const autenticacion =
@@ -70,7 +71,8 @@ export class SoloLecturaParticipantesMiddleware implements NestMiddleware {
           status,
           codigo: escritura ? 'ESCRITURA_NO_PERMITIDA' : 'PARAMETRO_INVALIDO',
           mensaje: escritura
-            ? 'Esta información es de solo lectura para el rol administrativo.'
+            ? (mensaje ??
+              'Esta información es de solo lectura para el rol administrativo.')
             : 'La solicitud contiene datos no válidos para una consulta de solo lectura.',
         });
     } catch (error) {

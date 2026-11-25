@@ -20,10 +20,22 @@ import { SeveridadAuditoria } from '../../domain/enums/severidad-auditoria.enum'
 import { contextoAuditoria } from '../http/contexto-auditoria';
 
 export const ALCANCE_PERMISO_KEY = 'alcance_permiso_individual';
+export const MENSAJE_PERMISO_KEY = 'mensaje_permiso_individual';
+export const CODIGO_PERMISO_KEY = 'codigo_permiso_individual';
 
 /** Mensaje de RF-03 para el acceso individual sin consentimiento explícito. */
 export const MENSAJE_SIN_PERMISO_INDIVIDUAL =
   'No tiene autorización para consultar información individual del usuario.';
+
+export const CODIGO_SIN_PERMISO_INDIVIDUAL = 'SIN_PERMISO_INDIVIDUAL';
+
+/** 403 estándar del guard: `{ status, codigo, mensaje }`. */
+export function sinPermisoIndividual(
+  mensaje: string = MENSAJE_SIN_PERMISO_INDIVIDUAL,
+  codigo: string = CODIGO_SIN_PERMISO_INDIVIDUAL,
+): ForbiddenException {
+  return new ForbiddenException({ status: 403, codigo, mensaje });
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
@@ -52,11 +64,19 @@ export class PermisoIndividualGuard implements CanActivate {
       ALCANCE_PERMISO_KEY,
       [context.getHandler(), context.getClass()],
     );
+    const mensaje = this.reflector.getAllAndOverride<string | undefined>(
+      MENSAJE_PERMISO_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    const codigo = this.reflector.getAllAndOverride<string | undefined>(
+      CODIGO_PERMISO_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     const request = context
       .switchToHttp()
       .getRequest<AuthenticatedSessionRequest>();
     const usuario = request.autenticacion?.usuario;
-    if (!usuario) throw new ForbiddenException(MENSAJE_SIN_PERMISO_INDIVIDUAL);
+    if (!usuario) throw sinPermisoIndividual(mensaje, codigo);
 
     const rol = usuario.rol;
     if (rol === Rol.COORDINADOR_PSI) return true;
@@ -84,7 +104,7 @@ export class PermisoIndividualGuard implements CanActivate {
       },
       EstadoAccion.DENEGADA,
     );
-    throw new ForbiddenException(MENSAJE_SIN_PERMISO_INDIVIDUAL);
+    throw sinPermisoIndividual(mensaje, codigo);
   }
 
   /** params > query > body; si la ruta solo trae la sesión de chat, se usa esa. */

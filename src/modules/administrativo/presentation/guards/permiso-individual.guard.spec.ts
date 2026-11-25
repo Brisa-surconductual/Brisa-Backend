@@ -5,6 +5,9 @@ import type { AuditoriaService } from '../../application/services/auditoria.serv
 import type { VerificarPermisoIndividualUseCase } from '../../application/use-cases/permisos-individuales/verificar-permiso-individual.use-case';
 import { AlcancePermiso } from '../../domain/enums/alcance-permiso.enum';
 import {
+  ALCANCE_PERMISO_KEY,
+  CODIGO_PERMISO_KEY,
+  MENSAJE_PERMISO_KEY,
   MENSAJE_SIN_PERMISO_INDIVIDUAL,
   PermisoIndividualGuard,
 } from './permiso-individual.guard';
@@ -14,6 +17,9 @@ describe('PermisoIndividualGuard', () => {
   let verificar: { execute: jest.Mock };
   let auditoria: { registrarIntento: jest.Mock };
   let guard: PermisoIndividualGuard;
+  let mensajeConfigurado: string | undefined;
+  let codigoConfigurado: string | undefined;
+  let alcanceConfigurado: AlcancePermiso;
 
   const contexto = (
     rol: string,
@@ -42,10 +48,18 @@ describe('PermisoIndividualGuard', () => {
   beforeEach(() => {
     verificar = { execute: jest.fn().mockResolvedValue(true) };
     auditoria = { registrarIntento: jest.fn().mockResolvedValue(undefined) };
+    mensajeConfigurado = undefined;
+    codigoConfigurado = undefined;
+    alcanceConfigurado = AlcancePermiso.ACCESO_INDIVIDUAL;
     const reflector = new Reflector();
     jest
       .spyOn(reflector, 'getAllAndOverride')
-      .mockReturnValue(AlcancePermiso.ACCESO_INDIVIDUAL);
+      .mockImplementation((clave: unknown) => {
+        if (clave === ALCANCE_PERMISO_KEY) return alcanceConfigurado;
+        if (clave === MENSAJE_PERMISO_KEY) return mensajeConfigurado;
+        if (clave === CODIGO_PERMISO_KEY) return codigoConfigurado;
+        return undefined;
+      });
     guard = new PermisoIndividualGuard(
       reflector,
       verificar as unknown as VerificarPermisoIndividualUseCase,
@@ -111,14 +125,67 @@ describe('PermisoIndividualGuard', () => {
       )
       .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ForbiddenException);
-    expect((error as ForbiddenException).message).toBe(
-      MENSAJE_SIN_PERMISO_INDIVIDUAL,
-    );
+    expect((error as ForbiddenException).getResponse()).toEqual({
+      status: 403,
+      codigo: 'SIN_PERMISO_INDIVIDUAL',
+      mensaje: MENSAJE_SIN_PERMISO_INDIVIDUAL,
+    });
     expect(auditoria.registrarIntento).toHaveBeenCalledWith(
       expect.objectContaining({ idUsuario }),
       expect.objectContaining({
         accion: 'INTENTO_ACCESO_NO_AUTORIZADO',
         severidad: 'ALTA',
+      }),
+      'DENEGADA',
+    );
+  });
+
+  it('usa el mensaje configurado en el decorador', async () => {
+    verificar.execute.mockResolvedValue(false);
+    mensajeConfigurado = 'Mensaje propio de la ruta.';
+    const error = await guard
+      .canActivate(
+        contexto(Rol.ADMINISTRATIVO, {
+          params: { codigo_participante: 'P-1' },
+        }),
+      )
+      .catch((e: unknown) => e);
+    expect((error as ForbiddenException).getResponse()).toMatchObject({
+      codigo: 'SIN_PERMISO_INDIVIDUAL',
+      mensaje: 'Mensaje propio de la ruta.',
+    });
+  });
+
+  it('usa el código configurado y verifica el alcance declarado (RF-130)', async () => {
+    verificar.execute.mockResolvedValue(false);
+    alcanceConfigurado = AlcancePermiso.PROGRESION_NARRATIVA;
+    codigoConfigurado = 'SIN_PERMISO_NARRATIVA';
+    mensajeConfigurado =
+      'Se requiere permiso explícito para consultar la progresión narrativa individual.';
+    const error = await guard
+      .canActivate(
+        contexto(Rol.ADMINISTRATIVO, {
+          params: { codigo_participante: 'P-1' },
+        }),
+      )
+      .catch((e: unknown) => e);
+    expect(verificar.execute).toHaveBeenCalledWith(
+      idUsuario,
+      { codigo: 'P-1' },
+      AlcancePermiso.PROGRESION_NARRATIVA,
+    );
+    expect((error as ForbiddenException).getResponse()).toEqual({
+      status: 403,
+      codigo: 'SIN_PERMISO_NARRATIVA',
+      mensaje:
+        'Se requiere permiso explícito para consultar la progresión narrativa individual.',
+    });
+    expect(auditoria.registrarIntento).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        detalle: expect.objectContaining({
+          alcance: 'PROGRESION_NARRATIVA',
+        }) as unknown,
       }),
       'DENEGADA',
     );

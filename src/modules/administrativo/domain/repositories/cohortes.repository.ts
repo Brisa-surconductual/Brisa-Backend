@@ -5,7 +5,7 @@ import type { CohorteConsultada } from '../results/cohorte-consultada';
 export abstract class CohortesRepository {
   abstract consultarVigentes(
     tx: Prisma.TransactionClient,
-    id?: string,
+    id?: string | readonly string[],
   ): Promise<CohorteConsultada[]>;
 
   abstract buscarParaActualizar(

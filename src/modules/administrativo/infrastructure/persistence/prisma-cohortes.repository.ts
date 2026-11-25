@@ -43,11 +43,13 @@ const ERRORES_SQL: Record<
 
 @Injectable()
 export class PrismaCohortesRepository implements CohortesRepository {
-  consultarVigentes(tx: Prisma.TransactionClient, id?: string) {
-    const filtro =
-      id === undefined
-        ? Prisma.empty
-        : Prisma.sql`AND id_cohorte = ${id}::uuid`;
+  consultarVigentes(
+    tx: Prisma.TransactionClient,
+    id?: string | readonly string[],
+  ) {
+    if (id !== undefined && typeof id !== 'string' && id.length === 0)
+      return Promise.resolve([]);
+    const filtro = this.filtroIdentificadores(id);
     return this.consultar<FilaCohorteConsultada>(
       tx,
       Prisma.sql`
@@ -62,6 +64,12 @@ export class PrismaCohortesRepository implements CohortesRepository {
     `,
       'ERROR_CONSULTA_COHORTE',
     );
+  }
+
+  private filtroIdentificadores(id?: string | readonly string[]): Prisma.Sql {
+    if (id === undefined) return Prisma.empty;
+    if (typeof id === 'string') return Prisma.sql`AND id_cohorte = ${id}::uuid`;
+    return Prisma.sql`AND id_cohorte IN (${Prisma.join(id.map((valor) => Prisma.sql`${valor}::uuid`))})`;
   }
 
   async buscarParaActualizar(tx: Prisma.TransactionClient, id: string) {
