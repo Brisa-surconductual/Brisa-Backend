@@ -1,4 +1,6 @@
+import type { CampoFiltroAgregado } from '../../domain/results/filtros-agregados';
 import type {
+  ConsultaFuenteAgregada,
   FuenteVistaAgregada,
   ResultadoFuenteAgregada,
 } from './fuente-vista-agregada.port';
@@ -6,5 +8,9 @@ import type {
 export type ResultadoSeguimientoAgregado = ResultadoFuenteAgregada;
 
 export abstract class SeguimientoAgregadoPort implements FuenteVistaAgregada {
-  abstract obtener(idCohorte: string): Promise<ResultadoSeguimientoAgregado>;
+  declare readonly filtrosSoportados?: readonly CampoFiltroAgregado[];
+  abstract obtener(
+    idCohorte: string,
+    consulta?: ConsultaFuenteAgregada,
+  ): Promise<ResultadoSeguimientoAgregado>;
 }
