@@ -17,7 +17,7 @@ import {
 export const LIMITE_PERMISOS = 20;
 export const LIMITE_MAXIMO_PERMISOS = 100;
 
-const entero = ({ value }: { value: unknown }) =>
+export const entero = ({ value }: { value: unknown }) =>
   typeof value === 'string' && /^\d+$/u.test(value) ? Number(value) : value;
 
 const booleano = ({ value }: { value: unknown }) => {

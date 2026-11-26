@@ -11,6 +11,12 @@ export interface PermisoListado {
   correo_beneficiario: string;
 }
 
+/** Usuario `ADMINISTRATIVO` que puede recibir un permiso (BE-336). */
+export interface BeneficiarioPermiso {
+  id_usuario: string;
+  correo_electronico: string;
+}
+
 /** Puerto de persistencia de los permisos explícitos de acceso individual (RF-04). */
 export abstract class PermisosIndividualesRepository {
   /** UUID interno del estudiante con ese seudónimo, o null si no existe. */
@@ -38,6 +44,12 @@ export abstract class PermisosIndividualesRepository {
     tx: Prisma.TransactionClient,
     filtro: FiltroPermisosIndividuales,
   ): Promise<{ items: PermisoListado[]; total: number; ahora: Date }>;
+
+  /** Usuarios `ADMINISTRATIVO` con cuenta `ACTIVA`, por correo ascendente. */
+  abstract listarBeneficiarios(
+    tx: Prisma.TransactionClient,
+    pagina: { offset: number; limit: number },
+  ): Promise<{ items: BeneficiarioPermiso[]; total: number }>;
 
   abstract buscarPorId(
     tx: Prisma.TransactionClient,

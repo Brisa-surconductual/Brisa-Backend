@@ -26,6 +26,19 @@ export interface ListadoPermisosDtoResponse {
   limit: number;
 }
 
+/** Elemento de `GET /admin/permisos-individuales/beneficiarios` (BE-336). */
+export interface BeneficiarioPermisoDtoResponse {
+  id_usuario: string;
+  correo_electronico: string;
+}
+
+export interface ListadoBeneficiariosDtoResponse {
+  items: BeneficiarioPermisoDtoResponse[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
 /** Respuesta 200 de `POST /admin/permisos-individuales/:id_permiso/revocar`. */
 export interface PermisoRevocadoDtoResponse {
   id_permiso: string;

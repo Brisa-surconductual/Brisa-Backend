@@ -4,6 +4,7 @@ import {
   Get,
   type INestApplication,
   Query,
+  UnauthorizedException,
   ValidationPipe,
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -16,6 +17,7 @@ import { CsrfSessionGuard } from '../../../../usuarios/presentation/guards/csrf-
 import { SessionAuthGuard } from '../../../../usuarios/presentation/guards/session-auth.guard';
 import { SessionScopeGuard } from '../../../../usuarios/presentation/guards/session-scope.guard';
 import { PermisoIndividualException } from '../../../application/exceptions/permiso-individual.exception';
+import { ListarBeneficiariosPermisoUseCase } from '../../../application/use-cases/permisos-individuales/listar-beneficiarios-permiso.use-case';
 import { ListarPermisosIndividualesUseCase } from '../../../application/use-cases/permisos-individuales/listar-permisos-individuales.use-case';
 import { OtorgarPermisoIndividualUseCase } from '../../../application/use-cases/permisos-individuales/otorgar-permiso-individual.use-case';
 import { RevocarPermisoIndividualUseCase } from '../../../application/use-cases/permisos-individuales/revocar-permiso-individual.use-case';
@@ -39,6 +41,7 @@ const autenticar = (c: ExecutionContext): boolean => {
     headers: Record<string, string>;
     autenticacion?: unknown;
   }>();
+  if (req.headers['x-test-sin-sesion']) throw new UnauthorizedException();
   req.autenticacion = {
     usuario: {
       id_usuario: ID_COORDINADOR,
@@ -80,6 +83,7 @@ class PruebaController {
 describe('PermisosIndividualesController (HTTP)', () => {
   let app: INestApplication<App>;
   const listar = jest.fn();
+  const beneficiarios = jest.fn();
   const otorgar = jest.fn();
   const revocar = jest.fn();
 
@@ -92,6 +96,10 @@ describe('PermisosIndividualesController (HTTP)', () => {
         {
           provide: ListarPermisosIndividualesUseCase,
           useValue: { execute: listar },
+        },
+        {
+          provide: ListarBeneficiariosPermisoUseCase,
+          useValue: { execute: beneficiarios },
         },
         {
           provide: OtorgarPermisoIndividualUseCase,
@@ -122,6 +130,12 @@ describe('PermisosIndividualesController (HTTP)', () => {
 
   beforeEach(() => {
     listar.mockReset().mockResolvedValue({
+      items: [],
+      total: 0,
+      offset: 0,
+      limit: 20,
+    });
+    beneficiarios.mockReset().mockResolvedValue({
       items: [],
       total: 0,
       offset: 0,
@@ -201,6 +215,86 @@ describe('PermisosIndividualesController (HTTP)', () => {
       expect(r.body).toEqual(SOBRE_400);
       sinEco(JSON.stringify(r.body), 'ECO-9');
       expect(revocar).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /beneficiarios (BE-336)', () => {
+    it('200, sin caché, con el contexto y la página por defecto', async () => {
+      const cuerpo = {
+        items: [
+          {
+            id_usuario: BENEFICIARIO,
+            correo_electronico: 'ana@usco.edu.co',
+          },
+        ],
+        total: 1,
+        offset: 0,
+        limit: 20,
+      };
+      beneficiarios.mockResolvedValue(cuerpo);
+
+      const r = await request(servidor())
+        .get(`${BASE}/beneficiarios`)
+        .expect(200)
+        .expect('Cache-Control', 'no-store');
+
+      expect(r.body).toEqual(cuerpo);
+      expect(beneficiarios).toHaveBeenCalledWith(
+        expect.objectContaining({ idUsuario: ID_COORDINADOR }),
+        expect.objectContaining({ offset: 0, limit: 20 }),
+      );
+    });
+
+    it.each([
+      ['limit=0', '?limit=0'],
+      ['limit=101', '?limit=101'],
+      ['offset=-1', '?offset=-1'],
+      ['un parámetro desconocido', '?foo=1'],
+    ])('400 con el sobre si llega %s', async (_, consulta) => {
+      const r = await request(servidor())
+        .get(`${BASE}/beneficiarios${consulta}`)
+        .expect(400);
+
+      expect(r.body).toEqual(SOBRE_400);
+      expect(beneficiarios).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('acceso solo para COORDINADOR_PSI con sesión completa', () => {
+    const rutas = [
+      [
+        'GET /beneficiarios',
+        () => request(servidor()).get(`${BASE}/beneficiarios`),
+      ],
+      ['GET /', () => request(servidor()).get(BASE)],
+      [
+        'POST /',
+        () => request(servidor()).post(BASE).set('X-CSRF-Token', 'token'),
+      ],
+    ] as const;
+
+    it.each(rutas)('%s: un ADMINISTRATIVO recibe 403', async (_, enviar) => {
+      await enviar().set('x-test-role', 'ADMINISTRATIVO').expect(403);
+
+      expect(beneficiarios).not.toHaveBeenCalled();
+      expect(listar).not.toHaveBeenCalled();
+      expect(otorgar).not.toHaveBeenCalled();
+    });
+
+    it.each(rutas)('%s: con sesión limitada recibe 403', async (_, enviar) => {
+      await enviar().set('x-test-alcance', 'LIMITADA').expect(403);
+
+      expect(beneficiarios).not.toHaveBeenCalled();
+      expect(listar).not.toHaveBeenCalled();
+      expect(otorgar).not.toHaveBeenCalled();
+    });
+
+    it.each(rutas)('%s: sin sesión recibe 401', async (_, enviar) => {
+      await enviar().set('x-test-sin-sesion', '1').expect(401);
+
+      expect(beneficiarios).not.toHaveBeenCalled();
+      expect(listar).not.toHaveBeenCalled();
+      expect(otorgar).not.toHaveBeenCalled();
     });
   });
 

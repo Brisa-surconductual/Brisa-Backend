@@ -155,6 +155,34 @@ export class PrismaPermisosIndividualesRepository implements PermisosIndividuale
     };
   }
 
+  async listarBeneficiarios(
+    tx: Prisma.TransactionClient,
+    pagina: { offset: number; limit: number },
+  ) {
+    const donde = { rol: 'ADMINISTRATIVO', estado_cuenta: 'ACTIVA' } as const;
+    try {
+      const usuarios = await tx.usuarios.findMany({
+        where: donde,
+        select: { id_usuario: true, correo_electronico: true },
+        orderBy: { correo_electronico: 'asc' },
+        skip: pagina.offset,
+        take: pagina.limit,
+      });
+      const total = await tx.usuarios.count({ where: donde });
+      return {
+        items: usuarios.map((u) => ({
+          id_usuario: u.id_usuario,
+          correo_electronico: u.correo_electronico,
+        })),
+        total,
+      };
+    } catch (error) {
+      throw new PermisoIndividualException('ERROR_PERSISTENCIA_PERMISOS', {
+        cause: error,
+      });
+    }
+  }
+
   async buscarPorId(
     tx: Prisma.TransactionClient,
     id: string,

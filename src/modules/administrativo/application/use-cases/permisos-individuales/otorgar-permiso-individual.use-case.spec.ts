@@ -51,6 +51,7 @@ describe('OtorgarPermisoIndividualUseCase', () => {
       buscarPorId: jest.fn(),
       revocar: jest.fn(),
       tieneVigente: jest.fn(),
+      listarBeneficiarios: jest.fn(),
     };
     auditoria = {
       ejecutar: jest.fn(

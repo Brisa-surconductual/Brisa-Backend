@@ -118,4 +118,74 @@ describe('PrismaPermisosIndividualesRepository', () => {
       });
     });
   });
+
+  describe('listarBeneficiarios (BE-336)', () => {
+    const construir = (usuarios: object[], total: number) => {
+      const findMany = jest.fn().mockResolvedValue(usuarios);
+      const count = jest.fn().mockResolvedValue(total);
+      const tx = {
+        usuarios: { findMany, count },
+      } as unknown as Prisma.TransactionClient;
+      return { tx, findMany, count };
+    };
+    const DONDE = { rol: 'ADMINISTRATIVO', estado_cuenta: 'ACTIVA' };
+
+    it('consulta solo ADMINISTRATIVO activos, con select de 2 campos, orden estable y paginación', async () => {
+      const { tx, findMany, count } = construir([], 0);
+
+      await repo.listarBeneficiarios(tx, { offset: 20, limit: 10 });
+
+      expect(findMany).toHaveBeenCalledWith({
+        where: DONDE,
+        select: { id_usuario: true, correo_electronico: true },
+        orderBy: { correo_electronico: 'asc' },
+        skip: 20,
+        take: 10,
+      });
+      expect(count).toHaveBeenCalledWith({ where: DONDE });
+    });
+
+    it('devuelve solo id_usuario y correo_electronico aunque la fila traiga más', async () => {
+      const { tx } = construir(
+        [
+          {
+            id_usuario: 'a0000000-0000-4000-8000-000000000002',
+            correo_electronico: 'ana@usco.edu.co',
+            contrasena_hash: 'no-debe-salir',
+          },
+        ],
+        1,
+      );
+
+      await expect(
+        repo.listarBeneficiarios(tx, { offset: 0, limit: 20 }),
+      ).resolves.toEqual({
+        items: [
+          {
+            id_usuario: 'a0000000-0000-4000-8000-000000000002',
+            correo_electronico: 'ana@usco.edu.co',
+          },
+        ],
+        total: 1,
+      });
+    });
+
+    it('un fallo de la base sale como ERROR_PERSISTENCIA_PERMISOS', async () => {
+      const tx = {
+        usuarios: {
+          findMany: jest.fn().mockRejectedValue(new Error('db')),
+          count: jest.fn(),
+        },
+      } as unknown as Prisma.TransactionClient;
+
+      const error = await repo
+        .listarBeneficiarios(tx, { offset: 0, limit: 20 })
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(PermisoIndividualException);
+      expect((error as PermisoIndividualException).codigo).toBe(
+        'ERROR_PERSISTENCIA_PERMISOS',
+      );
+    });
+  });
 });
