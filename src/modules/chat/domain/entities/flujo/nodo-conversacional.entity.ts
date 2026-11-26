@@ -1,0 +1,93 @@
+import { randomUUID } from 'crypto';
+import { TipoNodoConversacional } from '../catalogos/tipo-nodo.entity';
+
+export class NodoConversacional {
+  constructor(
+    readonly idNodo: string,
+    readonly idFlujo: string,
+    readonly idTipoNodo: string,
+    readonly nombreTipoNodo: string,
+    readonly contenido: Record<string, unknown>,
+    readonly esNodoInicial: boolean,
+    readonly orden: number | null,
+    readonly idContenido: string | null,
+    readonly creadoPor: string,
+    readonly fechaCreacion: Date,
+    readonly fechaActualizacion: Date,
+    /** RF-25: nodo de cierre del flujo (único por flujo; nunca también inicial). */
+    readonly esNodoFinal: boolean = false,
+  ) {}
+
+  static crear(
+    idFlujo: string,
+    tipo: TipoNodoConversacional,
+    contenido: Record<string, unknown>,
+    esNodoInicial: boolean,
+    orden: number | null,
+    idContenido: string | null,
+    creadoPor: string,
+    esNodoFinal = false,
+  ): NodoConversacional {
+    const ahora = new Date();
+    return new NodoConversacional(
+      randomUUID(),
+      idFlujo,
+      tipo.idTipoNodo,
+      tipo.nombre,
+      contenido,
+      esNodoInicial,
+      orden,
+      idContenido,
+      creadoPor,
+      ahora,
+      ahora,
+      esNodoFinal,
+    );
+  }
+
+  /** Aplica los cambios indicados; `undefined` conserva el valor actual. */
+  actualizar(
+    cambios: Partial<
+      Pick<
+        NodoConversacional,
+        'contenido' | 'esNodoInicial' | 'esNodoFinal' | 'orden' | 'idContenido'
+      >
+    >,
+    tipo?: TipoNodoConversacional,
+  ): NodoConversacional {
+    return new NodoConversacional(
+      this.idNodo,
+      this.idFlujo,
+      tipo?.idTipoNodo ?? this.idTipoNodo,
+      tipo?.nombre ?? this.nombreTipoNodo,
+      cambios.contenido ?? this.contenido,
+      cambios.esNodoInicial ?? this.esNodoInicial,
+      cambios.orden === undefined ? this.orden : cambios.orden,
+      cambios.idContenido === undefined
+        ? this.idContenido
+        : cambios.idContenido,
+      this.creadoPor,
+      this.fechaCreacion,
+      new Date(),
+      cambios.esNodoFinal ?? this.esNodoFinal,
+    );
+  }
+
+  copiarEn(idFlujo: string, creadoPor: string): NodoConversacional {
+    const ahora = new Date();
+    return new NodoConversacional(
+      randomUUID(),
+      idFlujo,
+      this.idTipoNodo,
+      this.nombreTipoNodo,
+      this.contenido,
+      this.esNodoInicial,
+      this.orden,
+      this.idContenido,
+      creadoPor,
+      ahora,
+      ahora,
+      this.esNodoFinal,
+    );
+  }
+}

@@ -1,13 +1,10 @@
-import { Transform, Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
-  IsArray,
+  Equals,
   IsBoolean,
-  IsDefined,
-  IsEnum,
   IsInt,
   IsNotEmpty,
   IsNotEmptyObject,
-  IsNumber,
   IsObject,
   IsOptional,
   IsString,
@@ -15,27 +12,8 @@ import {
   MaxLength,
   Min,
   ValidateIf,
-  ValidateNested,
 } from 'class-validator';
-import {
-  OperadorCondicion,
-  TipoDatoValidacion,
-} from '../../domain/enums/arbol-conversacional.enums';
-
-export class CrearFlujoGrupalDtoRequest {
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(150)
-  nombre!: string;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsInt()
-  @Min(1)
-  version: number = 1;
-}
+import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
 
 export class CrearNodoConversacionalDtoRequest {
   @IsUUID()
@@ -49,14 +27,19 @@ export class CrearNodoConversacionalDtoRequest {
   @IsBoolean()
   es_nodo_inicial: boolean = false;
 
-  @IsOptional()
   @IsInt()
   @Min(1)
-  orden?: number;
+  orden!: number;
 
+  /** RF-25 / RF-24: contenido del nodo; cada estudiante lo recorre según su cronograma. */
   @IsOptional()
   @IsUUID()
-  id_contenido_cronograma?: string;
+  id_contenido?: string;
+
+  /** RF-25: nodo de cierre del flujo (único; nunca también inicial). */
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
+  @IsBoolean()
+  es_nodo_final: boolean = false;
 }
 
 export class ActualizarNodoConversacionalDtoRequest {
@@ -80,124 +63,36 @@ export class ActualizarNodoConversacionalDtoRequest {
 
   @IsOptional()
   @IsUUID()
-  id_contenido_cronograma?: string | null;
-}
-
-export class ReglaValidacionDtoRequest {
-  @IsEnum(TipoDatoValidacion)
-  tipo_dato!: TipoDatoValidacion;
+  id_contenido?: string | null;
 
   @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsBoolean()
-  obligatorio: boolean = true;
+  es_nodo_final?: boolean;
 
-  @IsOptional()
-  @IsNumber()
-  valor_min?: number;
-
-  @IsOptional()
-  @IsNumber()
-  valor_max?: number;
-
-  @IsOptional()
-  @IsString()
-  formato_regex?: string;
-
+  /**
+   * RF-25: confirma que se eliminen las transiciones de salida que dejan de
+   * tener sentido al cambiar el tipo de respuesta del nodo.
+   */
   @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsArray()
-  @IsString({ each: true })
-  valores_permitidos: string[] = [];
+  @IsBoolean()
+  eliminar_transiciones_afectadas?: boolean;
+}
+
+export class CrearFlujoGrupalDtoRequest {
+  /** Esta solicitud solo crea flujos grupales. */
+  @Equals(ModalidadConversacional.GRUPAL)
+  modalidad: ModalidadConversacional.GRUPAL = ModalidadConversacional.GRUPAL;
 
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
   @IsString()
   @IsNotEmpty()
-  mensaje_error!: string;
-}
-
-export class ActualizarReglaValidacionDtoRequest {
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsEnum(TipoDatoValidacion)
-  tipo_dato?: TipoDatoValidacion;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsBoolean()
-  obligatorio?: boolean;
-
-  @IsOptional()
-  @IsNumber()
-  valor_min?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  valor_max?: number | null;
-
-  @IsOptional()
-  @IsString()
-  formato_regex?: string | null;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsArray()
-  @IsString({ each: true })
-  valores_permitidos?: string[];
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsString()
-  @IsNotEmpty()
-  mensaje_error?: string;
-}
-
-export class CrearTransicionConversacionalDtoRequest {
-  @IsUUID()
-  id_nodo_origen!: string;
-
-  @IsUUID()
-  id_nodo_destino!: string;
-
-  @IsEnum(OperadorCondicion)
-  operador_condicion!: OperadorCondicion;
-
-  @IsDefined()
-  valor_condicion!: unknown;
-
-  @IsInt()
-  @Min(1)
-  orden_evaluacion!: number;
-
-  @ValidateNested()
-  @IsDefined()
-  @IsObject()
-  @Type(() => ReglaValidacionDtoRequest)
-  regla_validacion!: ReglaValidacionDtoRequest;
-}
-
-export class ActualizarTransicionConversacionalDtoRequest {
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsUUID()
-  id_nodo_origen?: string;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsUUID()
-  id_nodo_destino?: string;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsEnum(OperadorCondicion)
-  operador_condicion?: OperadorCondicion;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsDefined()
-  valor_condicion?: unknown;
+  @MaxLength(150)
+  nombre!: string;
 
   @ValidateIf((_dto, value: unknown) => value !== undefined)
   @IsInt()
   @Min(1)
-  orden_evaluacion?: number;
-
-  @ValidateIf((_dto, value: unknown) => value !== undefined)
-  @IsObject()
-  @IsNotEmptyObject()
-  @ValidateNested()
-  @Type(() => ActualizarReglaValidacionDtoRequest)
-  regla_validacion?: ActualizarReglaValidacionDtoRequest;
+  version: number = 1;
 }

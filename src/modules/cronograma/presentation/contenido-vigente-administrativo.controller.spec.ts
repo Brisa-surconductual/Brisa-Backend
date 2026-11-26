@@ -22,7 +22,7 @@ describe('ContenidoVigenteAdministrativoController', () => {
   it('requiere rol administrativo y sesión completa mediante los guards existentes', () => {
     expect(
       Reflect.getMetadata(ROLES_KEY, ContenidoVigenteAdministrativoController),
-    ).toEqual([Rol.ADMINISTRATIVO]);
+    ).toEqual([Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI]);
     expect(
       Reflect.getMetadata(
         ALCANCES_SESION_KEY,

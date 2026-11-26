@@ -1,19 +1,18 @@
+import { ArbolConversacional } from '../../domain/entities/flujo/arbol-conversacional.entity';
+import { ResultadoValidacionArbol } from '../../domain/results/resultado-validacion-arbol';
+import { FlujoConversacional } from '../../domain/entities/flujo/flujo-conversacional.entity';
+import { NodoConversacional } from '../../domain/entities/flujo/nodo-conversacional.entity';
+import { TipoNodoConversacional } from '../../domain/entities/catalogos/tipo-nodo.entity';
+import { TransicionConversacional } from '../../domain/entities/flujo/transicion-conversacional.entity';
+import { ReglaValidacion } from '../../domain/entities/reglas-validacion/reglas-validacion.entity';
+import { EstadoFlujoConversacional } from '../../domain/enums/estado-flujo-conversacional.enum';
+import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
+import { OperadorCondicion } from '../../domain/enums/operador-condicional.enum';
 import {
-  ArbolConversacional,
-  FlujoConversacional,
-  NodoConversacional,
-  ResultadoValidacionArbol,
-  TipoNodoConversacional,
-  TransicionConversacional,
-} from '../../domain/entities/arbol-conversacional.entity';
-import {
-  EstadoFlujoConversacional,
-  ModalidadConversacional,
-  OperadorCondicion,
   TipoCravingClinico,
-  TipoDatoValidacion,
   TipoDependenciaClinica,
-} from '../../domain/enums/arbol-conversacional.enums';
+} from '../../domain/enums/perfil-clinico.enum';
+import { TipoDatoValidacion } from '../../domain/enums/tipo-dato-validacion-enum';
 
 export class FlujoConversacionalDtoResponse {
   id_flujo!: string;
@@ -61,8 +60,9 @@ export class NodoConversacionalDtoResponse {
   tipo_nodo!: string;
   contenido!: Record<string, unknown>;
   es_nodo_inicial!: boolean;
+  es_nodo_final!: boolean;
   orden!: number | null;
-  id_contenido_cronograma!: string | null;
+  id_contenido!: string | null;
   creado_por!: string;
   fecha_creacion!: Date;
   fecha_actualizacion!: Date;
@@ -75,11 +75,40 @@ export class NodoConversacionalDtoResponse {
       tipo_nodo: nodo.nombreTipoNodo,
       contenido: nodo.contenido,
       es_nodo_inicial: nodo.esNodoInicial,
+      es_nodo_final: nodo.esNodoFinal,
       orden: nodo.orden,
-      id_contenido_cronograma: nodo.idContenidoCronograma,
+      id_contenido: nodo.idContenido,
       creado_por: nodo.creadoPor,
       fecha_creacion: nodo.fechaCreacion,
       fecha_actualizacion: nodo.fechaActualizacion,
+    };
+  }
+}
+
+export class ReglaTransicionDtoResponse {
+  id_regla_validacion!: string;
+  operador_condicion!: OperadorCondicion;
+  valor_esperado!: unknown;
+  tipo_dato!: TipoDatoValidacion;
+  obligatorio!: boolean;
+  valor_min!: number | null;
+  valor_max!: number | null;
+  formato_regex!: string | null;
+  valores_permitidos!: string[];
+  mensaje_error!: string;
+
+  static crear(regla: ReglaValidacion): ReglaTransicionDtoResponse {
+    return {
+      id_regla_validacion: regla.idReglaValidacion,
+      operador_condicion: regla.operadorCondicion,
+      valor_esperado: regla.valorEsperado,
+      tipo_dato: regla.tipoDato,
+      obligatorio: regla.obligatorio,
+      valor_min: regla.valorMin,
+      valor_max: regla.valorMax,
+      formato_regex: regla.formatoRegex,
+      valores_permitidos: regla.valoresPermitidos,
+      mensaje_error: regla.mensajeError,
     };
   }
 }
@@ -89,20 +118,12 @@ export class TransicionConversacionalDtoResponse {
   id_flujo!: string;
   id_nodo_origen!: string;
   id_nodo_destino!: string;
-  operador_condicion!: OperadorCondicion;
-  valor_condicion!: unknown;
   orden_evaluacion!: number;
-  regla_validacion!: {
-    id_regla_validacion: string;
-    tipo_dato: TipoDatoValidacion;
-    obligatorio: boolean;
-    valor_min: number | null;
-    valor_max: number | null;
-    formato_regex: string | null;
-    valores_permitidos: string[];
-    mensaje_error: string;
-  };
+  /** `null` cuando el nodo origen no espera respuesta (transición automática). */
+  regla_validacion!: ReglaTransicionDtoResponse | null;
   fecha_creacion!: Date;
+  /** RF-25: al crear, la transición "cualquier otra respuesta" del origen tras el cambio. */
+  transicion_por_defecto?: TransicionConversacionalDtoResponse | null;
 
   static crear(
     transicion: TransicionConversacional,
@@ -112,19 +133,11 @@ export class TransicionConversacionalDtoResponse {
       id_flujo: transicion.idFlujo,
       id_nodo_origen: transicion.idNodoOrigen,
       id_nodo_destino: transicion.idNodoDestino,
-      operador_condicion: transicion.operadorCondicion,
-      valor_condicion: transicion.valorCondicion,
       orden_evaluacion: transicion.ordenEvaluacion,
-      regla_validacion: {
-        id_regla_validacion: transicion.reglaValidacion.idReglaValidacion,
-        tipo_dato: transicion.reglaValidacion.tipoDato,
-        obligatorio: transicion.reglaValidacion.obligatorio,
-        valor_min: transicion.reglaValidacion.valorMin,
-        valor_max: transicion.reglaValidacion.valorMax,
-        formato_regex: transicion.reglaValidacion.formatoRegex,
-        valores_permitidos: transicion.reglaValidacion.valoresPermitidos,
-        mensaje_error: transicion.reglaValidacion.mensajeError,
-      },
+      regla_validacion:
+        transicion.reglaValidacion === null
+          ? null
+          : ReglaTransicionDtoResponse.crear(transicion.reglaValidacion),
       fecha_creacion: transicion.fechaCreacion,
     };
   }

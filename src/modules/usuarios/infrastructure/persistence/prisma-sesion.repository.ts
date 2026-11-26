@@ -66,20 +66,16 @@ export class PrismaSesionRepository implements SesionRepository {
     fechaInteraccion: Date,
     estadoAplicacion: EstadoAplicacion,
   ): Promise<boolean> {
-    const resultado = await this.prisma.sesiones.updateMany({
-      where: {
-        id_sesion: idSesion,
-        activa: true,
-      },
-      data: {
-        fecha_ultima_interaccion: fechaInteraccion,
-        estado_aplicacion: SesionMapper.estadoAplicacionToPrisma(
-          estadoAplicacion,
-        ) as any,
-      },
-    });
+    // Una sola sentencia: `updateMany` abre BEGIN/COMMIT y añade dos viajes
+    // a la base en cada petición autenticada.
+    const filas = await this.prisma.$executeRaw`
+      UPDATE usuario.sesiones
+      SET fecha_ultima_interaccion = ${fechaInteraccion},
+          estado_aplicacion =
+            ${SesionMapper.estadoAplicacionToPrisma(estadoAplicacion)}::usuario.estado_aplicacion_enum
+      WHERE id_sesion = ${idSesion}::uuid AND activa = true`;
 
-    return resultado.count === 1;
+    return filas === 1;
   }
 
   async actualizarCsrfToken(

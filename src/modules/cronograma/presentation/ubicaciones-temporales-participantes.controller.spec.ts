@@ -43,7 +43,7 @@ describe('UbicacionesTemporalesParticipantesController', () => {
     const alcances: unknown = Reflect.getMetadata(ALCANCES_SESION_KEY, handler);
 
     expect(guards).toEqual([SessionAuthGuard, SessionScopeGuard, RolesGuard]);
-    expect(roles).toEqual([Rol.ADMINISTRATIVO]);
+    expect(roles).toEqual([Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI]);
     expect(alcances).toEqual([AlcanceSesion.COMPLETA]);
   });
 });

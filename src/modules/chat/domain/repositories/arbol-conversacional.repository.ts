@@ -1,205 +1,151 @@
+import { AuditoriaArbolConversacional } from '../entities/catalogos/auditoria-arbol-conversacional.entity';
+import { ContenidoConProgramaciones } from '../entities/catalogos/contenido-con-programaciones.entity';
+import { ContenidoCronogramaConversacional } from '../entities/catalogos/contenido-cronograma.entity';
+import { TipoEntradaConversacional } from '../entities/catalogos/tipo-entrada.entity';
+import { TipoNodoConversacional } from '../entities/catalogos/tipo-nodo.entity';
+import { ArbolConversacional } from '../entities/flujo/arbol-conversacional.entity';
 import {
-  ArbolConversacional,
-  AuditoriaArbolConversacional,
   FlujoConversacional,
-  NodoConversacional,
-  ReglaValidacion,
-  TipoEntradaConversacional,
-  TipoNodoConversacional,
-  TransicionConversacional,
-} from '../entities/arbol-conversacional.entity';
+  ModalidadSinPerfil,
+} from '../entities/flujo/flujo-conversacional.entity';
+import { NodoConversacional } from '../entities/flujo/nodo-conversacional.entity';
+import { TransicionConversacional } from '../entities/flujo/transicion-conversacional.entity';
 import {
-  EstadoFlujoConversacional,
-  ModalidadConversacional,
-  OperadorCondicion,
   TipoCravingClinico,
   TipoDependenciaClinica,
-} from '../enums/arbol-conversacional.enums';
+} from '../enums/perfil-clinico.enum';
 
-export interface PerfilClinicoArbol {
-  tipoDependencia: TipoDependenciaClinica;
-  tipoCraving: TipoCravingClinico;
-}
-
-export interface ConsultaFlujos {
-  modalidad?: ModalidadConversacional;
-  tipoDependencia?: TipoDependenciaClinica;
-  tipoCraving?: TipoCravingClinico;
-  estado?: EstadoFlujoConversacional;
-  page: number;
-  pageSize: number;
-}
-
-export interface PaginaFlujos {
-  items: FlujoConversacional[];
-  total: number;
-}
-
-export interface VersionClonada {
-  flujo: FlujoConversacional;
-  idFlujoOrigen: string;
-  nodosCopiados: number;
-  transicionesCopiadas: number;
-}
-
-export interface CrearFlujoPersonalizadoCommand extends PerfilClinicoArbol {
-  nombre: string;
-  creadoPor: string;
-}
-
-export interface CrearFlujoGrupalCommand {
-  nombre: string;
-  version: number;
-  creadoPor: string;
-}
-
-export interface CrearNodoCommand {
-  idFlujo: string;
-  idTipoNodo: string;
-  contenido: Record<string, unknown>;
-  esNodoInicial: boolean;
-  orden: number | null;
-  idContenidoCronograma: string | null;
-  creadoPor: string;
-}
-
-export interface ActualizarNodoCommand {
-  idFlujo: string;
-  idNodo: string;
-  idTipoNodo?: string;
-  contenido?: Record<string, unknown>;
-  esNodoInicial?: boolean;
-  orden?: number | null;
-  idContenidoCronograma?: string | null;
-  actualizadoPor: string;
-}
-
-export interface DatosReglaValidacionCommand {
-  tipoDato: ReglaValidacion['tipoDato'];
-  obligatorio: boolean;
-  valorMin: number | null;
-  valorMax: number | null;
-  formatoRegex: string | null;
-  valoresPermitidos: string[];
-  mensajeError: string;
-}
-
-export interface CrearReglaValidacionCommand extends DatosReglaValidacionCommand {
-  creadoPor: string;
-}
-
-export interface CrearTransicionCommand {
-  idFlujo: string;
-  idNodoOrigen: string;
-  idNodoDestino: string;
-  operadorCondicion: OperadorCondicion;
-  valorCondicion: unknown;
-  ordenEvaluacion: number;
-  reglaValidacion?: DatosReglaValidacionCommand;
-  idReglaValidacion?: string;
-  creadoPor: string;
-}
-
-export interface ActualizarTransicionCommand {
-  idFlujo: string;
-  idTransicion: string;
-  idNodoOrigen?: string;
-  idNodoDestino?: string;
-  operadorCondicion?: OperadorCondicion;
-  valorCondicion?: unknown;
-  ordenEvaluacion?: number;
-  reglaValidacion?: Partial<DatosReglaValidacionCommand>;
-  idReglaValidacion?: string;
-  actualizadoPor: string;
-}
-
+/**
+ * Puerto de persistencia del árbol conversacional.
+ *
+ * Solo busca y guarda entidades: las reglas de negocio (publicar, archivar,
+ * clonar, validar el grafo) viven en el dominio y en los casos de uso.
+ * Cada método `guardar*` es atómico y deja constancia de auditoría.
+ */
 export abstract class ArbolConversacionalRepository {
-  abstract listarFlujos(consulta: ConsultaFlujos): Promise<PaginaFlujos>;
+  // ── Consultas ────────────────────────────────────────────────────────────
 
-  abstract clonarVersion(
-    idFlujo: string,
-    idActor: string,
-  ): Promise<VersionClonada>;
-
-  abstract publicarAdministrativo(
-    idFlujo: string,
-    idActor: string,
-  ): Promise<FlujoConversacional>;
-
-  abstract archivarAdministrativo(
-    idFlujo: string,
-    idActor: string,
-  ): Promise<FlujoConversacional>;
-
-  abstract crearFlujoGrupal(
-    command: CrearFlujoGrupalCommand,
-  ): Promise<FlujoConversacional>;
-
-  abstract crearFlujoPersonalizado(
-    command: CrearFlujoPersonalizadoCommand,
-  ): Promise<FlujoConversacional>;
-
-  abstract clonarVersionPersonalizada(
-    idFlujo: string,
-    idActor: string,
-  ): Promise<FlujoConversacional>;
-
-  abstract listarFlujosPersonalizados(): Promise<FlujoConversacional[]>;
-
-  abstract buscarPublicadoGrupal(): Promise<FlujoConversacional | null>;
-
-  abstract buscarPublicadoPersonalizado(
-    perfil: PerfilClinicoArbol,
-  ): Promise<FlujoConversacional | null>;
-
-  abstract listarAuditoriaArbol(
-    idFlujo: string,
-  ): Promise<AuditoriaArbolConversacional[]>;
-
-  abstract publicarPersonalizado(
-    idFlujo: string,
-    idActor: string,
-  ): Promise<FlujoConversacional>;
-
-  abstract archivarPersonalizado(
-    idFlujo: string,
-    idActor: string,
-  ): Promise<FlujoConversacional>;
+  abstract obtenerFlujo(idFlujo: string): Promise<FlujoConversacional | null>;
 
   abstract obtenerArbol(idFlujo: string): Promise<ArbolConversacional | null>;
 
-  abstract listarTiposNodo(): Promise<TipoNodoConversacional[]>;
-
-  abstract listarTiposEntrada(): Promise<TipoEntradaConversacional[]>;
-
-  abstract listarReglasValidacion(): Promise<ReglaValidacion[]>;
-
   abstract buscarNodo(idNodo: string): Promise<NodoConversacional | null>;
+
+  abstract buscarNodosPorIds(ids: string[]): Promise<NodoConversacional[]>;
 
   abstract buscarTransicion(
     idTransicion: string,
   ): Promise<TransicionConversacional | null>;
 
-  abstract crearReglaValidacion(
-    command: CrearReglaValidacionCommand,
-  ): Promise<ReglaValidacion>;
+  abstract buscarTipoNodo(
+    idTipoNodo: string,
+  ): Promise<TipoNodoConversacional | null>;
 
-  abstract crearNodo(command: CrearNodoCommand): Promise<NodoConversacional>;
+  abstract listarFlujos(
+    filtro: Partial<
+      Pick<
+        FlujoConversacional,
+        'modalidad' | 'tipoDependencia' | 'tipoCraving' | 'estado'
+      >
+    >,
+    page: number,
+    pageSize: number,
+  ): Promise<{ items: FlujoConversacional[]; total: number }>;
 
-  abstract actualizarNodo(
-    command: ActualizarNodoCommand,
-  ): Promise<NodoConversacional>;
+  abstract listarFlujosPersonalizados(): Promise<FlujoConversacional[]>;
 
-  abstract crearTransicion(
-    command: CrearTransicionCommand,
-  ): Promise<TransicionConversacional>;
+  /** Único flujo publicado de una modalidad sin perfil clínico (GRUPAL o SOS). */
+  abstract buscarPublicadoUnico(
+    modalidad: ModalidadSinPerfil,
+  ): Promise<FlujoConversacional | null>;
 
-  abstract actualizarTransicion(
-    command: ActualizarTransicionCommand,
-  ): Promise<TransicionConversacional>;
+  /** Atajo histórico (RF-24): el flujo grupal publicado. */
+  abstract buscarPublicadoGrupal(): Promise<FlujoConversacional | null>;
 
-  abstract publicar(
+  /** Última versión registrada de una modalidad sin perfil, o 0 si no hay ninguna. */
+  abstract obtenerUltimaVersionSinPerfil(
+    modalidad: ModalidadSinPerfil,
+  ): Promise<number>;
+
+  abstract buscarPublicadoPersonalizado(
+    tipoDependencia: TipoDependenciaClinica,
+    tipoCraving: TipoCravingClinico,
+  ): Promise<FlujoConversacional | null>;
+
+  /** Última versión registrada para el perfil clínico, o 0 si no hay ninguna. */
+  abstract obtenerUltimaVersionPersonalizada(
+    tipoDependencia: TipoDependenciaClinica,
+    tipoCraving: TipoCravingClinico,
+  ): Promise<number>;
+
+  abstract listarAuditoriaArbol(
     idFlujo: string,
+  ): Promise<AuditoriaArbolConversacional[]>;
+
+  abstract listarTiposNodo(): Promise<TipoNodoConversacional[]>;
+
+  abstract listarTiposEntrada(): Promise<TipoEntradaConversacional[]>;
+
+  /** Contenido ya asociado a una unidad temporal, disponible para un nodo. */
+  abstract listarContenidosCronograma(): Promise<
+    ContenidoCronogramaConversacional[]
+  >;
+
+  /** Existe la asociación contenido-cronograma (y por tanto el contenido está programado). */
+  /** RF-25: el contenido existe (puede o no estar programado en algún cronograma). */
+  abstract existeContenido(idContenido: string): Promise<boolean>;
+
+  /** RF-25 / RF-24: contenidos con sus programaciones (cronograma, unidad y fechas). */
+  abstract listarContenidosConProgramaciones(): Promise<
+    ContenidoConProgramaciones[]
+  >;
+
+  // ── Persistencia ─────────────────────────────────────────────────────────
+
+  /** Crea el flujo si no existe; si existe, persiste su estado actual. */
+  abstract guardarFlujo(
+    flujo: FlujoConversacional,
     idActor: string,
-  ): Promise<FlujoConversacional>;
+  ): Promise<void>;
+
+  /** Guarda varios flujos en una sola transacción (p. ej. archivar y publicar). */
+  abstract guardarFlujos(
+    flujos: FlujoConversacional[],
+    idActor: string,
+  ): Promise<void>;
+
+  /** Guarda un árbol nuevo copiado de `idFlujoOrigen`. */
+  abstract guardarArbolClonado(
+    arbol: ArbolConversacional,
+    idFlujoOrigen: string,
+    idActor: string,
+  ): Promise<void>;
+
+  /**
+   * Guarda el nodo. Si se indican transiciones, las elimina (con sus reglas)
+   * en la misma transacción: RF-25, cambio de tipo de respuesta confirmado.
+   */
+  abstract guardarNodo(
+    nodo: NodoConversacional,
+    idActor: string,
+    transicionesAEliminar?: TransicionConversacional[],
+  ): Promise<void>;
+
+  /**
+   * Guarda la transición junto con su regla propia; si la regla se
+   * reemplazó, elimina la anterior (nunca se comparte).
+   */
+  abstract guardarTransicion(
+    transicion: TransicionConversacional,
+    idActor: string,
+  ): Promise<void>;
+
+  /**
+   * Guarda varias transiciones en una sola transacción (p. ej. la específica,
+   * la de "cualquier otra respuesta" y su reubicación al final del orden).
+   */
+  abstract guardarTransiciones(
+    transiciones: TransicionConversacional[],
+    idActor: string,
+  ): Promise<void>;
 }

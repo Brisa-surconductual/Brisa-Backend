@@ -19,7 +19,7 @@ export class UbicacionesTemporalesParticipantesController {
   @Get(['/ubicaciones-temporales', '/participantes/ubicaciones-temporales'])
   @Header('Cache-Control', 'no-store')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
   async consultar(
     @Query() dto: ConsultarUbicacionesTemporalesParticipantesDtoRequest,

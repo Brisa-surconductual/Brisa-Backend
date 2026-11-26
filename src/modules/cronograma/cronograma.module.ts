@@ -10,6 +10,10 @@ import { AutorizarConsumoEventoContenidoService } from './application/service/au
 import { CalcularUbicacionTemporalUsuarioUseCase } from './application/use-cases/cronograma/calcular-ubicacion-temporal-usuario.use-case';
 import { ModuloInternoAuthGuard } from './presentation/guards/modulo-interno-auth.guard';
 import { ConsultaContenidoVigentePort } from './application/ports/consulta-contenido-vigente.port';
+import { ConsultaHabilitacionContenidoPort } from './application/ports/consulta-habilitacion-contenido.port';
+import { CronogramaPort } from './application/ports/cronograma.port';
+import { PrismaCronogramaCohorteAdapter } from './infrastructure/persistence/prisma-cronograma-cohorte.adapter';
+import { S3_CLIENT } from './infrastructure/storage/s3-client.provider';
 
 @Module({
   imports: [PrismaModule, UsersModule],
@@ -20,13 +24,17 @@ import { ConsultaContenidoVigentePort } from './application/ports/consulta-conte
     ...CronogramaInfrastructureProviders,
     RolesGuard,
     ModuloInternoAuthGuard,
+    { provide: CronogramaPort, useClass: PrismaCronogramaCohorteAdapter },
   ],
 
   exports: [
+    S3_CLIENT,
     InicializarCronogramaUsuarioUseCase,
     AutorizarConsumoEventoContenidoService,
     CalcularUbicacionTemporalUsuarioUseCase,
     ConsultaContenidoVigentePort,
+    ConsultaHabilitacionContenidoPort,
+    CronogramaPort,
   ],
 })
 export class CronogramaModule {}

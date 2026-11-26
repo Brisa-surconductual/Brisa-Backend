@@ -108,7 +108,7 @@ export class CronogramaController {
 
   @Post('/crear/unidad-temporal')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles('ADMINISTRATIVO')
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async crearUnidadTemporal(
     @Body() dto: UnidadTemporalDtoRequest,
@@ -118,7 +118,7 @@ export class CronogramaController {
 
   @Post('/contenidos')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async crearContenido(
     @Body() dto: CrearContenidoDtoRequest,
@@ -128,7 +128,7 @@ export class CronogramaController {
 
   @Patch('/contenidos/:id_contenido')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async actualizarContenido(
     @Param('id_contenido', new ParseUUIDPipe()) idContenido: string,
@@ -139,7 +139,7 @@ export class CronogramaController {
 
   @Delete('/contenidos/:id_contenido')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async eliminarContenido(
     @Param('id_contenido', new ParseUUIDPipe()) idContenido: string,
@@ -149,7 +149,7 @@ export class CronogramaController {
 
   @Post('/recursos/url-subida')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async solicitarUrlSubidaRecurso(
     @Body() dto: SolicitarUrlSubidaRecursoDtoRequest,
@@ -159,7 +159,7 @@ export class CronogramaController {
 
   @Get('/modulos-destino')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
   async listarModulosDestino(): Promise<ModuloDestinoDtoResponse[]> {
     return this.listarModulosDestinoUseCase.execute();
@@ -167,7 +167,7 @@ export class CronogramaController {
 
   @Post('/recursos')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async crearRecursoContenido(
     @Body() dto: CrearRecursoContenidoDtoRequest,
@@ -177,7 +177,7 @@ export class CronogramaController {
 
   @Get('/contenidos/:id_contenido/recursos')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
   async listarRecursosContenido(
     @Param('id_contenido', new ParseUUIDPipe()) idContenido: string,
@@ -187,7 +187,7 @@ export class CronogramaController {
 
   @Patch('/recursos/:id_recurso')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async actualizarRecursoContenido(
     @Param('id_recurso', new ParseUUIDPipe()) idRecurso: string,
@@ -199,7 +199,7 @@ export class CronogramaController {
   @Delete('/recursos/:id_recurso')
   @HttpCode(HttpStatus.NO_CONTENT)
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async eliminarRecursoContenido(
     @Param('id_recurso', new ParseUUIDPipe()) idRecurso: string,
@@ -209,7 +209,7 @@ export class CronogramaController {
 
   @Patch('/contenidos/:id_contenido/recursos/orden')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async reordenarRecursosContenido(
     @Param('id_contenido', new ParseUUIDPipe()) idContenido: string,
@@ -219,7 +219,7 @@ export class CronogramaController {
   }
 
   @Post('/asociar-contenido-unidad-temporal')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async asociarContenidoUnidadTemporal(
     @Body() dto: crearContenidoCronogramaDtoRequest,
@@ -228,7 +228,7 @@ export class CronogramaController {
   }
 
   @Patch('/actualizar-disponibilidad-contenido')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async actualizarDisponibilidadContenidoAsociado(
     @Body() dto: ActualizarDisponibilidadContenidoDtoRequest,
@@ -237,7 +237,7 @@ export class CronogramaController {
   }
 
   @Patch('/actualizar-unidad-temporal')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async actualizarUnidadTemporal(
     @Body() dto: ActualizarUnidadTemporalDtoRequest,
@@ -246,7 +246,7 @@ export class CronogramaController {
   }
 
   @Delete('/eliminar-asociacion-contenido-unidad-temporal')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async eliminarAsociacionContenidoUnidadTemporal(
     @Body() dto: EliminarAsociacionContenidoUnidadTemporalDtoRequest,
@@ -256,7 +256,7 @@ export class CronogramaController {
 
   @Post('/usuarios/:id_usuario/pausas-administrativas')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async registrarPausaAdministrativa(
     @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,
@@ -272,7 +272,7 @@ export class CronogramaController {
 
   @Get('/usuarios/:id_usuario/pausas-administrativas')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
   async consultarPausasAdministrativas(
     @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,
@@ -282,7 +282,7 @@ export class CronogramaController {
 
   @Patch('/usuarios/:id_usuario/pausas-administrativas/:id_pausa/anular')
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async anularPausaAdministrativa(
     @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,
@@ -292,7 +292,7 @@ export class CronogramaController {
   }
 
   @Delete('/eliminar-unidad-temporal')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async eliminarUnidadTemporal(
     @Body() dto: EliminarUnidadTemporalDtoRequest,
@@ -301,7 +301,7 @@ export class CronogramaController {
   }
 
   @Get('/:idCronograma/unidades-temporales/:idUnidadTemporal/contenidos')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async obtenerContenidos(
     @Param('idCronograma') idCronograma: string,
@@ -320,7 +320,7 @@ export class CronogramaController {
   }
 
   @Post('/crear-cronograma')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async crearCronograma(
     @Body() dto: CrearCronogramaDtoRequest,
@@ -329,14 +329,14 @@ export class CronogramaController {
   }
 
   @Get('/obtener-cronogramas')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async obtenerCronogramas(): Promise<ObtenerCronogramasDtoResponse[]> {
     return this.obtenerCronogramasUseCase.execute();
   }
 
   @Get('/obtener-unidades-temporales/:idCronograma')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async obtenerUnidadesTemporales(
     @Param('idCronograma') idCronograma: string,
@@ -345,7 +345,7 @@ export class CronogramaController {
   }
 
   @Get('/obtener-pausas-administrativas')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async obtenerPausasAdministrativas(): Promise<
     ConsultarPausasAdministrativasUsuarioDtoResponse[]
@@ -354,7 +354,7 @@ export class CronogramaController {
   }
 
   @Patch('/usuarios/:id_usuario/asignar-cronograma')
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async asignarCronogramaAUsuario(
     @Param('id_usuario', new ParseUUIDPipe()) idUsuario: string,

@@ -1,11 +1,11 @@
 import { Transform } from 'class-transformer';
 import { IsEnum, IsInt, Max, Min, ValidateIf } from 'class-validator';
+import { EstadoFlujoConversacional } from '../../domain/enums/estado-flujo-conversacional.enum';
+import { ModalidadConversacional } from '../../domain/enums/modalidad-conversacional-enum';
 import {
-  EstadoFlujoConversacional,
-  ModalidadConversacional,
   TipoCravingClinico,
   TipoDependenciaClinica,
-} from '../../domain/enums/arbol-conversacional.enums';
+} from '../../domain/enums/perfil-clinico.enum';
 
 function enteroConsulta({ value }: { value: unknown }): unknown {
   if (typeof value !== 'string' || !/^\d+$/.test(value)) return value;

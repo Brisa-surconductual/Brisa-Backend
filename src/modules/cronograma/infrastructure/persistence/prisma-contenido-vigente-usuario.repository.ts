@@ -7,7 +7,10 @@ import { TipoContenido } from '../../domain/enums/tipo-contenido.enum';
 import { CronogramaSinUnidadesTemporalesException } from '../../domain/exeption/cronograma/cronograma-sin-unidades-temporales.exeption';
 import { CronogramaUsuarioNoAsignadoException } from '../../domain/exeption/cronograma/cronograma-usuario-no-asignado.exception';
 import { FechaInicioUsuarioNoRegistradaException } from '../../domain/exeption/cronograma/fecha-inicio-usuario-no-registrada.exception';
-import { ContenidoVigenteUsuarioRepository } from '../../domain/repositories/contenido-vigente-usuario.repository';
+import {
+  ContenidoVigenteUsuarioRepository,
+  HabilitacionContenidoUsuario,
+} from '../../domain/repositories/contenido-vigente-usuario.repository';
 
 interface ContenidoVigenteRow {
   id_contenido: string;
@@ -58,6 +61,36 @@ export class PrismaContenidoVigenteUsuarioRepository implements ContenidoVigente
             fila.estado_disponibilidad,
           ),
       );
+    } catch (error: unknown) {
+      this.traducirErrorFuncion(error);
+    }
+  }
+
+  async consultarHabilitacion(
+    idUsuario: string,
+    idContenido: string,
+    fechaConsulta: Date,
+  ): Promise<HabilitacionContenidoUsuario> {
+    try {
+      const [fila] = await this.prisma.$queryRaw<
+        { habilitado: boolean; fecha_habilitacion: Date | null }[]
+      >(
+        Prisma.sql`
+          SELECT habilitado, fecha_habilitacion
+          FROM cronograma.fn_habilitacion_contenido_usuario(
+            ${idUsuario}::uuid,
+            ${idContenido}::uuid,
+            ${fechaConsulta}::timestamptz
+          )
+        `,
+      );
+      // Sin ubicación temporal calculable no hay forma de saber si ya empezó.
+      return fila === undefined
+        ? { habilitado: false, fechaHabilitacion: null }
+        : {
+            habilitado: fila.habilitado === true,
+            fechaHabilitacion: fila.fecha_habilitacion,
+          };
     } catch (error: unknown) {
       this.traducirErrorFuncion(error);
     }

@@ -39,7 +39,7 @@ export class GestionBaseCronogramaController {
 
   @Post('/:id_cronograma/activar')
   @HttpCode(200)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(CsrfSessionGuard)
   async activarCronograma(
     @Param('id_cronograma', new ParseUUIDPipe()) id: string,

@@ -41,7 +41,7 @@ export class UsuariosController {
   @Get('/buscar')
   @HttpCode(HttpStatus.OK)
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async buscar(@Query() dto: BuscarUsuariosQueryDto) {
     return this.buscarUsuarios.execute(dto.q);
@@ -67,7 +67,7 @@ export class UsuariosController {
   @Post('/crear/administrativo')
   @HttpCode(HttpStatus.CREATED)
   @AlcancesSesion(AlcanceSesion.COMPLETA)
-  @Roles(Rol.ADMINISTRATIVO)
+  @Roles(Rol.COORDINADOR_PSI)
   @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard, CsrfSessionGuard)
   async crearAdministrativo(
     @Body() dto: CreacionUsuarioAdminDtoRequest,

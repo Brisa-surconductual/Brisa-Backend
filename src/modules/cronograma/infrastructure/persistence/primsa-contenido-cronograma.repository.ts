@@ -57,7 +57,9 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
     reordenamientoHermanas: AsignacionOrden[],
   ): Promise<ContenidoCronograma> {
     await this.prisma.$transaction(async (tx) => {
-      await this.asegurarUnidadEditable(
+      // Un contenido se programa a lo sumo una vez por cronograma; el
+      // trigger de la base asigna el mismo id_cronograma.
+      const idCronograma = await this.asegurarUnidadEditable(
         tx,
         contenidoCronograma.id_unidad_temporal,
       );
@@ -71,7 +73,10 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
       }
 
       await tx.contenidos_cronograma.create({
-        data: ContenidoCronogramaMapper.toPrisma(contenidoCronograma),
+        data: {
+          ...ContenidoCronogramaMapper.toPrisma(contenidoCronograma),
+          id_cronograma: idCronograma,
+        },
       });
 
       for (const asignacion of reordenamientoHermanas) {
@@ -90,23 +95,48 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
   obtenerPorIdContenido(
     id_contenido: string,
   ): Promise<ContenidoCronograma | null> {
+    // Un contenido puede estar programado en varios cronogramas (uno por
+    // cronograma): se devuelve la programación más antigua.
     return this.prisma.contenidos_cronograma
-      .findUnique({
+      .findFirst({
         where: { id_contenido },
+        orderBy: [
+          { fecha_creacion: 'asc' },
+          { id_contenido_cronograma: 'asc' },
+        ],
       })
-      .then((contenido) => {
-        if (!contenido) {
-          return null;
-        }
-        return ContenidoCronogramaMapper.toDomain({
-          ...contenido,
-          orden_contenido: contenido.orden_contenido ?? 0,
-          fecha_inicio_disponibilidad:
-            contenido.fecha_inicio_disponibilidad ?? new Date(),
-          fecha_fin_disponibilidad:
-            contenido.fecha_fin_disponibilidad ?? new Date(),
-        });
-      });
+      .then((contenido) => (contenido ? this.aDominio(contenido) : null));
+  }
+
+  obtenerPorIdContenidoEnCronograma(
+    id_contenido: string,
+    id_cronograma: string,
+  ): Promise<ContenidoCronograma | null> {
+    return this.prisma.contenidos_cronograma
+      .findFirst({
+        where: { id_contenido, unidades_temporales: { id_cronograma } },
+      })
+      .then((contenido) => (contenido ? this.aDominio(contenido) : null));
+  }
+
+  private aDominio(contenido: {
+    id_contenido_cronograma: string;
+    id_contenido: string;
+    id_unidad_temporal: string;
+    orden_contenido: number | null;
+    fecha_inicio_disponibilidad: Date | null;
+    fecha_fin_disponibilidad: Date | null;
+    fecha_creacion: Date;
+    fecha_actualizacion: Date;
+  }): ContenidoCronograma {
+    return ContenidoCronogramaMapper.toDomain({
+      ...contenido,
+      orden_contenido: contenido.orden_contenido ?? 0,
+      fecha_inicio_disponibilidad:
+        contenido.fecha_inicio_disponibilidad ?? new Date(),
+      fecha_fin_disponibilidad:
+        contenido.fecha_fin_disponibilidad ?? new Date(),
+    });
   }
 
   obtenerPorIdContenidoCronograma(
@@ -184,12 +214,17 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
     contenidoCronograma: ContenidoCronograma,
   ): Promise<ContenidoCronograma> {
     await this.prisma.$transaction(async (tx) => {
-      await this.asegurarUnidadEditable(
+      // Un contenido se programa a lo sumo una vez por cronograma; el
+      // trigger de la base asigna el mismo id_cronograma.
+      const idCronograma = await this.asegurarUnidadEditable(
         tx,
         contenidoCronograma.id_unidad_temporal,
       );
       await tx.contenidos_cronograma.create({
-        data: ContenidoCronogramaMapper.toPrisma(contenidoCronograma),
+        data: {
+          ...ContenidoCronogramaMapper.toPrisma(contenidoCronograma),
+          id_cronograma: idCronograma,
+        },
       });
     });
     return contenidoCronograma;
@@ -216,12 +251,16 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
       );
   }
 
+  /** Bloquea el cronograma de la unidad, exige que esté editable y devuelve su id. */
   private async asegurarUnidadEditable(
     tx: Prisma.TransactionClient,
     idUnidad: string,
-  ): Promise<void> {
-    const estados = await tx.$queryRaw<{ estado: string }[]>(Prisma.sql`
-        SELECT c.estado FROM cronograma.cronogramas c
+  ): Promise<string> {
+    const estados = await tx.$queryRaw<
+      { estado: string; id_cronograma: string }[]
+    >(Prisma.sql`
+        SELECT c.estado, c.id_cronograma::text AS id_cronograma
+        FROM cronograma.cronogramas c
         JOIN cronograma.unidades_temporales u ON u.id_cronograma = c.id_cronograma
         WHERE u.id_unidad_temporal = ${idUnidad}::uuid FOR UPDATE OF c
       `);
@@ -231,6 +270,7 @@ export class PrismaContenidoCronogramaRepository implements ContenidoCronogramaR
       throw new ConflictException(
         'El cronograma está activo. Su contenido y programación son de solo lectura.',
       );
+    return estados[0].id_cronograma;
   }
 
   private async asegurarAsociacionEditable(

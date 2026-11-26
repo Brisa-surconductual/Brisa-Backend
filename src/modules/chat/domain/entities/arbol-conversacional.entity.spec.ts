@@ -1,22 +1,18 @@
-import {
-  ArbolConversacional,
-  FlujoConversacional,
-  NodoConversacional,
-  ReglaValidacion,
-  TransicionConversacional,
-} from './arbol-conversacional.entity';
-import {
-  EstadoFlujoConversacional,
-  ModalidadConversacional,
-  OperadorCondicion,
-  TipoDatoValidacion,
-} from '../enums/arbol-conversacional.enums';
+import { ArbolConversacional } from './flujo/arbol-conversacional.entity';
+import { FlujoConversacional } from './flujo/flujo-conversacional.entity';
+import { NodoConversacional } from './flujo/nodo-conversacional.entity';
+import { ReglaValidacion } from './reglas-validacion/reglas-validacion.entity';
+import { TransicionConversacional } from './flujo/transicion-conversacional.entity';
+import { EstadoFlujoConversacional } from '../enums/estado-flujo-conversacional.enum';
+import { ModalidadConversacional } from '../enums/modalidad-conversacional-enum';
+import { OperadorCondicion } from '../enums/operador-condicional.enum';
+import { TipoDatoValidacion } from '../enums/tipo-dato-validacion-enum';
 import {
   CicloConversacionalNoPermitidoException,
   NodoInicialInexistenteException,
   NodosHuerfanosException,
   ReglaValidacionInvalidaException,
-} from '../exeption/arbol-conversacional.exceptions';
+} from '../exceptions';
 
 describe('ArbolConversacional (RF-25)', () => {
   const fecha = new Date('2026-09-19T12:00:00.000Z');
@@ -56,6 +52,8 @@ describe('ArbolConversacional (RF-25)', () => {
       null,
       [],
       'Respuesta requerida',
+      OperadorCondicion.IGUALDAD,
+      { valor: 'si' },
     );
 
   const transicion = (origen: string, destino: string, orden = 1) =>
@@ -64,8 +62,6 @@ describe('ArbolConversacional (RF-25)', () => {
       flujo.idFlujo,
       origen,
       destino,
-      OperadorCondicion.IGUALDAD,
-      true,
       orden,
       regla(),
       fecha,
@@ -164,6 +160,8 @@ describe('ArbolConversacional (RF-25)', () => {
           null,
           [],
           'Fuera de rango',
+          OperadorCondicion.RANGO,
+          { min: 1, max: 2 },
         ),
     ).toThrow(ReglaValidacionInvalidaException);
   });
@@ -180,6 +178,8 @@ describe('ArbolConversacional (RF-25)', () => {
           null,
           [],
           'Seleccione una opción',
+          OperadorCondicion.IGUALDAD,
+          { valor: 'a' },
         ),
     ).toThrow(ReglaValidacionInvalidaException);
   });

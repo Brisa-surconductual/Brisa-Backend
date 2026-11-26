@@ -33,6 +33,8 @@ import { CatologoContenitosUseCase } from './use-cases/contenido/catalogo-conten
 import { CrearCronogramaUseCase } from './use-cases/cronograma/crear-cronograma.use-case';
 import { ConsultaContenidoVigentePort } from './ports/consulta-contenido-vigente.port';
 import { ConsultaContenidoVigenteService } from './service/consulta-contenido-vigente.service';
+import { ConsultaHabilitacionContenidoPort } from './ports/consulta-habilitacion-contenido.port';
+import { ConsultaHabilitacionContenidoService } from './service/consulta-habilitacion-contenido.service';
 import { ObtenerCronogramasUseCase } from './use-cases/cronograma/obtener-cronogrmas.use-case';
 import { ObtenerUnidadesTemporalesUseCase } from './use-cases/unidad-temporal/obtener-unidades-temporales.use-case';
 import { ConsultarPausasAdministraivasUseCase } from './use-cases/pausa-administrativa/consultar-pausas-administraivas.use-case';
@@ -41,7 +43,7 @@ import {
   EliminarRecursoContenidoUseCase,
   ListarRecursosContenidoUseCase,
 } from './use-cases/recurso-contenido/gestionar-recurso-contenido.use-cases';
-import {AsignarCronogramaUsuarioUseCase} from './use-cases/cronograma/asignar-cronograma.use-case';
+import { AsignarCronogramaUsuarioUseCase } from './use-cases/cronograma/asignar-cronograma.use-case';
 
 export const CronogramaApplicationProviders = [
   ActivarCronogramaUseCase,
@@ -72,6 +74,10 @@ export const CronogramaApplicationProviders = [
   {
     provide: ConsultaContenidoVigentePort,
     useClass: ConsultaContenidoVigenteService,
+  },
+  {
+    provide: ConsultaHabilitacionContenidoPort,
+    useClass: ConsultaHabilitacionContenidoService,
   },
   ConsultarPausasAdministrativasUsuarioUseCase,
   AnularPausaAdministrativaUseCase,

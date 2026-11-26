@@ -187,3 +187,17 @@ No se encontraron los dos endpoints de modalidad en este checkout. Su
 implementación pertenece a HU-05 y no se agregó como parte de esta corrección.
 Se conserva el versionado independiente por perfil clínico ya implementado:
 primera versión 1, siguientes versiones incrementales.
+
+## Cambios
+
+### 2026-11-21 · Usabilidad del editor de flujos (RF-25)
+
+Nodos con `es_nodo_final`, captura de perfil con valor, `eliminar_transiciones_afectadas`; transiciones con `orden_evaluacion` opcional, `id_nodo_destino_otro` y operador `SIEMPRE`; publicación que exige nodo final. Contrato completo en [`CONTRATO_RF25_USABILIDAD_FLUJO.md`](CONTRATO_RF25_USABILIDAD_FLUJO.md).
+
+### 2026-11-22 · Nodo ligado al contenido y catálogo `contenidos` (RF-25 / RF-24)
+
+`id_contenido` reemplaza a `id_contenido_cronograma` en crear, editar y consultar nodos. El catálogo agrega `contenidos`, con las programaciones de cada contenido: cronograma, unidad y fechas. Detalle en [`CONTRATO_RF24_RITMO_CRONOGRAMA.md`](CONTRATO_RF24_RITMO_CRONOGRAMA.md#cambios).
+
+### 2026-11-22 · Variable taxonómica del nodo (RF-30B)
+
+03-C, 03-D y la publicación validan `contenido.variable` contra la taxonomía (422 `VARIABLE_NO_VALIDA`, `VARIABLE_DESHABILITADA`, `TIPO_ENTRADA_INCOMPATIBLE`, `OPCIONES_FUERA_DE_TAXONOMIA`, `NODO_FINAL_CON_VARIABLE`, `VARIABLE_NODO_INVALIDA`). Nuevas rutas `GET/POST /chat/taxonomia-variables` y `PATCH /chat/taxonomia-variables/{codigo}`, auditadas con `id_flujo = null`. Detalle en [`CONTRATO_RF30B_TAXONOMIA_VARIABLES.md`](CONTRATO_RF30B_TAXONOMIA_VARIABLES.md).

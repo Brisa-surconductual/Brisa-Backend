@@ -1,0 +1,65 @@
+name: Prisma PR Check
+
+on:
+  pull_request:
+    branches:
+      - master
+      - test
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prisma-pr-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-migrations:
+    name: Prisma migration check
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: prisma_test_db
+        ports:
+          - 5432:5432
+        # Espera a que Postgres esté listo antes de correr los tests
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prisma_test_db?schema=public
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm' # O 'yarn' / 'pnpm' según lo que uses
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Las migraciones SQL son la fuente de verdad: se aplican a una DB vacia.
+      - name: Apply migrations to ephemeral DB
+        run: npx prisma migrate deploy --schema prisma/schema.prisma
+
+      # schema.prisma es un artefacto generado (workflow prisma-generate-schema).
+      # Aqui solo se comprueba que la DB resultante se pueda introspectar
+      # y que el schema generado sea valido.
+      - name: Introspect resulting DB (db pull) into temp schema
+        run: |
+          cp prisma/schema.prisma /tmp/schema.generated.prisma
+          npx prisma db pull --schema /tmp/schema.generated.prisma
+          npx prisma validate --schema /tmp/schema.generated.prisma
