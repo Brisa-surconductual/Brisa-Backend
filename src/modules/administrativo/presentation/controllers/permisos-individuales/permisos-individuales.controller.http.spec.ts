@@ -222,6 +222,23 @@ describe('PermisosIndividualesController (HTTP)', () => {
       },
     );
 
+    it('GET con un código inexistente: el 404 de negocio pasa con su sobre', async () => {
+      const error = new PermisoIndividualException(
+        'PARTICIPANTE_NO_ENCONTRADO',
+      );
+      listar.mockRejectedValue(error);
+
+      const r = await request(servidor())
+        .get(`${BASE}?codigo_participante=P-00000000`)
+        .expect(404);
+
+      expect(r.body).toEqual(error.getResponse());
+      expect(listar).toHaveBeenCalledWith(
+        expect.objectContaining({ idUsuario: ID_COORDINADOR }),
+        expect.objectContaining({ codigo_participante: 'P-00000000' }),
+      );
+    });
+
     it('POST sin CSRF responde 403 con el sobre de la guarda, no con el del filtro', async () => {
       const r = await request(servidor())
         .post(BASE)
