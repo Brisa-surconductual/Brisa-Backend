@@ -10,6 +10,7 @@ import {
   Post,
   Query,
   Req,
+  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import { Roles } from '../../../../../shared/presentation/decorators/roles.decorator';
@@ -26,6 +27,7 @@ import { OtorgarPermisoIndividualDtoRequest } from '../../../application/dto/per
 import { ListarPermisosIndividualesUseCase } from '../../../application/use-cases/permisos-individuales/listar-permisos-individuales.use-case';
 import { OtorgarPermisoIndividualUseCase } from '../../../application/use-cases/permisos-individuales/otorgar-permiso-individual.use-case';
 import { RevocarPermisoIndividualUseCase } from '../../../application/use-cases/permisos-individuales/revocar-permiso-individual.use-case';
+import { SolicitudInvalidaPermisosFilter } from '../../filters/solicitud-invalida-permisos.filter';
 import { contextoAuditoria } from '../../http/contexto-auditoria';
 
 /**
@@ -36,6 +38,7 @@ import { contextoAuditoria } from '../../http/contexto-auditoria';
 @Roles(Rol.COORDINADOR_PSI)
 @AlcancesSesion(AlcanceSesion.COMPLETA)
 @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
+@UseFilters(SolicitudInvalidaPermisosFilter)
 export class PermisosIndividualesController {
   constructor(
     private readonly otorgarPermiso: OtorgarPermisoIndividualUseCase,

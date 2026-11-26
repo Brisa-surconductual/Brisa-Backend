@@ -2,6 +2,7 @@ import { HttpException } from '@nestjs/common';
 import type { AdministrativoDomainException } from '../../domain/exceptions/domain.exception';
 
 const ERRORES_PERMISO_INDIVIDUAL = {
+  PARAMETRO_INVALIDO: [400, 'Los parámetros de la operación no son válidos.'],
   PARTICIPANTE_NO_ENCONTRADO: [404, 'El participante seleccionado no existe.'],
   PERMISO_NO_ENCONTRADO: [404, 'El permiso solicitado no existe.'],
   PERMISO_YA_VIGENTE: [409, 'Ya existe un permiso vigente con ese alcance.'],
