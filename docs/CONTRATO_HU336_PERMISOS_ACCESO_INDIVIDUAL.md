@@ -22,7 +22,7 @@ Acceso, igual en los cuatro:
 - Rol: solo `COORDINADOR_PSI` (`@Roles(Rol.COORDINADOR_PSI)` + `RolesGuard`). Un `ADMINISTRATIVO` recibe 403.
 - Sesión por cookie, con alcance `COMPLETA` (`SessionAuthGuard`, `SessionScopeGuard`).
 - CSRF: cabecera `X-CSRF-Token` obligatoria **solo en los dos POST** (`CsrfSessionGuard`). Los GET no la exigen.
-- Las respuestas de éxito (200 y 201) llevan `Cache-Control: no-store`. Las de error (filtro, excepciones de negocio, guardas, parser) no la llevan: no hay un middleware global que la ponga.
+- Las respuestas del controlador llevan `Cache-Control: no-store`, tanto las de éxito (200 y 201) como los errores de validación (filtro) y de negocio (404, 409, 422, 500); así se comprobó en vivo. Los 401 y 403 de las guardas y los errores del parser (que ocurren antes del controlador) no la llevan: no hay un middleware global que la ponga.
 - Nombres de campo en `snake_case`; sin envoltura `{ data }`; fechas en ISO 8601 UTC (`toISOString()`).
 - Los 400 de validación salen por el filtro `SolicitudInvalidaPermisosFilter` (`@UseFilters` del controlador). Los errores de negocio, por `PermisoIndividualException`. Ambos con el sobre `{ status, codigo, mensaje }`.
 
