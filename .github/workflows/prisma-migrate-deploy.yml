@@ -1,11 +1,9 @@
-name: Deploy Prisma Migrations to Main
+name: Deploy Prisma Migrations to Main (manual)
 
-# Esto dispara el workflow cada vez que hay un push (o merge) a la rama main
+# En cada push a master las migraciones de produccion las aplica el job
+# `migrate` de backend.yml, antes del deploy a Render. Este workflow queda
+# solo para ejecutarlo a mano desde Actions si hace falta re-aplicarlas.
 on:
-  push:
-    branches:
-      - master
-  # Opcional: Permite ejecutarlo manualmente desde la pestaña Actions de GitHub si algo falla
   workflow_dispatch:
 
 jobs:
@@ -13,11 +11,17 @@ jobs:
     name: Run Prisma Migrations
     runs-on: ubuntu-latest
 
-    environment: test
+    # Debe ser el Environment de produccion, NO "test": los secretos del
+    # Environment tienen prioridad sobre los del repositorio, asi que con
+    # "test" se resolvia la URL de la DB de test.
+    environment: deploy
 
-    # Variables de entorno globales para este job
+    concurrency:
+      group: deploy-migrations-production
+      cancel-in-progress: false
+
     env:
-      # La URL de la base de datos se obtendrá de los Secretos de GitHub
+      # Secreto del Environment "production" con la URL de la DB de produccion.
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
     steps:
