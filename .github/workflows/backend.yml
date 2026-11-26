@@ -50,12 +50,12 @@ jobs:
     if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: production
+    environment: deploy
     concurrency:
       group: deploy-migrations-production
       cancel-in-progress: false
     env:
-      DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -68,7 +68,7 @@ jobs:
       - name: Verificar que el secreto de produccion existe
         run: |
           if [ -z "$DATABASE_URL" ]; then
-            echo "::error::Falta el secreto PROD_DATABASE_URL en el Environment 'production'."
+            echo "::error::Falta el secreto DATABASE_URL en el Environment 'deploy'."
             exit 1
           fi
       - name: Apply Prisma migrations to production
