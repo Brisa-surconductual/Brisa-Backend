@@ -5,6 +5,12 @@ import type { ContextoAuditoria } from '../results/contexto-auditoria';
 import type { FiltroPermisosIndividuales } from '../results/filtro-permisos-individuales';
 import type { NuevoPermisoIndividual } from '../results/nuevo-permiso-individual';
 
+/** Un permiso del listado junto con el correo de su beneficiario (BE-336). */
+export interface PermisoListado {
+  permiso: PermisoIndividual;
+  correo_beneficiario: string;
+}
+
 /** Puerto de persistencia de los permisos explícitos de acceso individual (RF-04). */
 export abstract class PermisosIndividualesRepository {
   /** UUID interno del estudiante con ese seudónimo, o null si no existe. */
@@ -31,7 +37,7 @@ export abstract class PermisosIndividualesRepository {
   abstract listar(
     tx: Prisma.TransactionClient,
     filtro: FiltroPermisosIndividuales,
-  ): Promise<{ items: PermisoIndividual[]; total: number; ahora: Date }>;
+  ): Promise<{ items: PermisoListado[]; total: number; ahora: Date }>;
 
   abstract buscarPorId(
     tx: Prisma.TransactionClient,

@@ -14,6 +14,8 @@ export interface PermisoOtorgadoDtoResponse {
 /** Elemento del listado `GET /admin/permisos-individuales`. */
 export interface PermisoListadoDtoResponse extends PermisoOtorgadoDtoResponse {
   id_usuario_beneficiario: string;
+  /** Etiqueta del beneficiario: su correo electrónico (no hay nombre en la base). */
+  correo_beneficiario: string;
   revocado_en: string | null;
 }
 
@@ -50,10 +52,12 @@ export function aPermisoOtorgado(
 export function aPermisoListado(
   permiso: PermisoIndividual,
   ahora: Date,
+  correoBeneficiario: string,
 ): PermisoListadoDtoResponse {
   return {
     ...aPermisoOtorgado(permiso, ahora),
     id_usuario_beneficiario: permiso.id_usuario_beneficiario,
+    correo_beneficiario: correoBeneficiario,
     revocado_en: iso(permiso.revocado_en),
   };
 }

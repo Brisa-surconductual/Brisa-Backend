@@ -29,8 +29,14 @@ describe('ListarPermisosIndividualesUseCase', () => {
       });
     const listar = jest.fn().mockResolvedValue({
       items: [
-        permiso('p1', null),
-        permiso('p2', new Date('2026-11-24T00:00:00Z')),
+        {
+          permiso: permiso('p1', null),
+          correo_beneficiario: 'ana@usco.edu.co',
+        },
+        {
+          permiso: permiso('p2', new Date('2026-11-24T00:00:00Z')),
+          correo_beneficiario: 'ana@usco.edu.co',
+        },
       ],
       total: 7,
       ahora,
@@ -67,6 +73,8 @@ describe('ListarPermisosIndividualesUseCase', () => {
       ['p2', false],
     ]);
     expect(respuesta.items[0]).toMatchObject({
+      id_usuario_beneficiario: 'a0000000-0000-4000-8000-000000000002',
+      correo_beneficiario: 'ana@usco.edu.co',
       alcance: 'ACCESO_INDIVIDUAL',
       fecha_inicio_vigencia: '2026-11-23T03:00:00.000Z',
       fecha_fin_vigencia: null,

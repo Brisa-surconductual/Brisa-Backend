@@ -123,25 +123,33 @@ export class PrismaPermisosIndividualesRepository implements PermisosIndividuale
     const donde = condiciones.length
       ? Prisma.sql`WHERE ${Prisma.join(condiciones, ' AND ')}`
       : Prisma.empty;
-    const desde = Prisma.sql`
+    const base = Prisma.sql`
       FROM administrativo.permisos_acceso_individual p
-      JOIN administrativo.seudonimos_participante s ON s.id_usuario = p.id_participante
-      ${donde}`;
+      JOIN administrativo.seudonimos_participante s ON s.id_usuario = p.id_participante`;
 
+    // El conteo no necesita el JOIN con usuarios: la FK del beneficiario garantiza que la fila existe.
     const [conteo] = await this.consultar<{ total: number; ahora: Date }>(
       tx,
-      Prisma.sql`SELECT count(*)::int AS total, now() AS ahora ${desde}`,
+      Prisma.sql`SELECT count(*)::int AS total, now() AS ahora ${base} ${donde}`,
     );
-    const filas = await this.consultar<FilaPermiso>(
+    // Una sola consulta para las filas y el correo del beneficiario (sin N+1).
+    const filas = await this.consultar<
+      FilaPermiso & { correo_beneficiario: string }
+    >(
       tx,
       Prisma.sql`
-      SELECT ${COLUMNAS} ${desde}
+      SELECT ${COLUMNAS}, b.correo_electronico AS correo_beneficiario ${base}
+      JOIN usuario.usuarios b ON b.id_usuario = p.id_usuario_administrativo
+      ${donde}
       ORDER BY p.fecha_creacion DESC, p.id_permiso
       OFFSET ${filtro.offset} LIMIT ${filtro.limit}
     `,
     );
     return {
-      items: filas.map(aEntidad),
+      items: filas.map((fila) => ({
+        permiso: aEntidad(fila),
+        correo_beneficiario: fila.correo_beneficiario,
+      })),
       total: conteo?.total ?? 0,
       ahora: conteo?.ahora ?? new Date(),
     };

@@ -50,4 +50,72 @@ describe('PrismaPermisosIndividualesRepository', () => {
       ),
     ).resolves.toBe(false);
   });
+
+  describe('listar (BE-336)', () => {
+    const ahora = new Date('2026-11-25T12:00:00Z');
+    const fila = {
+      id_permiso: '1c9e7a2b-3d4f-4a5b-8c6d-7e8f9a0b1c2d',
+      id_usuario_beneficiario: nuevo.id_usuario_beneficiario,
+      id_participante: nuevo.id_participante,
+      codigo_participante: 'P-7F3A91C2',
+      alcance: AlcancePermiso.ACCESO_INDIVIDUAL,
+      fecha_inicio_vigencia: new Date('2026-11-23T03:00:00Z'),
+      fecha_fin_vigencia: null,
+      revocado_en: null,
+      correo_beneficiario: 'ana@usco.edu.co',
+    };
+    const filtro = { solo_vigentes: true, offset: 0, limit: 20 };
+    const consultas = (queryRaw: jest.Mock): string[] =>
+      (queryRaw.mock.calls as [Prisma.Sql][]).map(([consulta]) => consulta.sql);
+
+    it('trae el correo del beneficiario en la misma consulta de filas (sin N+1)', async () => {
+      const queryRaw = jest
+        .fn()
+        .mockResolvedValueOnce([{ total: 1, ahora }])
+        .mockResolvedValueOnce([fila]);
+      const tx = { $queryRaw: queryRaw } as unknown as Prisma.TransactionClient;
+
+      const resultado = await repo.listar(tx, filtro);
+
+      expect(queryRaw).toHaveBeenCalledTimes(2);
+      expect(resultado.total).toBe(1);
+      expect(resultado.items).toHaveLength(1);
+      expect(resultado.items[0].correo_beneficiario).toBe('ana@usco.edu.co');
+      expect(resultado.items[0].permiso.id_usuario_beneficiario).toBe(
+        nuevo.id_usuario_beneficiario,
+      );
+    });
+
+    it('el JOIN con usuarios va solo en la consulta de filas', async () => {
+      const queryRaw = jest
+        .fn()
+        .mockResolvedValueOnce([{ total: 0, ahora }])
+        .mockResolvedValueOnce([]);
+      const tx = { $queryRaw: queryRaw } as unknown as Prisma.TransactionClient;
+
+      await repo.listar(tx, filtro);
+      const [conteo, filas] = consultas(queryRaw);
+
+      expect(conteo).not.toContain('usuario.usuarios');
+      expect(filas).toContain(
+        'JOIN usuario.usuarios b ON b.id_usuario = p.id_usuario_administrativo',
+      );
+      expect(filas).toContain('b.correo_electronico AS correo_beneficiario');
+      expect(filas).toContain('ORDER BY p.fecha_creacion DESC, p.id_permiso');
+    });
+
+    it('sin filas devuelve una lista vacía con el reloj de la base', async () => {
+      const queryRaw = jest
+        .fn()
+        .mockResolvedValueOnce([{ total: 0, ahora }])
+        .mockResolvedValueOnce([]);
+      const tx = { $queryRaw: queryRaw } as unknown as Prisma.TransactionClient;
+
+      await expect(repo.listar(tx, filtro)).resolves.toEqual({
+        items: [],
+        total: 0,
+        ahora,
+      });
+    });
+  });
 });

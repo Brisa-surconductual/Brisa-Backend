@@ -48,7 +48,9 @@ export class ListarPermisosIndividualesUseCase {
           throw new PermisoIndividualException('PARTICIPANTE_NO_ENCONTRADO');
         const { items, total, ahora } = await this.permisos.listar(tx, filtro);
         return {
-          items: items.map((permiso) => aPermisoListado(permiso, ahora)),
+          items: items.map(({ permiso, correo_beneficiario }) =>
+            aPermisoListado(permiso, ahora, correo_beneficiario),
+          ),
           total,
           offset: filtro.offset,
           limit: filtro.limit,
