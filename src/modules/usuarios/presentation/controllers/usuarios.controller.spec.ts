@@ -10,7 +10,7 @@ import { SessionScopeGuard } from '../guards/session-scope.guard';
 import { UsuariosController } from './usuarios.controller';
 
 describe('UsuariosController - creación administrativa', () => {
-  it('exige sesión completa, rol administrativo y CSRF', () => {
+  it('exige sesión completa, rol coordinador y CSRF', () => {
     const handler = UsuariosController.prototype.crearAdministrativo;
     const guards = Reflect.getMetadata(GUARDS_METADATA, handler) as unknown[];
     const roles = Reflect.getMetadata(ROLES_KEY, handler) as string[];
@@ -25,7 +25,7 @@ describe('UsuariosController - creación administrativa', () => {
       RolesGuard,
       CsrfSessionGuard,
     ]);
-    expect(roles).toEqual([Rol.ADMINISTRATIVO, Rol.COORDINADOR_PSI]);
+    expect(roles).toEqual([Rol.COORDINADOR_PSI]);
     expect(alcances).toEqual([AlcanceSesion.COMPLETA]);
   });
 });
