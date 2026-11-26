@@ -28,6 +28,7 @@ import { GestionarContenidoNarrativoUseCase } from './use-cases/gestionar-conten
 import { GestionarMensajesNotificacionUseCase } from './use-cases/gestionar-mensajes-notificacion.use-case';
 import { GestionarCohortesUseCase } from './use-cases/gestionar-cohortes.use-case';
 import { GestionarParticipantesCohorteUseCase } from './use-cases/gestionar-participantes-cohorte.use-case';
+import { ListarBeneficiariosPermisoUseCase } from './use-cases/permisos-individuales/listar-beneficiarios-permiso.use-case';
 import { ListarPermisosIndividualesUseCase } from './use-cases/permisos-individuales/listar-permisos-individuales.use-case';
 import { OtorgarPermisoIndividualUseCase } from './use-cases/permisos-individuales/otorgar-permiso-individual.use-case';
 import { RevocarPermisoIndividualUseCase } from './use-cases/permisos-individuales/revocar-permiso-individual.use-case';
@@ -63,6 +64,7 @@ export const AdministrativoApplicationProviders: Provider[] = [
   GestionarContenidoNarrativoUseCase,
   GestionarMensajesNotificacionUseCase,
   GestionarParticipantesCohorteUseCase,
+  ListarBeneficiariosPermisoUseCase,
   ListarPermisosIndividualesUseCase,
   OtorgarPermisoIndividualUseCase,
   RevocarPermisoIndividualUseCase,

@@ -50,6 +50,7 @@ describe('RevocarPermisoIndividualUseCase', () => {
         }),
       ),
       tieneVigente: jest.fn(),
+      listarBeneficiarios: jest.fn(),
     };
     const auditoria = {
       ejecutar: jest.fn(

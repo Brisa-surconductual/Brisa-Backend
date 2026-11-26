@@ -10,6 +10,7 @@ import {
   Post,
   Query,
   Req,
+  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import { Roles } from '../../../../../shared/presentation/decorators/roles.decorator';
@@ -21,11 +22,14 @@ import { CsrfSessionGuard } from '../../../../usuarios/presentation/guards/csrf-
 import { SessionAuthGuard } from '../../../../usuarios/presentation/guards/session-auth.guard';
 import { SessionScopeGuard } from '../../../../usuarios/presentation/guards/session-scope.guard';
 import type { AuthenticatedSessionRequest } from '../../../../usuarios/presentation/http/authenticated-session-request';
+import { ListarBeneficiariosPermisoDtoRequest } from '../../../application/dto/permisos-individuales/listar-beneficiarios-permiso.dto-request';
 import { ListarPermisosIndividualesDtoRequest } from '../../../application/dto/permisos-individuales/listar-permisos-individuales.dto-request';
 import { OtorgarPermisoIndividualDtoRequest } from '../../../application/dto/permisos-individuales/otorgar-permiso-individual.dto-request';
+import { ListarBeneficiariosPermisoUseCase } from '../../../application/use-cases/permisos-individuales/listar-beneficiarios-permiso.use-case';
 import { ListarPermisosIndividualesUseCase } from '../../../application/use-cases/permisos-individuales/listar-permisos-individuales.use-case';
 import { OtorgarPermisoIndividualUseCase } from '../../../application/use-cases/permisos-individuales/otorgar-permiso-individual.use-case';
 import { RevocarPermisoIndividualUseCase } from '../../../application/use-cases/permisos-individuales/revocar-permiso-individual.use-case';
+import { SolicitudInvalidaPermisosFilter } from '../../filters/solicitud-invalida-permisos.filter';
 import { contextoAuditoria } from '../../http/contexto-auditoria';
 
 /**
@@ -36,10 +40,12 @@ import { contextoAuditoria } from '../../http/contexto-auditoria';
 @Roles(Rol.COORDINADOR_PSI)
 @AlcancesSesion(AlcanceSesion.COMPLETA)
 @UseGuards(SessionAuthGuard, SessionScopeGuard, RolesGuard)
+@UseFilters(SolicitudInvalidaPermisosFilter)
 export class PermisosIndividualesController {
   constructor(
     private readonly otorgarPermiso: OtorgarPermisoIndividualUseCase,
     private readonly listarPermisos: ListarPermisosIndividualesUseCase,
+    private readonly listarBeneficiarios: ListarBeneficiariosPermisoUseCase,
     private readonly revocarPermiso: RevocarPermisoIndividualUseCase,
   ) {}
 
@@ -61,6 +67,19 @@ export class PermisosIndividualesController {
     @Req() request: AuthenticatedSessionRequest,
   ) {
     return this.listarPermisos.execute(contextoAuditoria(request), consulta);
+  }
+
+  /** BE-336: administrativos activos a quienes se puede conceder un permiso. */
+  @Get('beneficiarios')
+  @Header('Cache-Control', 'no-store')
+  beneficiarios(
+    @Query() consulta: ListarBeneficiariosPermisoDtoRequest,
+    @Req() request: AuthenticatedSessionRequest,
+  ) {
+    return this.listarBeneficiarios.execute(
+      contextoAuditoria(request),
+      consulta,
+    );
   }
 
   @Post(':id_permiso/revocar')
